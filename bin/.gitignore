@@ -1,0 +1,7 @@
+# Ignore all binaries in bin directory
+*
+*/
+
+# But keep the README
+!.gitignore
+!README.md

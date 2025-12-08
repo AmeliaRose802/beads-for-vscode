@@ -1,0 +1,7 @@
+{
+  "require": ["test/suite/index.js"],
+  "ui": "tdd",
+  "timeout": 10000,
+  "color": true,
+  "reporter": "spec"
+}

@@ -1,0 +1,38 @@
+name: Test
+
+on:
+  pull_request:
+    branches: [ master, main ]
+  # Allow workflow to be manually approved for Copilot PRs
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+      
+      - name: Install dependencies
+        working-directory: ./mcp_server
+        run: npm install
+      
+      - name: Run linter
+        working-directory: ./mcp_server
+        run: npm run lint
+      
+      - name: Run tests
+        working-directory: ./mcp_server
+        run: npm test
+      
+      - name: Verify OpenAPI generation
+        working-directory: ./mcp_server
+        run: |
+          npm run generate-openapi
+          # Check that files were generated
+          test -f docs/api/openapi.json
+          test -f docs/api/schemas/index.json
+          echo "✅ OpenAPI documentation generated successfully"

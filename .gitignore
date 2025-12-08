@@ -1,0 +1,5 @@
+node_modules/
+*.vsix
+.vscode-test/
+webview/bundle.js
+webview/bundle.js.map

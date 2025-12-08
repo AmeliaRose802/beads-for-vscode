@@ -1,0 +1,4 @@
+- It's not exactly a UI right now. Not human friendly. Make list display items in a beatiful human friendly way that cleanly convays hyerchey not the current nonsense
+- Adding an item should be more human friendly. It is not currently very human friendly
+- UI should ship with beads and not require additional setup steps
+- Add a way to init the project easily from the UI. If used on a project that does not already have beads set up then it should set it up

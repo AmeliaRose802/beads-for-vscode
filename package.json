@@ -1,0 +1,76 @@
+{
+  "name": "beads-ui",
+  "displayName": "Beads UI",
+  "version": "1.0.0",
+  "description": "VS Code UI for beads (bd) issue tracker",
+  "publisher": "beads",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "beads",
+    "bd",
+    "issue-tracker",
+    "project-management"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [
+    "onCommand:beads-ui.open"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "beads-ui.open",
+        "title": "Beads: Open UI",
+        "icon": "$(beaker)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "beads-ui",
+          "title": "Beads",
+          "icon": "$(symbol-misc)"
+        }
+      ]
+    },
+    "views": {
+      "beads-ui": [
+        {
+          "type": "webview",
+          "id": "beadsMainView",
+          "name": "Beads UI"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "node build.js",
+    "watch": "node build.js --watch",
+    "lint": "eslint .",
+    "test": "node ./test/runTest.js",
+    "test:unit": "mocha test/suite/*.test.js",
+    "pretest": "npm run lint",
+    "vscode:prepublish": "npm run build"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^20.19.25",
+    "@types/vscode": "^1.106.1",
+    "@vscode/test-electron": "^2.5.2",
+    "esbuild": "^0.27.1",
+    "eslint": "^8.57.1",
+    "glob": "^10.5.0",
+    "mocha": "^10.8.2",
+    "sinon": "^17.0.1"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1"
+  }
+}
