@@ -74,6 +74,27 @@ suite('Parse Utils Tests', () => {
       assert.ok(Array.isArray(result.openIssues[0].labels));
       assert.strictEqual(result.openIssues[0].labels.length, 0);
     });
+
+    test('Should build hierarchy using parent-child edges when graph data provided', () => {
+      const json = JSON.stringify([
+        { id: 'root-1', title: 'Root Feature', issue_type: 'feature', priority: 1, status: 'open' },
+        { id: 'child-1', title: 'Child Task', issue_type: 'task', priority: 2, status: 'open' }
+      ]);
+
+      const graph = JSON.stringify([
+        {
+          Dependencies: [
+            { issue_id: 'child-1', depends_on_id: 'root-1', type: 'parent-child' }
+          ]
+        }
+      ]);
+
+      const result = parseListJSON(json, 'list', graph);
+      assert.strictEqual(result.hierarchy.length, 1);
+      assert.strictEqual(result.hierarchy[0].issue.id, 'root-1');
+      assert.strictEqual(result.hierarchy[0].children.length, 1);
+      assert.strictEqual(result.hierarchy[0].children[0].issue.id, 'child-1');
+    });
   });
 
   suite('parseStatsOutput', () => {

@@ -97,12 +97,17 @@ class BeadsViewProvider {
           } else if (data.useJSON && (data.command === 'list' || data.command === 'ready' || data.command === 'blocked')) {
             // Handle list/ready/blocked commands with JSON output
             const jsonCommand = `${data.command} --json`;
-            const jsonResult = await this._executeBdCommand(jsonCommand);
+            const [jsonResult, graphResult] = await Promise.all([
+              this._executeBdCommand(jsonCommand),
+              this._executeBdCommand('graph --all --json')
+            ]);
             if (jsonResult.success) {
               webviewView.webview.postMessage({
                 type: 'commandResultJSON',
                 command: data.command,
                 output: jsonResult.output,
+                graphData: graphResult && graphResult.success ? graphResult.output : null,
+                graphError: graphResult && !graphResult.success ? graphResult.output : null,
                 success: true
               });
             } else {

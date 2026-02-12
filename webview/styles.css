@@ -563,6 +563,39 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 }
 .output-display__closed-items { margin-top: 8px; }
 
+/* Issue Tree */
+.issue-tree { display: flex; flex-direction: column; gap: 8px; }
+.issue-tree__node { margin-bottom: 4px; }
+.issue-tree__node-header { display: flex; align-items: flex-start; gap: 6px; }
+.issue-tree__toggle, .issue-tree__toggle-spacer {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.issue-tree__toggle {
+  background-color: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  border: 1px solid var(--vscode-button-border);
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+}
+.issue-tree__toggle:hover { background-color: var(--vscode-button-secondaryHoverBackground); }
+.issue-tree__toggle-spacer { visibility: hidden; }
+.issue-tree__card { flex: 1; }
+.issue-tree__children {
+  margin-left: 12px;
+  padding-left: 10px;
+  border-left: 1px dashed var(--vscode-panel-border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.issue-tree__empty { padding: 8px; color: var(--vscode-descriptionForeground); font-style: italic; }
+
 /* Pagination Controls */
 .pagination-controls {
   display: flex;

@@ -45,6 +45,91 @@ function paginateItems(items, page, pageSize) {
   return items.slice(start, start + pageSize);
 }
 
+const IssueTreeNode = ({
+  node,
+  existingAssignees,
+  issueDetails,
+  loadingDetails,
+  onShowIssue,
+  onCloseIssue,
+  onReopenIssue,
+  onEditIssue,
+  onTypeChange,
+  onPriorityChange,
+  onAssigneeChange,
+  onShowHierarchy,
+  onDragStart,
+  onDrop,
+  draggedIssue,
+  vscode
+}) => {
+  const [expanded, setExpanded] = useState(true);
+  const hasChildren = Array.isArray(node.children) && node.children.length > 0;
+
+  return (
+    <div className="issue-tree__node">
+      <div className="issue-tree__node-header">
+        {hasChildren ? (
+          <button
+            className="issue-tree__toggle"
+            onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+            aria-label={expanded ? 'Collapse children' : 'Expand children'}>
+            {expanded ? '▾' : '▸'}
+          </button>
+        ) : (
+          <span className="issue-tree__toggle-spacer" />
+        )}
+        <div className="issue-tree__card">
+          <IssueCard 
+            issue={node.issue} 
+            onClick={() => onShowIssue(node.issue.id)}
+            onClose={() => onCloseIssue(node.issue.id)}
+            onReopen={() => onReopenIssue(node.issue.id)}
+            onEdit={() => onEditIssue(node.issue.id)}
+            onTypeChange={onTypeChange}
+            onPriorityChange={onPriorityChange}
+            onAssigneeChange={onAssigneeChange}
+            onShowHierarchy={onShowHierarchy}
+            existingAssignees={existingAssignees}
+            detailedData={issueDetails[node.issue.id]}
+            isLoadingDetails={loadingDetails[node.issue.id]}
+            onDragStart={() => onDragStart(node.issue)}
+            onDrop={() => onDrop(node.issue)}
+            isDragging={draggedIssue?.id === node.issue.id}
+            isDropTarget={draggedIssue && (node.issue.type === 'epic' || node.issue.type === 'feature') && draggedIssue.id !== node.issue.id}
+            vscode={vscode}
+          />
+        </div>
+      </div>
+      {expanded && hasChildren && (
+        <div className="issue-tree__children">
+          {node.children.map((child) => (
+            <IssueTreeNode
+              key={child.issue.id}
+              node={child}
+              existingAssignees={existingAssignees}
+              issueDetails={issueDetails}
+              loadingDetails={loadingDetails}
+              onShowIssue={onShowIssue}
+              onCloseIssue={onCloseIssue}
+              onReopenIssue={onReopenIssue}
+              onEditIssue={onEditIssue}
+              onTypeChange={onTypeChange}
+              onPriorityChange={onPriorityChange}
+              onAssigneeChange={onAssigneeChange}
+              onShowHierarchy={onShowHierarchy}
+              onDragStart={onDragStart}
+              onDrop={onDrop}
+              draggedIssue={draggedIssue}
+              vscode={vscode}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, onReopenIssue, onEditIssue, onLinkParent, onTypeChange, onPriorityChange, onAssigneeChange, onShowHierarchy, issueDetails = {}, loadingDetails = {}, vscode }) => {
   const [draggedIssue, setDraggedIssue] = useState(null);
   const [pageSize, setPageSize] = useState(getStoredPageSize);
@@ -74,16 +159,6 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
         .filter(Boolean)
     )];
 
-    // Define display order for issue types
-    const typeOrder = ['epic', 'feature', 'bug', 'task', 'chore'];
-    const typeLabels = {
-      epic: '📚 Epics',
-      feature: '✨ Features',
-      bug: '🐛 Bugs',
-      task: '📋 Tasks',
-      chore: '🔧 Chores'
-    };
-
     const handleDragStart = (issue) => {
       setDraggedIssue(issue);
     };
@@ -95,19 +170,12 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
       setDraggedIssue(null);
     };
 
-    // Apply pagination to open issues before grouping
-    const paginatedOpenIssues = paginateItems(output.openIssues, currentPage, pageSize);
-    const totalOpenItems = output.openIssues.length;
+    const hierarchyRoots = (output.hierarchy && output.hierarchy.length > 0)
+      ? output.hierarchy
+      : output.openIssues.map(issue => ({ issue, children: [] }));
 
-    // Group paginated issues by type
-    const paginatedGroupedIssues = paginatedOpenIssues.reduce((groups, issue) => {
-      const type = issue.type || 'task';
-      if (!groups[type]) {
-        groups[type] = [];
-      }
-      groups[type].push(issue);
-      return groups;
-    }, {});
+    const totalRootItems = hierarchyRoots.length;
+    const paginatedRoots = paginateItems(hierarchyRoots, currentPage, pageSize);
 
     return (
       <div className={`output ${className} output-display`}>
@@ -118,46 +186,38 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
         <PaginationControls
           currentPage={currentPage}
           pageSize={pageSize}
-          totalItems={totalOpenItems}
+          totalItems={totalRootItems}
           onPageChange={setCurrentPage}
           onPageSizeChange={handlePageSizeChange}
         />
-        
-        {typeOrder.map(type => {
-          if (!paginatedGroupedIssues[type] || paginatedGroupedIssues[type].length === 0) return null;
-          
-          return (
-            <div key={type} className="issue-group">
-              <div className="issue-group__header">
-                {typeLabels[type]} ({paginatedGroupedIssues[type].length})
-              </div>
-              <div className="issue-group__items">
-                {paginatedGroupedIssues[type].map((issue, idx) => (
-                  <IssueCard 
-                    key={idx} 
-                    issue={issue} 
-                    onClick={() => onShowIssue(issue.id)}
-                    onClose={() => onCloseIssue(issue.id)}
-                    onReopen={() => onReopenIssue(issue.id)}
-                    onEdit={() => onEditIssue(issue.id)}
-                    onTypeChange={onTypeChange}
-                    onPriorityChange={onPriorityChange}
-                    onAssigneeChange={onAssigneeChange}
-                    onShowHierarchy={onShowHierarchy}
-                    existingAssignees={existingAssignees}
-                    detailedData={issueDetails[issue.id]}
-                    isLoadingDetails={loadingDetails[issue.id]}
-                    onDragStart={handleDragStart}
-                    onDrop={handleDrop}
-                    isDragging={draggedIssue?.id === issue.id}
-                    isDropTarget={draggedIssue && (issue.type === 'epic' || issue.type === 'feature') && draggedIssue.id !== issue.id}
-                    vscode={vscode}
-                  />
-                ))}
-              </div>
-            </div>
-          );
-        })}
+
+        <div className="issue-tree">
+          {paginatedRoots.length === 0 ? (
+            <div className="issue-tree__empty">No open issues.</div>
+          ) : (
+            paginatedRoots.map((node) => (
+              <IssueTreeNode
+                key={node.issue.id}
+                node={node}
+                existingAssignees={existingAssignees}
+                issueDetails={issueDetails}
+                loadingDetails={loadingDetails}
+                onShowIssue={onShowIssue}
+                onCloseIssue={onCloseIssue}
+                onReopenIssue={onReopenIssue}
+                onEditIssue={onEditIssue}
+                onTypeChange={onTypeChange}
+                onPriorityChange={onPriorityChange}
+                onAssigneeChange={onAssigneeChange}
+                onShowHierarchy={onShowHierarchy}
+                onDragStart={handleDragStart}
+                onDrop={handleDrop}
+                draggedIssue={draggedIssue}
+                vscode={vscode}
+              />
+            ))
+          )}
+        </div>
         
         {output.closedIssues.length > 0 && (
           <details className="output-display__closed-section">

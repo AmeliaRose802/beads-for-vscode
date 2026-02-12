@@ -7,7 +7,7 @@ import DependencyGraph from './components/DependencyGraph';
 import HierarchyView from './components/HierarchyView';
 import BlockingView from './components/BlockingView';
 const { parseListJSON, parseStatsOutput } = require('./parse-utils');
-const { buildCreateCommand, buildUpdateCommand, createAssigneeChangeHandler } = require('./form-handlers');
+const { buildCreateCommand, buildUpdateCommand } = require('./form-handlers');
 const { buildHierarchyModel } = require('./hierarchy-utils');
 const { buildBlockingModel } = require('./blocking-utils');
 const { processMessage } = require('./message-handler');
@@ -164,8 +164,46 @@ const App = () => {
     runInlineAction(`update ${issueId} --priority ${newPriority}`, `Updated ${issueId} priority to P${newPriority}`);
   };
 
-  // Create assignee change handler using the extracted function
-  const handleAssigneeChange = createAssigneeChangeHandler(vscode, output, runCommand);
+  const handleAssigneeChange = (issueId, newAssignee) => {
+    return new Promise((resolve, reject) => {
+      const assigneeArg = newAssignee.trim() ? `--assignee "${newAssignee}"` : '--assignee ""';
+      const command = `update ${issueId} ${assigneeArg}`;
+      const successMsg = newAssignee.trim() 
+        ? `Assigned ${issueId} to ${newAssignee}`
+        : `Cleared assignee for ${issueId}`;
+      
+      vscode.postMessage({
+        type: 'executeCommand',
+        command: command,
+        isInlineAction: true,
+        successMessage: successMsg
+      });
+
+      const handler = (event) => {
+        const message = event.data;
+        if (message.type === 'inlineActionResult' && message.command === command) {
+          window.removeEventListener('message', handler);
+          if (message.success) {
+            resolve();
+            setTimeout(() => {
+              if (typeof output === 'object' && output.command) {
+                runCommand(output.command);
+              }
+            }, 500);
+          } else {
+            reject(new Error(message.output || 'Failed to update assignee'));
+          }
+        }
+      };
+
+      window.addEventListener('message', handler);
+
+      setTimeout(() => {
+        window.removeEventListener('message', handler);
+        reject(new Error('Timeout updating assignee'));
+      }, 5000);
+    });
+  };
 
   const handleCreateIssue = () => {
     const command = buildCreateCommand({

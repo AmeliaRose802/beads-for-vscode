@@ -7,7 +7,10 @@
 function processMessage(message, ctx) {
   switch (message.type) {
     case 'commandResultJSON': {
-      const parsed = ctx.parseListJSON(message.output, message.command);
+      const parsed = ctx.parseListJSON(message.output, message.command, message.graphData);
+      if (message.graphError) {
+        console.error('Graph data unavailable:', message.graphError);
+      }
       if (parsed.type === 'error') {
         ctx.setOutput(parsed.message);
         ctx.setIsError(true);
