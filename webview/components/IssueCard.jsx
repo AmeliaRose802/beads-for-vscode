@@ -391,11 +391,6 @@ const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, on
                   <div>{detailedData.notes}</div>
                 </div>
               )}
-              {detailedData?.assignee && (
-                <div className="issue-card__assignee">
-                  <strong>Assignee:</strong> {detailedData.assignee}
-                </div>
-              )}
               {/* Relationships section */}
               {totalRelationships > 0 && (
                 <div className="issue-card__relationships">

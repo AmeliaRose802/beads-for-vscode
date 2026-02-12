@@ -38,7 +38,40 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose }) => {
 
   const { issues, edges, completionOrder, criticalPath, readyItems, parallelGroups } = blockingModel;
 
-  if (issues.length === 0) {
+  // Apply client-side filters to the pre-computed model
+  const matchesFilters = useMemo(() => {
+    const hasPriority = filterPriority !== '';
+    const hasAssignee = filterAssignee.trim() !== '';
+    const hasLabel = filterLabel.trim() !== '';
+    if (!hasPriority && !hasAssignee && !hasLabel) return null;
+
+    return (issue) => {
+      if (hasPriority && String(issue.priority) !== filterPriority) return false;
+      if (hasAssignee && !(issue.assignee || '').toLowerCase().includes(filterAssignee.toLowerCase())) return false;
+      if (hasLabel) {
+        const labels = Array.isArray(issue.labels) ? issue.labels : [];
+        if (!labels.some(l => l.toLowerCase().includes(filterLabel.toLowerCase()))) return false;
+      }
+      return true;
+    };
+  }, [filterPriority, filterAssignee, filterLabel]);
+
+  const filteredIds = useMemo(() => {
+    if (!matchesFilters) return null;
+    return new Set(issues.filter(matchesFilters).map(i => i.id));
+  }, [issues, matchesFilters]);
+
+  const filterList = (list) => filteredIds ? list.filter(i => filteredIds.has(i.id)) : list;
+  const filteredIssues = filterList(issues);
+  const filteredCompletionOrder = filterList(completionOrder);
+  const filteredCriticalPath = filterList(criticalPath);
+  const filteredReadyItems = filterList(readyItems);
+  const filteredParallelGroups = (filteredIds
+    ? parallelGroups.map(g => g.filter(i => filteredIds.has(i.id))).filter(g => g.length > 0)
+    : parallelGroups
+  );
+
+  if (filteredIssues.length === 0) {
     return (
       <div className="blocking-view blocking-view--empty">
         <div className="blocking-view__header">
@@ -102,7 +135,7 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose }) => {
 
   const renderGraphTab = () => {
     const issueMap = {};
-    issues.forEach(i => { issueMap[i.id] = i; });
+    filteredIssues.forEach(i => { issueMap[i.id] = i; });
 
     // Build adjacency for layout
     const edgeTargets = {};
@@ -125,7 +158,7 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose }) => {
           </span>
         </div>
         <div className="blocking-view__graph-container">
-          {parallelGroups.map((group, depth) => (
+          {filteredParallelGroups.map((group, depth) => (
             <div key={depth} className="blocking-view__graph-layer">
               <div className="blocking-view__layer-label">Phase {depth + 1}</div>
               <div className="blocking-view__layer-items">
@@ -162,7 +195,7 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose }) => {
                   );
                 })}
               </div>
-              {depth < parallelGroups.length - 1 && (
+              {depth < filteredParallelGroups.length - 1 && (
                 <div className="blocking-view__arrow-down">↓</div>
               )}
             </div>
@@ -178,7 +211,7 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose }) => {
         <span className="blocking-view__order-label">Suggested completion order (dependencies first):</span>
       </div>
       <ol className="blocking-view__order-list">
-        {completionOrder.map((issue, idx) => {
+        {filteredCompletionOrder.map((issue, idx) => {
           const isCritical = criticalPathIds.has(issue.id);
           const isReady = readyIds.has(issue.id);
           const itemClass = [
@@ -211,11 +244,11 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose }) => {
     <div className="blocking-view__critical">
       <div className="blocking-view__critical-header">
         <span className="blocking-view__critical-label">
-          Critical path ({criticalPath.length} items, longest dependency chain):
+          Critical path ({filteredCriticalPath.length} items, longest dependency chain):
         </span>
       </div>
       <div className="blocking-view__critical-chain">
-        {criticalPath.map((issue, idx) => (
+        {filteredCriticalPath.map((issue, idx) => (
           <div key={issue.id} className="blocking-view__critical-item">
             <div
               className="blocking-view__critical-node"
@@ -226,7 +259,7 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose }) => {
               <span className="blocking-view__critical-title">{issue.title}</span>
               <span className="blocking-view__critical-priority">P{issue.priority}</span>
             </div>
-            {idx < criticalPath.length - 1 && (
+            {idx < filteredCriticalPath.length - 1 && (
               <div className="blocking-view__critical-arrow">↓ blocks</div>
             )}
           </div>
@@ -239,10 +272,10 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose }) => {
     <div className="blocking-view__parallel">
       <div className="blocking-view__parallel-header">
         <span className="blocking-view__parallel-label">
-          Work can be parallelized into {parallelGroups.length} phases:
+          Work can be parallelized into {filteredParallelGroups.length} phases:
         </span>
       </div>
-      {parallelGroups.map((group, idx) => (
+      {filteredParallelGroups.map((group, idx) => (
         <div key={idx} className="blocking-view__parallel-group">
           <div className="blocking-view__parallel-phase">
             Phase {idx + 1} ({group.length} item{group.length !== 1 ? 's' : ''})
@@ -270,9 +303,9 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose }) => {
       <div className="blocking-view__header">
         <h3 className="blocking-view__title">🚧 Blocking View</h3>
         <div className="blocking-view__summary">
-          <span className="blocking-view__stat">{issues.length} items</span>
+          <span className="blocking-view__stat">{filteredIssues.length} items</span>
           <span className="blocking-view__stat">{edges.length} blocking links</span>
-          <span className="blocking-view__stat">{readyItems.length} ready</span>
+          <span className="blocking-view__stat">{filteredReadyItems.length} ready</span>
         </div>
         <button className="blocking-view__close-btn" onClick={onClose}>✕</button>
       </div>
