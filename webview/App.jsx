@@ -4,6 +4,8 @@ import CreatePanel from './components/CreatePanel';
 import RelationshipPanel from './components/RelationshipPanel';
 import EditPanel from './components/EditPanel';
 import DependencyGraph from './components/DependencyGraph';
+const { parseListJSON, parseStatsOutput } = require('./parse-utils');
+const { buildCreateCommand, buildUpdateCommand } = require('./form-handlers');
 
 const vscode = acquireVsCodeApi();
 
@@ -162,85 +164,9 @@ const App = () => {
     return () => window.removeEventListener('message', messageHandler);
   }, []);
 
-  const parseListJSON = (jsonOutput, command) => {
-    try {
-      const issues = JSON.parse(jsonOutput);
-      const openIssues = [];
-      const closedIssues = [];
-      
-      issues.forEach(issue => {
-        // Normalize the issue data
-        const normalizedIssue = {
-          id: issue.id,
-          title: issue.title,
-          type: issue.issue_type || 'task',
-          priority: `p${issue.priority}`,
-          status: issue.status,
-          created_at: issue.created_at,
-          updated_at: issue.updated_at,
-          closed_at: issue.closed_at,
-          description: issue.description,
-          assignee: issue.assignee,
-          dependency_count: issue.dependency_count || 0,
-          dependent_count: issue.dependent_count || 0
-        };
-        
-        if (issue.status === 'closed') {
-          closedIssues.push(normalizedIssue);
-        } else {
-          openIssues.push(normalizedIssue);
-        }
-      });
-      
-      // Sort closed issues by closed_at (most recent first)
-      closedIssues.sort((a, b) => {
-        if (a.closed_at && b.closed_at) {
-          return new Date(b.closed_at) - new Date(a.closed_at);
-        }
-        return 0;
-      });
-      
-      return { 
-        type: 'list', 
-        command, 
-        header: `Found ${openIssues.length} issue${openIssues.length !== 1 ? 's' : ''}`,
-        openIssues, 
-        closedIssues 
-      };
-    } catch (error) {
-      console.error('Failed to parse JSON list output:', error);
-      return { type: 'error', message: 'Failed to parse issue list', command };
-    }
-  };
-
-  const parseStatsOutput = (text) => {
-    const lines = text.split('\n');
-    const stats = {};
-    let header = '';
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-
-      if (trimmed.includes('Statistics')) {
-        header = trimmed;
-        continue;
-      }
-
-      const match = trimmed.match(/^([^:]+):\s+(.+)$/);
-      if (match) {
-        const [, key, value] = match;
-        stats[key.trim()] = value.trim();
-      }
-    }
-
-    return { type: 'stats', header, stats };
-  };
-
   const displayResult = (command, resultOutput, success) => {
     if (command.includes('list') || command.includes('ready') || command.includes('blocked')) {
-      const parsed = parseListOutput(resultOutput);
-      parsed.command = command;
+      const parsed = parseListJSON(resultOutput, command);
       setOutput(parsed);
     } else if (command.includes('stats')) {
       const parsed = parseStatsOutput(resultOutput);
@@ -298,56 +224,30 @@ const App = () => {
 
   const handleInlineActionResult = (message) => {
     const { command, output: cmdOutput, success, successMessage } = message;
-    
     if (success) {
-      // Clear form if it was a create command
       if (command.includes('create')) {
-        setCreateTitle('');
-        setCreateDescription('');
-        setCreateParentId('');
-        setCreateBlocksId('');
-        setCreateRelatedId('');
-        setCreateType('task');
-        setCreatePriority('2');
+        setCreateTitle(''); setCreateDescription('');
+        setCreateParentId(''); setCreateBlocksId(''); setCreateRelatedId('');
+        setCreateType('task'); setCreatePriority('2');
       }
-      
-      // Show brief success message
       if (successMessage) {
         const tempOutput = output;
         setOutput(`✓ ${successMessage}`);
-        setIsSuccess(true);
-        setIsError(false);
-        
-        // Restore previous output after brief delay
-        setTimeout(() => {
-          setOutput(tempOutput);
-          setIsSuccess(false);
-        }, 2000);
+        setIsSuccess(true); setIsError(false);
+        setTimeout(() => { setOutput(tempOutput); setIsSuccess(false); }, 2000);
       }
-      
-      // Trigger sync for modifying commands
       const modifyingCommands = ['create', 'update', 'close', 'reopen', 'link'];
-      const isModifying = modifyingCommands.some(cmd => command.includes(cmd));
-      
-      if (isModifying) {
+      if (modifyingCommands.some(cmd => command.includes(cmd))) {
         setTimeout(() => {
-          vscode.postMessage({
-            type: 'executeCommand',
-            command: 'sync'
-          });
-          // Refresh the current view
+          vscode.postMessage({ type: 'executeCommand', command: 'sync' });
           setTimeout(() => {
-            if (typeof output === 'object' && output.command) {
-              runCommand(output.command);
-            }
+            if (typeof output === 'object' && output.command) runCommand(output.command);
           }, 500);
         }, 1000);
       }
     } else {
-      // Show error message and keep form data
       setOutput(`❌ Error: ${cmdOutput || 'Command failed'}`);
-      setIsError(true);
-      setIsSuccess(false);
+      setIsError(true); setIsSuccess(false);
     }
   };
 
@@ -376,36 +276,17 @@ const App = () => {
   };
 
   const handleCreateIssue = () => {
-    if (!createTitle.trim()) {
+    const command = buildCreateCommand({
+      title: createTitle, type: createType, priority: createPriority,
+      description: createDescription, parentId: createParentId,
+      blocksId: createBlocksId, relatedId: createRelatedId, currentFile
+    });
+    if (!command) {
       setOutput('❌ Error: Title is required');
       setIsError(true);
       return;
     }
-
-    let command = `create --title "${createTitle}" -t ${createType} -p ${createPriority}`;
-    if (createDescription.trim()) {
-      command += ` -d "${createDescription}"`;
-    }
-    
-    // Add file reference to notes if available
-    if (currentFile) {
-      command += ` --notes "File: ${currentFile}"`;
-    }
-    
-    // Build links using separate --deps flags for each relationship
-    if (createParentId.trim()) {
-      command += ` --deps parent:${createParentId.trim()}`;
-    }
-    if (createBlocksId.trim()) {
-      command += ` --deps blocks:${createBlocksId.trim()}`;
-    }
-    if (createRelatedId.trim()) {
-      command += ` --deps related:${createRelatedId.trim()}`;
-    }
-
     runInlineAction(command, `Created new ${createType}`);
-    // Form will be cleared by handleInlineActionResult on success
-    // Don't close the panel - keep it open for creating more issues
   };
 
   const handleAISuggest = async () => {
@@ -447,61 +328,31 @@ const App = () => {
     });
   };
 
-  const handleLinkBeads = () => {
+  const handleDepAction = (action) => {
     if (!sourceBead.trim() || !targetBead.trim()) {
       setOutput('Error: Please provide both source and target bead IDs');
       setIsError(true);
       return;
     }
-
-    const command = `dep add ${sourceBead} --${relationType} ${targetBead}`;
-    runInlineAction(command, `Linked ${sourceBead} → ${targetBead}`);
-    
-    // Clear inputs but stay on the page
-    setSourceBead('');
-    setTargetBead('');
-  };
-
-  const handleUnlinkBeads = () => {
-    if (!sourceBead.trim() || !targetBead.trim()) {
-      setOutput('Error: Please provide both source and target bead IDs');
-      setIsError(true);
-      return;
-    }
-
-    const command = `dep remove ${sourceBead} --${relationType} ${targetBead}`;
-    runInlineAction(command, `Unlinked ${sourceBead} ⇸ ${targetBead}`);
-    
-    // Clear inputs but stay on the page
+    const verb = action === 'add' ? 'Linked' : 'Unlinked';
+    const arrow = action === 'add' ? '→' : '⇸';
+    runInlineAction(`dep ${action} ${sourceBead} --${relationType} ${targetBead}`, `${verb} ${sourceBead} ${arrow} ${targetBead}`);
     setSourceBead('');
     setTargetBead('');
   };
 
   const handleUpdateIssue = () => {
-    if (!editTitle.trim()) {
+    const command = buildUpdateCommand({
+      issueId: editIssueId, title: editTitle, type: editType,
+      priority: editPriority, description: editDescription, status: editStatus
+    });
+    if (!command) {
       setOutput('Error: Title is required');
       setIsError(true);
       return;
     }
-
-    let command = `update ${editIssueId}`;
-    
-    // Build update command with changed fields
-    command += ` --title "${editTitle}"`;
-    command += ` --type ${editType}`;
-    command += ` --priority ${editPriority}`;
-    command += ` --status ${editStatus}`;
-    
-    if (editDescription.trim()) {
-      command += ` --description "${editDescription}"`;
-    }
-
     runInlineAction(command, `Updated ${editIssueId}`);
-    
-    // Close edit panel
     setShowEditPanel(false);
-    
-    // Clear form
     setEditIssueId('');
     setEditTitle('');
     setEditDescription('');
@@ -576,8 +427,8 @@ const App = () => {
             onSourceChange={setSourceBead}
             onTargetChange={setTargetBead}
             onTypeChange={setRelationType}
-            onLink={handleLinkBeads}
-            onUnlink={handleUnlinkBeads}
+            onLink={() => handleDepAction('add')}
+            onUnlink={() => handleDepAction('remove')}
             onCancel={() => setShowRelationshipPanel(false)}
           />
         )}

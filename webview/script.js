@@ -19,6 +19,10 @@ window.addEventListener('message', event => {
   }
 });
 
+/**
+ * Executes a bd command via vscode message.
+ * @param {string} command - The bd command to execute.
+ */
 function runCommand(command) {
   const output = document.getElementById('output');
   output.textContent = `$ bd ${command}\n\nExecuting...`;
@@ -34,6 +38,12 @@ function runCommand(command) {
   });
 }
 
+/**
+ * Displays command results in the output area.
+ * @param {string} command - The bd command that was executed.
+ * @param {string} resultOutput - The raw output from the command.
+ * @param {boolean} success - Whether the command succeeded.
+ */
 function displayResult(command, resultOutput, success) {
   const output = document.getElementById('output');
   
@@ -56,6 +66,11 @@ function displayResult(command, resultOutput, success) {
   output.className = success ? 'output success' : 'output error';
 }
 
+/**
+ * Formats bd show output as HTML.
+ * @param {string} text - The raw text output from bd show.
+ * @returns {string} Formatted HTML string.
+ */
 function formatShowOutput(text) {
   const lines = text.split('\n');
   let html = '';
@@ -114,6 +129,11 @@ function formatShowOutput(text) {
   return html || `<pre style="margin: 0;">${escapeHtml(text)}</pre>`;
 }
 
+/**
+ * Formats bd stats output as HTML.
+ * @param {string} text - The raw text output from bd stats.
+ * @returns {string} Formatted HTML string.
+ */
 function formatStatsOutput(text) {
   const lines = text.split('\n');
   let html = '';
@@ -135,6 +155,11 @@ function formatStatsOutput(text) {
   return html || `<pre style="margin: 0;">${escapeHtml(text)}</pre>`;
 }
 
+/**
+ * Returns a CSS color variable for the given issue status.
+ * @param {string} status - The issue status (e.g., 'open', 'in_progress', 'closed', 'blocked').
+ * @returns {string} A CSS variable string for the status color.
+ */
 function getStatusColor(status) {
   const s = status.toLowerCase();
   if (s === 'open') return 'var(--vscode-terminal-ansiBlue)';
@@ -144,12 +169,22 @@ function getStatusColor(status) {
   return 'var(--vscode-foreground)';
 }
 
+/**
+ * Returns a CSS color variable for the given priority level.
+ * @param {string} priority - The priority level (e.g., 'P0', 'P1').
+ * @returns {string} A CSS variable string for the priority color.
+ */
 function getPriorityColor(priority) {
   if (priority === 'P0') return 'var(--vscode-errorForeground)';
   if (priority === 'P1') return 'var(--vscode-terminal-ansiYellow)';
   return 'var(--vscode-descriptionForeground)';
 }
 
+/**
+ * Formats bd list output as HTML.
+ * @param {string} text - The raw text output from bd list, ready, or blocked commands.
+ * @returns {string} Formatted HTML string.
+ */
 function formatListOutput(text) {
   // Parse beads list output and format it beautifully
   const lines = text.split('\n');
@@ -251,12 +286,20 @@ function formatListOutput(text) {
   return finalHtml || escapeHtml(text);
 }
 
+/**
+ * Escapes HTML special characters in the given text.
+ * @param {string} text - The text to escape.
+ * @returns {string} The HTML-escaped text.
+ */
 function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
 }
 
+/**
+ * Runs the command currently entered in the command input field.
+ */
 function runCustomCommand() {
   const commandInput = document.getElementById('command-input');
   const command = commandInput.value.trim();
@@ -266,23 +309,37 @@ function runCustomCommand() {
   runCommand(command);
 }
 
+/**
+ * Sets the command input field value and focuses it.
+ * @param {string} command - The command string to set.
+ */
 function setCommand(command) {
   document.getElementById('command-input').value = command;
   document.getElementById('command-input').focus();
 }
 
+/**
+ * Clears the output display area.
+ */
 function clearOutput() {
   const output = document.getElementById('output');
   output.textContent = 'Ready to execute commands...';
   output.className = 'output';
 }
 
+/**
+ * Handles keypress events in the command input, executing on Enter.
+ * @param {KeyboardEvent} event - The keyboard event.
+ */
 function handleKeyPress(event) {
   if (event.key === 'Enter') {
     runCustomCommand();
   }
 }
 
+/**
+ * Toggles visibility of the create issue panel.
+ */
 function showCreateIssue() {
   const panel = document.getElementById('create-panel');
   if (panel.style.display === 'none') {
@@ -294,6 +351,9 @@ function showCreateIssue() {
   }
 }
 
+/**
+ * Hides the create issue panel and resets its form inputs.
+ */
 function hideCreatePanel() {
   document.getElementById('create-panel').style.display = 'none';
   // Clear inputs
@@ -303,6 +363,9 @@ function hideCreatePanel() {
   document.getElementById('create-priority').value = '2';
 }
 
+/**
+ * Creates a new issue from the create issue form data.
+ */
 function createIssue() {
   const title = document.getElementById('create-title').value.trim();
   const type = document.getElementById('create-type').value;
@@ -325,6 +388,9 @@ function createIssue() {
   hideCreatePanel();
 }
 
+/**
+ * Initializes bd in the current workspace after user confirmation.
+ */
 function initBeads() {
   const confirmed = confirm('This will initialize beads in the current workspace. Continue?');
   if (confirmed) {
@@ -332,6 +398,9 @@ function initBeads() {
   }
 }
 
+/**
+ * Toggles visibility of the relationship management panel.
+ */
 function showRelationshipPanel() {
   const panel = document.getElementById('relationship-panel');
   if (panel.style.display === 'none') {
@@ -342,6 +411,9 @@ function showRelationshipPanel() {
   }
 }
 
+/**
+ * Hides the relationship panel and resets its form inputs.
+ */
 function hideRelationshipPanel() {
   document.getElementById('relationship-panel').style.display = 'none';
   // Clear inputs
@@ -349,6 +421,9 @@ function hideRelationshipPanel() {
   document.getElementById('target-bead').value = '';
 }
 
+/**
+ * Links two beads with the selected relationship type.
+ */
 function linkBeads() {
   const sourceBead = document.getElementById('source-bead').value.trim();
   const targetBead = document.getElementById('target-bead').value.trim();
@@ -366,6 +441,9 @@ function linkBeads() {
   hideRelationshipPanel();
 }
 
+/**
+ * Unlinks two beads by removing the selected relationship type.
+ */
 function unlinkBeads() {
   const sourceBead = document.getElementById('source-bead').value.trim();
   const targetBead = document.getElementById('target-bead').value.trim();

@@ -56,14 +56,38 @@ Press Enter or click the ▶ button to execute.
 To work on this extension:
 
 1. Open the folder in VS Code
-2. Run `npm install` to install dependencies
+2. Run `npm install` to install dependencies (also installs git hooks)
 3. Press `F5` to launch Extension Development Host
 4. Make changes to `extension.js`
 5. Reload the Extension Development Host window to test changes
 
+### Pre-commit Hooks
+
+This project uses **husky** to enforce code quality on every commit. Hooks are installed automatically when you run `npm install`.
+
+The following validations run before each commit and **must all pass**:
+
+| Check | Requirement |
+|-------|-------------|
+| **Lint** | Zero ESLint warnings or errors |
+| **File length** | All source files ≤ 500 lines |
+| **No skipped tests** | No `.skip()`, `.only()`, `xit()`, etc. |
+| **Type annotations** | JSDoc on all exported functions |
+| **Test coverage** | ≥ 80% line/branch/function coverage |
+
+If any check fails, the commit is blocked with a clear error message.
+
+```bash
+# Run the pre-commit checks manually
+npm run pre-commit
+
+# Run tests with coverage report
+npm run test:coverage
+```
+
 ### Testing
 
-This extension includes comprehensive test coverage with 30+ tests:
+This extension includes comprehensive test coverage with 50+ tests:
 
 ```bash
 # Run all tests (lint + integration tests)
@@ -74,6 +98,9 @@ npm run lint
 
 # Run unit tests
 npm run test:unit
+
+# Run with coverage
+npm run test:coverage
 ```
 
 **Test Coverage:**
@@ -84,6 +111,9 @@ npm run test:unit
 - ✅ Environment variable configuration
 - ✅ Security validations
 - ✅ Integration with VS Code APIs
+- ✅ JSON parsing & form command building
+- ✅ AI suggestion response parsing
+- ✅ Pre-commit hook configuration
 
 For detailed testing documentation, see [TESTING.md](./TESTING.md).
 
