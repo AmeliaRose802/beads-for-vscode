@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import IssueCard from './IssueCard';
 import StatsDisplay from './StatsDisplay';
 
-const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, onReopenIssue, onEditIssue, onLinkParent, onTypeChange, onPriorityChange, issueDetails = {}, loadingDetails = {}, vscode }) => {
+const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, onReopenIssue, onEditIssue, onLinkParent, onTypeChange, onPriorityChange, onAssigneeChange, issueDetails = {}, loadingDetails = {}, vscode }) => {
   const [draggedIssue, setDraggedIssue] = useState(null);
   const className = isError ? 'error' : isSuccess ? 'success' : '';
   
@@ -11,6 +11,13 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
   }
   
   if (typeof output === 'object' && output.type === 'list') {
+    // Extract existing assignees from all issues
+    const existingAssignees = [...new Set(
+      [...output.openIssues, ...output.closedIssues]
+        .map(issue => issue.assignee)
+        .filter(Boolean)
+    )];
+
     // Group issues by type for better organization
     const groupedIssues = output.openIssues.reduce((groups, issue) => {
       const type = issue.type || 'task';
@@ -72,6 +79,8 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
                     onEdit={() => onEditIssue(issue.id)}
                     onTypeChange={onTypeChange}
                     onPriorityChange={onPriorityChange}
+                    onAssigneeChange={onAssigneeChange}
+                    existingAssignees={existingAssignees}
                     detailedData={issueDetails[issue.id]}
                     isLoadingDetails={loadingDetails[issue.id]}
                     onDragStart={handleDragStart}
@@ -100,6 +109,8 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
                   onClose={() => onCloseIssue(issue.id)}
                   onReopen={() => onReopenIssue(issue.id)}
                   onEdit={() => onEditIssue(issue.id)}
+                  onAssigneeChange={onAssigneeChange}
+                  existingAssignees={existingAssignees}
                   detailedData={issueDetails[issue.id]}
                   isLoadingDetails={loadingDetails[issue.id]}
                   vscode={vscode}

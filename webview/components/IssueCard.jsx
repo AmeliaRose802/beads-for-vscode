@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import AssigneeDropdown from './AssigneeDropdown';
 
-const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, onPriorityChange, detailedData, isLoadingDetails, onDragStart, onDrop, isDragging, isDropTarget, vscode }) => {
+const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, onPriorityChange, onAssigneeChange, existingAssignees, detailedData, isLoadingDetails, onDragStart, onDrop, isDragging, isDropTarget, vscode }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [comments, setComments] = useState([]);
   const [loadingComments, setLoadingComments] = useState(false);
@@ -8,14 +9,18 @@ const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, on
   const [dependencies, setDependencies] = useState(null);
   const [dependents, setDependents] = useState(null);
   const [loadingDeps, setLoadingDeps] = useState(false);
+  const [isEditingAssignee, setIsEditingAssignee] = useState(false);
+  const [assigneeSaveState, setAssigneeSaveState] = useState('idle'); // idle, saving, saved, error
   const isClosed = issue.status === 'closed';
 
   // Calculate total relationship count
   const totalRelationships = (issue.dependency_count || 0) + (issue.dependent_count || 0);
 
   const handleCardClick = (e) => {
-    // Don't trigger card click if clicking on action buttons or quick edit
-    if (e.target.closest('.issue-card__actions') || e.target.closest('.issue-card__quick-edit')) {
+    // Don't trigger card click if clicking on action buttons, quick edit, or assignee editor
+    if (e.target.closest('.issue-card__actions') || 
+        e.target.closest('.issue-card__quick-edit') ||
+        e.target.closest('.issue-card__assignee-editor')) {
       return;
     }
     
@@ -155,6 +160,47 @@ const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, on
     setShowQuickEdit(!showQuickEdit);
   };
 
+  const handleAssigneeClick = (e) => {
+    e.stopPropagation();
+    if (!isClosed && onAssigneeChange) {
+      setIsEditingAssignee(true);
+    }
+  };
+
+  const handleAssigneeChange = async (newAssignee) => {
+    if (!onAssigneeChange) return;
+
+    setAssigneeSaveState('saving');
+    
+    try {
+      await onAssigneeChange(issue.id, newAssignee);
+      setAssigneeSaveState('saved');
+      
+      // Reset to idle after showing saved state
+      setTimeout(() => {
+        setAssigneeSaveState('idle');
+        setIsEditingAssignee(false);
+      }, 1500);
+    } catch (error) {
+      setAssigneeSaveState('error');
+      
+      // Reset to idle after showing error
+      setTimeout(() => {
+        setAssigneeSaveState('idle');
+      }, 3000);
+    }
+  };
+
+  const handleAssigneeBlur = () => {
+    // Only close if not saving
+    if (assigneeSaveState !== 'saving') {
+      setTimeout(() => {
+        setIsEditingAssignee(false);
+        setAssigneeSaveState('idle');
+      }, 200); // Small delay to allow click events to fire
+    }
+  };
+
   const priorityClass = `issue-card--priority-${issue.priority.toLowerCase()}`;
   const clickableClass = onClick ? '' : 'issue-card--not-clickable';
   const draggingClass = isDragging ? 'issue-card--dragging' : '';
@@ -194,10 +240,32 @@ const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, on
               🔗 {totalRelationships}
             </span>
           )}
-          {issue.status === 'in_progress' && (issue.assignee || detailedData?.assignee) && (
-            <span className="issue-card__assignee-badge" title="Assigned to">
-              👤 {issue.assignee || detailedData?.assignee}
-            </span>
+          {!isClosed && (
+            <div 
+              className={`issue-card__assignee-editor ${isEditingAssignee ? 'issue-card__assignee-editor--active' : ''}`}
+              onClick={handleAssigneeClick}
+            >
+              {!isEditingAssignee ? (
+                <span 
+                  className="issue-card__assignee-display"
+                  title={onAssigneeChange ? 'Click to edit assignee' : 'Assignee'}
+                >
+                  {assigneeSaveState === 'saving' && '⏳ '}
+                  {assigneeSaveState === 'saved' && '✓ '}
+                  {assigneeSaveState === 'error' && '❌ '}
+                  👤 {issue.assignee || detailedData?.assignee || 'Unassigned'}
+                </span>
+              ) : (
+                <div className="issue-card__assignee-input-wrapper" onClick={(e) => e.stopPropagation()}>
+                  <AssigneeDropdown
+                    value={issue.assignee || detailedData?.assignee || ''}
+                    onChange={handleAssigneeChange}
+                    existingAssignees={existingAssignees || []}
+                    placeholder="Select or type assignee"
+                  />
+                </div>
+              )}
+            </div>
           )}
         </div>
         <div className="issue-card__actions">

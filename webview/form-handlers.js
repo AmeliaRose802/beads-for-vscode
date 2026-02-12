@@ -51,4 +51,62 @@ function buildUpdateCommand(state) {
   return command;
 }
 
-module.exports = { buildCreateCommand, buildUpdateCommand };
+/**
+ * Create an async assignee change handler that uses vscode messaging.
+ * @param {object} vscode - The VS Code API object
+ * @param {object} output - Current output state for refreshing list
+ * @param {Function} runCommand - Function to re-run current list command
+ * @returns {Function} Handler function (issueId, newAssignee) => Promise
+ */
+function createAssigneeChangeHandler(vscode, output, runCommand) {
+  return function handleAssigneeChange(issueId, newAssignee) {
+    return new Promise((resolve, reject) => {
+      const assigneeArg = newAssignee.trim() ? `--assignee "${newAssignee}"` : '--assignee ""';
+      const command = `update ${issueId} ${assigneeArg}`;
+      const successMsg = newAssignee.trim() 
+        ? `Assigned ${issueId} to ${newAssignee}`
+        : `Cleared assignee for ${issueId}`;
+      
+      // Execute the command
+      vscode.postMessage({
+        type: 'executeCommand',
+        command: command,
+        isInlineAction: true,
+        successMessage: successMsg
+      });
+
+      // Listen for the response
+      // eslint-disable-next-line no-undef
+      const handler = (event) => {
+        const message = event.data;
+        if (message.type === 'inlineActionResult' && message.command === command) {
+          // eslint-disable-next-line no-undef
+          window.removeEventListener('message', handler);
+          if (message.success) {
+            resolve();
+            // Refresh the list after a short delay
+            setTimeout(() => {
+              if (typeof output === 'object' && output.command) {
+                runCommand(output.command);
+              }
+            }, 500);
+          } else {
+            reject(new Error(message.output || 'Failed to update assignee'));
+          }
+        }
+      };
+
+      // eslint-disable-next-line no-undef
+      window.addEventListener('message', handler);
+
+      // Timeout after 5 seconds
+      setTimeout(() => {
+        // eslint-disable-next-line no-undef
+        window.removeEventListener('message', handler);
+        reject(new Error('Timeout updating assignee'));
+      }, 5000);
+    });
+  };
+}
+
+module.exports = { buildCreateCommand, buildUpdateCommand, createAssigneeChangeHandler };

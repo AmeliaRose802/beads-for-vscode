@@ -5,7 +5,7 @@ import RelationshipPanel from './components/RelationshipPanel';
 import EditPanel from './components/EditPanel';
 import DependencyGraph from './components/DependencyGraph';
 const { parseListJSON, parseStatsOutput } = require('./parse-utils');
-const { buildCreateCommand, buildUpdateCommand } = require('./form-handlers');
+const { buildCreateCommand, buildUpdateCommand, createAssigneeChangeHandler } = require('./form-handlers');
 
 const vscode = acquireVsCodeApi();
 
@@ -265,6 +265,9 @@ const App = () => {
     runInlineAction(`update ${issueId} --priority ${newPriority}`, `Updated ${issueId} priority to P${newPriority}`);
   };
 
+  // Create assignee change handler using the extracted function
+  const handleAssigneeChange = createAssigneeChangeHandler(vscode, output, runCommand);
+
   const runInlineAction = (command, successMessage) => {
     // Execute command without clearing current view
     vscode.postMessage({
@@ -478,6 +481,7 @@ const App = () => {
               onLinkParent={(childId, parentId) => runInlineAction(`dep add ${childId} --parent ${parentId}`, `Linked ${childId} → ${parentId}`)}
               onTypeChange={handleQuickTypeChange}
               onPriorityChange={handleQuickPriorityChange}
+              onAssigneeChange={handleAssigneeChange}
               issueDetails={issueDetails}
               loadingDetails={loadingDetails}
               vscode={vscode}

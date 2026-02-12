@@ -235,6 +235,58 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   max-width: 150px;
 }
 
+/* Inline Assignee Editor */
+.issue-card__assignee-editor {
+  position: relative;
+  min-width: 100px;
+  max-width: 200px;
+}
+
+.issue-card__assignee-display {
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  background-color: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.issue-card__assignee-display:hover {
+  background-color: var(--vscode-list-hoverBackground);
+}
+
+.issue-card__assignee-editor--active .issue-card__assignee-display {
+  display: none;
+}
+
+.issue-card__assignee-input-wrapper {
+  position: absolute;
+  top: -4px;
+  left: 0;
+  z-index: 100;
+  min-width: 180px;
+  background-color: var(--vscode-dropdown-background);
+  border: 1px solid var(--vscode-focusBorder);
+  border-radius: 3px;
+  padding: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.issue-card__assignee-input-wrapper .assignee-dropdown {
+  width: 100%;
+}
+
+.issue-card__assignee-input-wrapper .assignee-dropdown__input {
+  font-size: 11px;
+  padding: 4px 6px;
+}
+
 .issue-card__relationships-badge {
   padding: 2px 6px;
   border-radius: 3px;
