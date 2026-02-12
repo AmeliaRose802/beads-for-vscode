@@ -4,3 +4,5 @@ node_modules/
 webview/bundle.js
 webview/bundle.js.map
 coverage/
+.pokepoke/
+logs/
