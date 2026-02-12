@@ -17,8 +17,49 @@ This repository uses directory-specific custom instructions to provide context-a
 - **`.github/instructions/services.instructions.md`** - Service layer, handlers, and configuration patterns
 - **`.github/instructions/tests.instructions.md`** - Testing standards and patterns
 - **`.github/instructions/documentation.instructions.md`** - Documentation requirements and style guide
+- **`.github/instructions/react-ui.instructions.md`** - React UI development guidelines (NO INLINE STYLES!)
 
 These instructions are automatically applied when working in their respective directories.
+
+---
+
+## 🚫 CRITICAL: NO INLINE STYLES IN REACT COMPONENTS
+
+### Absolute Rule for React/JSX Code
+
+**NEVER** use inline `style={{}}` attributes in JSX components. This is a critical project standard.
+
+### ❌ FORBIDDEN:
+```jsx
+<div style={{ padding: '8px', backgroundColor: 'red' }}>Content</div>
+```
+
+### ✅ REQUIRED:
+```jsx
+// In JSX
+<div className="my-component">Content</div>
+
+// In styles.css
+.my-component {
+  padding: 8px;
+  background-color: var(--vscode-editor-background);
+}
+```
+
+### Why This Rule Exists:
+- Maintains separation of concerns
+- Keeps styles centralized and maintainable
+- Leverages VS Code theme variables
+- Prevents style duplication and inconsistency
+- Makes global style changes easier
+
+### Only Exception:
+Truly dynamic values that **cannot** be expressed in CSS (e.g., calculated positions from runtime data). This should be extremely rare.
+
+### Enforcement:
+If you catch yourself writing `style={{`, **STOP** and create a CSS class instead.
+
+---
 
 ## Enhanced ADO MCP Server
 
@@ -121,15 +162,31 @@ bd info --json
    bd update <id> --status in_progress --json
    ```
 
-5. **Complete work**:
+5. **Write and run tests**:
+   ```bash
+   # NEVER close a bd issue without test coverage
+   # Write tests first, then implement, then verify tests pass
+   npm test
+   ```
+
+6. **Complete work ONLY after tests pass**:
    ```bash
    bd close <id> --reason "Implemented and tested" --json
    ```
 
-6. **End of session - sync immediately**:
+7. **End of session - sync immediately**:
    ```bash
    bd sync
    ```
+
+### ⚠️ CRITICAL: TEST COVERAGE REQUIREMENT
+
+**NEVER close a beads issue without:**
+1. Writing test coverage for the feature/fix
+2. Running the tests to ensure they pass
+3. Verifying the fix/feature works as expected
+
+**Closing an issue without tests is FORBIDDEN.**
 
 ### Issue Types & Priorities
 

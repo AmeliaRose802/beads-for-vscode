@@ -13,19 +13,6 @@ A VS Code extension providing a user interface for the beads (bd) command-line i
 
 ## Installation
 
-### From Source (Development)
-
-1. Open this folder in VS Code
-2. Press `F5` to launch a new VS Code window with the extension loaded
-
-### Manual Installation
-
-1. Copy this entire folder to your VS Code extensions directory:
-   - **Windows**: `%USERPROFILE%\.vscode\extensions\`
-   - **macOS/Linux**: `~/.vscode/extensions/`
-2. Restart VS Code
-3. The Beads icon will appear in the Activity Bar
-
 ## Usage
 
 1. Open a workspace/folder that contains a bd-initialized project
@@ -56,6 +43,8 @@ Press Enter or click the ▶ button to execute.
 
 - VS Code 1.75.0 or higher
 - The `bd` command-line tool must be installed and available in your PATH
+  - Install from: https://github.com/steveyegge/beads
+  - If not installed, you'll see an error message with installation instructions
 - A bd-initialized workspace (run `bd init` in your project directory)
 
 ## Commands

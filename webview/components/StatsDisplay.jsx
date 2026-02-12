@@ -14,11 +14,13 @@ const StatItem = ({ label, value, percentage, colorClass }) => (
 
 const StatsDisplay = ({ stats, header, command }) => {
   const total = parseInt(stats['Total Issues'] || '0');
-  const open = parseInt(stats['Open'] || '0');
   const inProgress = parseInt(stats['In Progress'] || '0');
   const closed = parseInt(stats['Closed'] || '0');
   const blocked = parseInt(stats['Blocked'] || '0');
   const ready = parseInt(stats['Ready'] || '0');
+  
+  // Calculate open as total - closed (all non-closed issues)
+  const open = total - closed;
 
   const getPercentage = (value) => total > 0 ? (value / total * 100).toFixed(1) : 0;
 
@@ -41,8 +43,8 @@ const StatsDisplay = ({ stats, header, command }) => {
       {/* Status & Work in Grid */}
       <div className="stats-display__grid">
         <StatItem
-          label="Open"
-          value={open}
+          label="Open / Ready"
+          value={`${open} / ${ready}`}
           percentage={getPercentage(open)}
           colorClass="stat-item--blue"
         />
@@ -66,13 +68,6 @@ const StatsDisplay = ({ stats, header, command }) => {
           value={blocked}
           percentage={getPercentage(blocked)}
           colorClass="stat-item--red"
-        />
-
-        <StatItem
-          label="Ready"
-          value={ready}
-          percentage={getPercentage(ready)}
-          colorClass="stat-item--cyan"
         />
       </div>
 

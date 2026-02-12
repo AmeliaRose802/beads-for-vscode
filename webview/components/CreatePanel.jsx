@@ -5,12 +5,21 @@ const CreatePanel = ({
   type, 
   priority, 
   description,
+  parentId,
+  blocksId,
+  relatedId,
+  currentFile,
   onTitleChange,
   onTypeChange,
   onPriorityChange,
   onDescriptionChange,
+  onParentIdChange,
+  onBlocksIdChange,
+  onRelatedIdChange,
   onCreate,
-  onCancel
+  onCancel,
+  onAISuggest,
+  isAILoading
 }) => {
   return (
     <div className="section">
@@ -18,13 +27,23 @@ const CreatePanel = ({
       <div className="relationship-content">
         <div className="relationship-group">
           <label className="relationship-label">Title *</label>
-          <input
-            type="text"
-            className="relationship-input"
-            placeholder="Brief description of the issue"
-            value={title}
-            onChange={(e) => onTitleChange(e.target.value)}
-          />
+          <div className="title-input-row">
+            <input
+              type="text"
+              className="relationship-input title-input"
+              placeholder="Brief description of the issue"
+              value={title}
+              onChange={(e) => onTitleChange(e.target.value)}
+            />
+            <button 
+              className="action-btn ai-suggest-btn" 
+              onClick={onAISuggest}
+              disabled={!title.trim() || isAILoading}
+              title="Use AI to suggest type, priority, and related issues"
+            >
+              {isAILoading ? '⏳ Analyzing...' : '✨ AI Suggest'}
+            </button>
+          </div>
         </div>
 
         <div className="relationship-group">
@@ -67,6 +86,48 @@ const CreatePanel = ({
             onChange={(e) => onDescriptionChange(e.target.value)}
           />
         </div>
+
+        <div className="relationship-group">
+          <label className="relationship-label">Related Issues (optional)</label>
+          <div className="relationship-grid">
+            <input
+              type="text"
+              className="relationship-input relationship-input-compact"
+              placeholder="Parent (e.g., beads_ui-5)"
+              value={parentId}
+              onChange={(e) => onParentIdChange(e.target.value)}
+              title="This issue will be a child of the parent"
+            />
+            <input
+              type="text"
+              className="relationship-input relationship-input-compact"
+              placeholder="Blocks (e.g., beads_ui-10)"
+              value={blocksId}
+              onChange={(e) => onBlocksIdChange(e.target.value)}
+              title="This issue must be completed before the blocked issue"
+            />
+            <input
+              type="text"
+              className="relationship-input relationship-input-compact"
+              placeholder="Related (e.g., beads_ui-15)"
+              value={relatedId}
+              onChange={(e) => onRelatedIdChange(e.target.value)}
+              title="This issue is related to another issue"
+            />
+          </div>
+        </div>
+
+        {currentFile && (
+          <div className="relationship-group">
+            <label className="relationship-label">📎 Current File Reference</label>
+            <div className="file-reference">
+              {currentFile}
+            </div>
+            <div className="relationship-info">
+              <small>Will be added to issue notes</small>
+            </div>
+          </div>
+        )}
 
         <div className="relationship-actions">
           <button className="action-btn" onClick={onCreate}>

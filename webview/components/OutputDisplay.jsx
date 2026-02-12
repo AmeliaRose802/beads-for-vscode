@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import IssueCard from './IssueCard';
 import StatsDisplay from './StatsDisplay';
 
-const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, onReopenIssue }) => {
+const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, onReopenIssue, onEditIssue, onLinkParent, onTypeChange, onPriorityChange, issueDetails = {}, loadingDetails = {}, vscode }) => {
+  const [draggedIssue, setDraggedIssue] = useState(null);
   const className = isError ? 'error' : isSuccess ? 'success' : '';
   
   if (typeof output === 'object' && output.type === 'stats') {
@@ -10,6 +11,37 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
   }
   
   if (typeof output === 'object' && output.type === 'list') {
+    // Group issues by type for better organization
+    const groupedIssues = output.openIssues.reduce((groups, issue) => {
+      const type = issue.type || 'task';
+      if (!groups[type]) {
+        groups[type] = [];
+      }
+      groups[type].push(issue);
+      return groups;
+    }, {});
+
+    // Define display order for issue types
+    const typeOrder = ['epic', 'feature', 'bug', 'task', 'chore'];
+    const typeLabels = {
+      epic: '📚 Epics',
+      feature: '✨ Features',
+      bug: '🐛 Bugs',
+      task: '📋 Tasks',
+      chore: '🔧 Chores'
+    };
+
+    const handleDragStart = (issue) => {
+      setDraggedIssue(issue);
+    };
+
+    const handleDrop = (targetIssue) => {
+      if (draggedIssue && draggedIssue.id !== targetIssue.id && onLinkParent) {
+        onLinkParent(draggedIssue.id, targetIssue.id);
+      }
+      setDraggedIssue(null);
+    };
+
     return (
       <div className={`output ${className} output-display`}>
         <div className="output-display__command">
@@ -20,15 +52,40 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
             {output.header}
           </div>
         )}
-        {output.openIssues.map((issue, idx) => (
-          <IssueCard 
-            key={idx} 
-            issue={issue} 
-            onClick={() => onShowIssue(issue.id)}
-            onClose={() => onCloseIssue(issue.id)}
-            onReopen={() => onReopenIssue(issue.id)}
-          />
-        ))}
+        
+        {typeOrder.map(type => {
+          if (!groupedIssues[type] || groupedIssues[type].length === 0) return null;
+          
+          return (
+            <div key={type} className="issue-group">
+              <div className="issue-group__header">
+                {typeLabels[type]} ({groupedIssues[type].length})
+              </div>
+              <div className="issue-group__items">
+                {groupedIssues[type].map((issue, idx) => (
+                  <IssueCard 
+                    key={idx} 
+                    issue={issue} 
+                    onClick={() => onShowIssue(issue.id)}
+                    onClose={() => onCloseIssue(issue.id)}
+                    onReopen={() => onReopenIssue(issue.id)}
+                    onEdit={() => onEditIssue(issue.id)}
+                    onTypeChange={onTypeChange}
+                    onPriorityChange={onPriorityChange}
+                    detailedData={issueDetails[issue.id]}
+                    isLoadingDetails={loadingDetails[issue.id]}
+                    onDragStart={handleDragStart}
+                    onDrop={handleDrop}
+                    isDragging={draggedIssue?.id === issue.id}
+                    isDropTarget={draggedIssue && (issue.type === 'epic' || issue.type === 'feature') && draggedIssue.id !== issue.id}
+                    vscode={vscode}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })}
+        
         {output.closedIssues.length > 0 && (
           <details className="output-display__closed-section">
             <summary className="output-display__closed-summary">
@@ -42,6 +99,10 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
                   onClick={() => onShowIssue(issue.id)}
                   onClose={() => onCloseIssue(issue.id)}
                   onReopen={() => onReopenIssue(issue.id)}
+                  onEdit={() => onEditIssue(issue.id)}
+                  detailedData={issueDetails[issue.id]}
+                  isLoadingDetails={loadingDetails[issue.id]}
+                  vscode={vscode}
                 />
               ))}
             </div>
