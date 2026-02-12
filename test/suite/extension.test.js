@@ -521,7 +521,7 @@ function getBeadsViewProviderClass() {
 
     _getHtmlForWebview(_webview) {
       const fs = require('fs');
-      const htmlPath = path.join(this._extensionUri.fsPath, 'webview.html');
+      const htmlPath = path.join(this._extensionUri.fsPath, 'webview', 'index.html');
       return fs.readFileSync(htmlPath, 'utf8');
     }
   }
