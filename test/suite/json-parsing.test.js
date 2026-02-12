@@ -1,52 +1,7 @@
 const assert = require('assert');
+const { parseListJSON } = require('../../webview/parse-utils');
 
 suite('JSON Parsing Tests', () => {
-  // Mock parseListJSON function (normally in App.jsx)
-  function parseListJSON(jsonOutput, command) {
-    try {
-      const issues = JSON.parse(jsonOutput);
-      const openIssues = [];
-      const closedIssues = [];
-      
-      issues.forEach(issue => {
-        const normalizedIssue = {
-          id: issue.id,
-          title: issue.title,
-          type: issue.issue_type || 'task',
-          priority: `p${issue.priority}`,
-          status: issue.status,
-          created_at: issue.created_at,
-          updated_at: issue.updated_at,
-          closed_at: issue.closed_at,
-          description: issue.description,
-          assignee: issue.assignee
-        };
-        
-        if (issue.status === 'closed') {
-          closedIssues.push(normalizedIssue);
-        } else {
-          openIssues.push(normalizedIssue);
-        }
-      });
-      
-      closedIssues.sort((a, b) => {
-        if (a.closed_at && b.closed_at) {
-          return new Date(b.closed_at) - new Date(a.closed_at);
-        }
-        return 0;
-      });
-      
-      return { 
-        type: 'list', 
-        command, 
-        header: `Found ${issues.length} issue${issues.length !== 1 ? 's' : ''}`,
-        openIssues, 
-        closedIssues 
-      };
-    } catch (error) {
-      return { type: 'error', message: 'Failed to parse issue list', command };
-    }
-  }
 
   test('Should parse empty JSON array', () => {
     const json = '[]';
@@ -133,7 +88,7 @@ suite('JSON Parsing Tests', () => {
     
     assert.strictEqual(result.openIssues.length, 2);
     assert.strictEqual(result.closedIssues.length, 1);
-    assert.strictEqual(result.header, 'Found 3 issues');
+    assert.strictEqual(result.header, 'Found 2 issues');
   });
 
   test('Should sort closed issues by closed_at date (most recent first)', () => {

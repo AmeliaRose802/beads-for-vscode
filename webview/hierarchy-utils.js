@@ -1,3 +1,5 @@
+const { getField } = require('./field-utils');
+
 /**
  * Build the hierarchy model (parent chain + dependency tree) for an issue.
  *
@@ -183,21 +185,6 @@ function createFallbackIssue(issueId) {
     priority: 'unknown',
     issue_type: 'task'
   };
-}
-
-/**
- * Safely extract a field value from an object using multiple candidate keys.
- * @param {object} obj - Source object.
- * @param {Array<string>} keys - Keys to test in order.
- * @returns {any} Matching value or undefined.
- */
-function getField(obj, keys) {
-  for (const key of keys) {
-    if (Object.prototype.hasOwnProperty.call(obj, key) && obj[key] !== undefined) {
-      return obj[key];
-    }
-  }
-  return undefined;
 }
 
 module.exports = { buildHierarchyModel };
