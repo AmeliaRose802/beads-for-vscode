@@ -1,6 +1,7 @@
 node_modules/
 *.vsix
 .vscode-test/
+.vscode-test-user/
 webview/bundle.js
 webview/bundle.js.map
 coverage/
