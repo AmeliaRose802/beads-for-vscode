@@ -566,4 +566,19 @@ Document in feature spec or README:
 
 ---
 
+## 🚫 CRITICAL: Pre-Commit Validation Compliance
+
+This project uses a pre-commit hook (`scripts/pre-commit-check.js`) that enforces lint, file length, test coverage, type annotations, and no-skipped-tests checks.
+
+**MANDATORY:** All pre-commit validations must pass before committing. Using `--no-verify`, `git commit -n`, or any other bypass mechanism is **ABSOLUTELY PROHIBITED** and violates project policy.
+
+**Before every commit:**
+1. Run `node scripts/pre-commit-check.js` to verify all checks pass
+2. Fix any failures — do NOT bypass or suppress them
+3. Ensure test coverage meets ≥ 80% threshold
+
+See `.github/copilot-instructions.md` for the full pre-commit compliance policy.
+
+---
+
 **Last Updated:** 2025-10-07

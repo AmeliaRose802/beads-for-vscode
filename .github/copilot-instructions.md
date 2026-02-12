@@ -61,6 +61,68 @@ If you catch yourself writing `style={{`, **STOP** and create a CSS class instea
 
 ---
 
+## 🚫 CRITICAL: NEVER BYPASS PRE-COMMIT VALIDATIONS
+
+### Absolute Rule for All Commits
+
+This project uses a **pre-commit hook** (`scripts/pre-commit-check.js`) that enforces lint, file length, test coverage, type annotations, and no-skipped-tests checks. These validations are **NON-NEGOTIABLE** and must pass before every commit.
+
+### ❌ ABSOLUTELY FORBIDDEN — NO EXCEPTIONS:
+
+**The following flags and techniques are PROHIBITED:**
+```bash
+# FORBIDDEN — bypasses ALL pre-commit hooks
+git commit --no-verify
+git commit -n
+
+# FORBIDDEN — bypasses pre-commit hooks
+git commit --no-verify -m "quick fix"
+
+# FORBIDDEN — disabling or removing the hook
+rm .husky/pre-commit
+chmod -x .husky/pre-commit
+git config core.hooksPath /dev/null
+HUSKY=0 git commit -m "..."
+```
+
+**Using `--no-verify` or any bypass mechanism violates project policy and is NEVER acceptable, regardless of urgency or justification.**
+
+### ✅ MANDATORY: What You MUST Do Instead
+
+1. **Run validations BEFORE committing**: `node scripts/pre-commit-check.js`
+2. **Fix ALL validation failures** — lint errors, coverage gaps, missing JSDoc, file length violations
+3. **Never suppress, skip, or work around** any pre-commit check
+4. **If a check fails, diagnose and fix the root cause** — do not disable the check
+
+### What the Pre-Commit Hook Validates
+
+| Check | Requirement |
+|-------|------------|
+| **Lint** | Zero ESLint warnings or errors |
+| **File length** | All source files ≤ 500 lines |
+| **No skipped tests** | No `.skip()`, `.only()`, `xit()`, `xdescribe()` |
+| **Type annotations** | Exported functions must have JSDoc |
+| **Test coverage** | ≥ 80% line, branch, and function coverage |
+
+### ⚠️ Consequences of Bypassing Validations
+
+- **Code quality degradation** — lint errors, missing docs, and untested code accumulate
+- **CI failures** — bypassed checks will fail in the CI pipeline
+- **Technical debt** — skipped validations lead to harder-to-maintain code
+- **Policy violation** — bypassing pre-commit hooks is treated as a project policy violation
+
+### Handling Validation Failures
+
+If a pre-commit check fails:
+1. **READ the error output** — it tells you exactly what failed and where
+2. **FIX the issue** — refactor long files, add JSDoc, fix lint errors, increase coverage
+3. **Re-run the check** — `node scripts/pre-commit-check.js`
+4. **Only commit when ALL checks pass**
+
+**There is NO scenario where bypassing validations is the correct action.**
+
+---
+
 ## Enhanced ADO MCP Server
 
 This workspace has the **Enhanced ADO MCP Server** available, which provides AI-powered tools for Azure DevOps work item operations.
