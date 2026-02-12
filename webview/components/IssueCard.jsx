@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import AssigneeDropdown from './AssigneeDropdown';
 
-const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, onPriorityChange, onAssigneeChange, existingAssignees, detailedData, isLoadingDetails, onDragStart, onDrop, isDragging, isDropTarget, vscode }) => {
+const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, onPriorityChange, onAssigneeChange, onShowHierarchy, existingAssignees, detailedData, isLoadingDetails, onDragStart, onDrop, isDragging, isDropTarget, vscode }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [comments, setComments] = useState([]);
   const [loadingComments, setLoadingComments] = useState(false);
@@ -77,7 +77,14 @@ const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, on
       window.addEventListener('message', handler);
     }
   };
-  
+
+  const handleShowHierarchyClick = (e) => {
+    e.stopPropagation();
+    if (onShowHierarchy) {
+      onShowHierarchy(issue.id);
+    }
+  };
+
   const parseComments = (output) => {
     if (output.includes('No comments')) {
       return [];
@@ -269,6 +276,12 @@ const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, on
           )}
         </div>
         <div className="issue-card__actions">
+          <button
+            onClick={handleShowHierarchyClick}
+            className="issue-card__action-btn"
+            title="Show hierarchy view">
+            🌳
+          </button>
           {!isClosed && onTypeChange && onPriorityChange && (
             <button
               onClick={toggleQuickEdit}
