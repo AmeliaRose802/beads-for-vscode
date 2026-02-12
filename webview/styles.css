@@ -263,6 +263,27 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 }
 .issue-card__title { color: var(--vscode-foreground); font-size: 12px; line-height: 1.4; }
 
+.issue-card__tags {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.issue-card__tag {
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 10px;
+  line-height: 1.4;
+  background-color: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+  border: 1px solid var(--vscode-panel-border);
+  max-width: 100%;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
 /* Quick Edit Dropdowns */
 .issue-card__quick-edit {
   display: flex;
