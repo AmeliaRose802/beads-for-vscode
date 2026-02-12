@@ -5,6 +5,11 @@
 
 const { getField } = require('./field-utils');
 
+/**
+ * Format a priority value into a normalized string like 'p0', 'p1', etc.
+ * @param {number|string|null|undefined} priority - Raw priority value
+ * @returns {string} Normalized priority string
+ */
 function formatPriority(priority) {
   if (priority === undefined || priority === null) return 'p2';
   const raw = String(priority).trim();
@@ -15,6 +20,11 @@ function formatPriority(priority) {
   return `p${raw || '2'}`;
 }
 
+/**
+ * Normalize a raw issue object into a consistent shape.
+ * @param {Object} issue - Raw issue from bd output
+ * @returns {Object|null} Normalized issue or null if invalid
+ */
 function normalizeIssue(issue) {
   if (!issue || !issue.id) {
     return null;
@@ -37,6 +47,11 @@ function normalizeIssue(issue) {
   };
 }
 
+/**
+ * Parse graph component data from a string or array.
+ * @param {string|Array} graphData - Raw graph data
+ * @returns {Array} Parsed array of graph components
+ */
 function parseGraphComponents(graphData) {
   if (!graphData) return [];
   try {
@@ -50,6 +65,11 @@ function parseGraphComponents(graphData) {
   }
 }
 
+/**
+ * Build a lookup map of child ID to parent ID from graph components.
+ * @param {Array} graphComponents - Parsed graph components with dependencies
+ * @returns {Object} Map of child issue ID to parent issue ID
+ */
 function buildParentLookup(graphComponents) {
   const parentLookup = {};
 
@@ -81,6 +101,12 @@ function buildParentLookup(graphComponents) {
   return parentLookup;
 }
 
+/**
+ * Build a hierarchy tree from open issues and graph dependency data.
+ * @param {Array} openIssues - Array of normalized open issues
+ * @param {string|Array} graphData - Raw graph data for parent-child relationships
+ * @returns {Array<{issue: Object, children: Array}>} Tree of issues with children
+ */
 function buildHierarchyFromGraph(openIssues, graphData) {
   if (!Array.isArray(openIssues) || openIssues.length === 0) {
     return [];
