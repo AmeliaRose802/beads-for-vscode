@@ -5,9 +5,11 @@ import RelationshipPanel from './components/RelationshipPanel';
 import EditPanel from './components/EditPanel';
 import DependencyGraph from './components/DependencyGraph';
 import HierarchyView from './components/HierarchyView';
+import BlockingView from './components/BlockingView';
 const { parseListJSON, parseStatsOutput } = require('./parse-utils');
 const { buildCreateCommand, buildUpdateCommand, createAssigneeChangeHandler } = require('./form-handlers');
 const { buildHierarchyModel } = require('./hierarchy-utils');
+const { buildBlockingModel } = require('./blocking-utils');
 const { processMessage } = require('./message-handler');
 const { createAppActions } = require('./app-actions');
 
@@ -24,6 +26,8 @@ const App = () => {
   const [showEditPanel, setShowEditPanel] = useState(false);
   const [showDependencyGraph, setShowDependencyGraph] = useState(false);
   const [showHierarchyView, setShowHierarchyView] = useState(false);
+  const [showBlockingView, setShowBlockingView] = useState(false);
+  const [blockingModel, setBlockingModel] = useState(null);
   const [graphData, setGraphData] = useState(null);
   const [, setGraphRequestPurpose] = useState(null);
   const [, setHierarchyIssueId] = useState(null);
@@ -74,6 +78,7 @@ const App = () => {
     displayResult,
     runCommand,
     requestGraphData,
+    requestBlockingData,
     handleInlineActionResult,
     clearOutput,
     runInlineAction
@@ -87,7 +92,9 @@ const App = () => {
     setShowCreatePanel,
     setShowEditPanel,
     setShowHierarchyView,
+    setShowBlockingView,
     setHierarchyModel,
+    setBlockingModel,
     setCreateTitle,
     setCreateDescription,
     setCreateParentId,
@@ -135,7 +142,10 @@ const App = () => {
         setShowDependencyGraph,
         setHierarchyModel,
         setShowHierarchyView,
+        setBlockingModel,
+        setShowBlockingView,
         buildHierarchyModel,
+        buildBlockingModel,
         updateGraphPurpose,
         graphPurposeRef,
         hierarchyIssueRef
@@ -295,6 +305,7 @@ const App = () => {
             <button className="action-btn" onClick={() => { clearOutput(); setShowCreatePanel(!showCreatePanel); setShowRelationshipPanel(false); setShowDependencyGraph(false); }} title="Create a new issue">➕ Create</button>
             <button className="action-btn" onClick={() => { clearOutput(); setShowRelationshipPanel(!showRelationshipPanel); setShowCreatePanel(false); setShowDependencyGraph(false); }} title="Manage dependencies between issues">🔗 Links</button>
             <button className="action-btn" onClick={requestGraphData} title="Visualize dependency relationships as a graph">🔀 Graph</button>
+            <button className="action-btn" onClick={requestBlockingData} title="View blocking chains and completion order">🚧 Blocking</button>
           </div>
         </div>
 
@@ -377,7 +388,17 @@ const App = () => {
           </div>
         )}
 
-        {!showDependencyGraph && !showHierarchyView && (
+        {showBlockingView && (
+          <div className="section">
+            <BlockingView
+              blockingModel={blockingModel}
+              onIssueClick={(issue) => handleShowIssueInline(issue.id)}
+              onClose={() => setShowBlockingView(false)}
+            />
+          </div>
+        )}
+
+        {!showDependencyGraph && !showHierarchyView && !showBlockingView && (
           <div className="section output-section">
             <div className="output-header">
               <div className="section-title">Results</div>

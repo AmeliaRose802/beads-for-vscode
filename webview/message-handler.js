@@ -109,6 +109,17 @@ function processMessage(message, ctx) {
             ctx.setShowHierarchyView(false);
           }
         }
+        if (purpose === 'blocking') {
+          try {
+            const model = ctx.buildBlockingModel(message.data);
+            ctx.setBlockingModel(model);
+            ctx.setShowBlockingView(true);
+          } catch (error) {
+            ctx.setOutput(`Blocking View Error: ${error.message}`);
+            ctx.setIsError(true);
+            ctx.setShowBlockingView(false);
+          }
+        }
       }
       if (message.error) {
         ctx.setOutput(`Graph Error: ${message.error}`);

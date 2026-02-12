@@ -14,7 +14,9 @@ function createAppActions(ctx) {
     setShowCreatePanel,
     setShowEditPanel,
     setShowHierarchyView,
+    setShowBlockingView,
     setHierarchyModel,
+    setBlockingModel,
     setCreateTitle,
     setCreateDescription,
     setCreateParentId,
@@ -89,12 +91,29 @@ function createAppActions(ctx) {
     setShowRelationshipPanel(false);
     setShowCreatePanel(false);
     setShowEditPanel(false);
+    setShowBlockingView(false);
     if (purpose === 'graph') {
       setShowHierarchyView(false);
     } else {
       setHierarchyModel(null);
       setShowHierarchyView(false);
     }
+
+    vscode.postMessage({
+      type: 'getGraphData'
+    });
+  };
+
+  const requestBlockingData = () => {
+    updateGraphPurpose('blocking');
+    setOutput('Loading blocking view...');
+    setIsError(false);
+    setIsSuccess(false);
+    setShowRelationshipPanel(false);
+    setShowCreatePanel(false);
+    setShowEditPanel(false);
+    setShowHierarchyView(false);
+    setBlockingModel(null);
 
     vscode.postMessage({
       type: 'getGraphData'
@@ -141,6 +160,7 @@ function createAppActions(ctx) {
     displayResult,
     runCommand,
     requestGraphData,
+    requestBlockingData,
     handleInlineActionResult,
     clearOutput,
     runInlineAction
