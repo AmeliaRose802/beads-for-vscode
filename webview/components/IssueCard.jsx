@@ -163,6 +163,8 @@ const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, on
   // Only allow dragging for non-closed issues, and only epics/features can be drop targets
   const canBeDropTarget = issue.type === 'epic' || issue.type === 'feature';
   const canBeDragged = !isClosed && issue.type !== 'epic'; // Epics can't be children
+
+  const labels = Array.isArray(issue.labels) ? issue.labels.filter(Boolean) : [];
   
   return (
     <div 
