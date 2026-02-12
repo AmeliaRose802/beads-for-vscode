@@ -58,7 +58,7 @@
     "pre-commit": "node scripts/pre-commit-check.js",
     "test:coverage": "c8 --include webview/form-handlers.js --include webview/parse-utils.js --lines 80 --branches 80 --functions 80 npm run test:unit",
     "test": "node ./test/runTest.js",
-    "test:unit": "mocha test/suite/json-parsing.test.js test/suite/parse-utils.test.js test/suite/form-handlers.test.js test/suite/ai-suggestions.test.js test/suite/pre-commit.test.js test/suite/issue-card-tags.test.js test/suite/assignee-dropdown.test.js",
+    "test:unit": "mocha test/suite/json-parsing.test.js test/suite/parse-utils.test.js test/suite/form-handlers.test.js test/suite/ai-suggestions.test.js test/suite/pre-commit.test.js test/suite/issue-card-tags.test.js test/suite/assignee-dropdown.test.js test/suite/hierarchy-utils.test.js",
     "pretest": "npm run lint",
     "vscode:prepublish": "npm run build",
     "prepare": "husky"

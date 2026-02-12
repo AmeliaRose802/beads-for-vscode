@@ -1,11 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import OutputDisplay from './components/OutputDisplay';
 import CreatePanel from './components/CreatePanel';
 import RelationshipPanel from './components/RelationshipPanel';
 import EditPanel from './components/EditPanel';
 import DependencyGraph from './components/DependencyGraph';
+import HierarchyView from './components/HierarchyView';
 const { parseListJSON, parseStatsOutput } = require('./parse-utils');
 const { buildCreateCommand, buildUpdateCommand, createAssigneeChangeHandler } = require('./form-handlers');
+const { buildHierarchyModel } = require('./hierarchy-utils');
+const { processMessage } = require('./message-handler');
+const { createAppActions } = require('./app-actions');
 
 const vscode = acquireVsCodeApi();
 
@@ -19,7 +23,24 @@ const App = () => {
   const [showCreatePanel, setShowCreatePanel] = useState(false);
   const [showEditPanel, setShowEditPanel] = useState(false);
   const [showDependencyGraph, setShowDependencyGraph] = useState(false);
+  const [showHierarchyView, setShowHierarchyView] = useState(false);
   const [graphData, setGraphData] = useState(null);
+  const [, setGraphRequestPurpose] = useState(null);
+  const [, setHierarchyIssueId] = useState(null);
+  const [hierarchyModel, setHierarchyModel] = useState(null);
+  const graphPurposeRef = useRef(null);
+  const hierarchyIssueRef = useRef(null);
+  const outputRef = useRef(output);
+
+  const updateGraphPurpose = (purpose) => {
+    setGraphRequestPurpose(purpose);
+    graphPurposeRef.current = purpose;
+  };
+
+  const updateHierarchyIssue = (issueId) => {
+    setHierarchyIssueId(issueId);
+    hierarchyIssueRef.current = issueId;
+  };
   
   // Edit issue form state
   const [editIssueId, setEditIssueId] = useState('');
@@ -49,213 +70,81 @@ const App = () => {
   const [targetBead, setTargetBead] = useState('');
   const [relationType, setRelationType] = useState('parent');
 
+  const {
+    displayResult,
+    runCommand,
+    requestGraphData,
+    handleInlineActionResult,
+    clearOutput,
+    runInlineAction
+  } = createAppActions({
+    parseListJSON,
+    parseStatsOutput,
+    setOutput,
+    setIsError,
+    setIsSuccess,
+    setShowRelationshipPanel,
+    setShowCreatePanel,
+    setShowEditPanel,
+    setShowHierarchyView,
+    setHierarchyModel,
+    setCreateTitle,
+    setCreateDescription,
+    setCreateParentId,
+    setCreateBlocksId,
+    setCreateRelatedId,
+    setCreateType,
+    setCreatePriority,
+    updateGraphPurpose,
+    vscode,
+    outputRef
+  });
+
+  useEffect(() => {
+    outputRef.current = output;
+  }, [output]);
+
   useEffect(() => {
     vscode.postMessage({ type: 'getCwd' });
     vscode.postMessage({ type: 'getCurrentFile' });
 
     const messageHandler = (event) => {
-      const message = event.data;
-      
-      switch (message.type) {
-        case 'commandResultJSON':
-          // Handle JSON list output
-          const parsed = parseListJSON(message.output, message.command);
-          if (parsed.type === 'error') {
-            setOutput(parsed.message);
-            setIsError(true);
-          } else {
-            setOutput(parsed);
-            setIsError(false);
-          }
-          break;
-        case 'commandResult':
-          displayResult(message.command, message.output, message.success);
-          break;
-        case 'inlineActionResult':
-          handleInlineActionResult(message);
-          break;
-        case 'cwdResult':
-          setCwd(message.cwd);
-          break;
-        case 'currentFileResult':
-          setCurrentFile(message.file || '');
-          break;
-        case 'issueDetails':
-          // Populate edit form with issue details
-          if (message.issue) {
-            setEditTitle(message.issue.title || '');
-            setEditType(message.issue.issue_type || 'task');
-            setEditPriority(String(message.issue.priority || '2'));
-            setEditDescription(message.issue.description || '');
-            setEditStatus(message.issue.status || 'open');
-          }
-          break;
-        case 'aiSuggestions':
-          // Populate create form with AI suggestions
-          setIsAILoading(false);
-          if (message.suggestions) {
-            const { type, priority, description, links } = message.suggestions;
-            if (type) setCreateType(type);
-            if (priority !== undefined) setCreatePriority(String(priority));
-            
-            // Parse links and populate separate fields
-            let linkCount = 0;
-            if (links) {
-              const parentMatch = links.match(/--parent\s+([\w-]+)/);
-              const blocksMatch = links.match(/--blocks\s+([\w-]+)/);
-              const relatedMatch = links.match(/--related\s+([\w-]+)/);
-              
-              if (parentMatch) {
-                setCreateParentId(parentMatch[1]);
-                linkCount++;
-              }
-              if (blocksMatch) {
-                setCreateBlocksId(blocksMatch[1]);
-                linkCount++;
-              }
-              if (relatedMatch) {
-                setCreateRelatedId(relatedMatch[1]);
-                linkCount++;
-              }
-            }
-            
-            // Show AI reasoning as a toast/info message
-            let message = `💡 AI Suggestion: ${description}`;
-            if (linkCount > 0) {
-              message += ` (${linkCount} relationship${linkCount > 1 ? 's' : ''} suggested)`;
-            }
-            setOutput(message);
-            setIsSuccess(true);
-            setTimeout(() => setIsSuccess(false), 3000);
-          }
-          if (message.error) {
-            setOutput(`AI Suggestion Error: ${message.error}`);
-            setIsError(true);
-          }
-          break;
-        case 'inlineIssueDetails':
-          // Update inline issue details without changing view
-          if (message.issueId && message.details) {
-            setIssueDetails(prev => ({
-              ...prev,
-              [message.issueId]: message.details
-            }));
-            setLoadingDetails(prev => ({
-              ...prev,
-              [message.issueId]: false
-            }));
-          }
-          break;
-        case 'graphData':
-          // Handle dependency graph data
-          if (message.data) {
-            setGraphData(message.data);
-            setShowDependencyGraph(true);
-          }
-          if (message.error) {
-            setOutput(`Graph Error: ${message.error}`);
-            setIsError(true);
-          }
-          break;
-      }
+      processMessage(event.data, {
+        parseListJSON,
+        displayResult,
+        handleInlineActionResult,
+        setOutput,
+        setIsError,
+        setCwd,
+        setCurrentFile,
+        setEditTitle,
+        setEditType,
+        setEditPriority,
+        setEditDescription,
+        setEditStatus,
+        setIsAILoading,
+        setCreateType,
+        setCreatePriority,
+        setCreateParentId,
+        setCreateBlocksId,
+        setCreateRelatedId,
+        setIsSuccess,
+        setIssueDetails,
+        setLoadingDetails,
+        setGraphData,
+        setShowDependencyGraph,
+        setHierarchyModel,
+        setShowHierarchyView,
+        buildHierarchyModel,
+        updateGraphPurpose,
+        graphPurposeRef,
+        hierarchyIssueRef
+      });
     };
 
     window.addEventListener('message', messageHandler);
     return () => window.removeEventListener('message', messageHandler);
   }, []);
-
-  const displayResult = (command, resultOutput, success) => {
-    if (command.includes('list') || command.includes('ready') || command.includes('blocked')) {
-      const parsed = parseListJSON(resultOutput, command);
-      setOutput(parsed);
-    } else if (command.includes('stats')) {
-      const parsed = parseStatsOutput(resultOutput);
-      parsed.command = command;
-      setOutput(parsed);
-    } else {
-      setOutput(`$ bd ${command}\n\n${resultOutput}`);
-    }
-    setIsError(!success);
-    setIsSuccess(success);
-  };
-
-  const runCommand = (command) => {
-    setOutput(`$ bd ${command}\n\nExecuting...`);
-    setIsError(false);
-    setIsSuccess(false);
-    setShowRelationshipPanel(false);
-    setShowCreatePanel(false);
-    setShowEditPanel(false);
-
-    // Use JSON mode for list, ready, and blocked commands
-    const useJSON = command === 'list' || command === 'ready' || command === 'blocked';
-    
-    vscode.postMessage({
-      type: 'executeCommand',
-      command: command,
-      useJSON: useJSON
-    });
-
-    const modifyingCommands = ['create', 'update', 'close', 'reopen', 'link'];
-    const isModifying = modifyingCommands.some(cmd => command.includes(cmd));
-    
-    if (isModifying) {
-      setTimeout(() => {
-        vscode.postMessage({
-          type: 'executeCommand',
-          command: 'sync'
-        });
-      }, 1000);
-    }
-  };
-
-  const requestGraphData = () => {
-    setOutput('Loading dependency graph...');
-    setIsError(false);
-    setIsSuccess(false);
-    setShowRelationshipPanel(false);
-    setShowCreatePanel(false);
-    setShowEditPanel(false);
-    
-    vscode.postMessage({
-      type: 'getGraphData'
-    });
-  };
-
-  const handleInlineActionResult = (message) => {
-    const { command, output: cmdOutput, success, successMessage } = message;
-    if (success) {
-      if (command.includes('create')) {
-        setCreateTitle(''); setCreateDescription('');
-        setCreateParentId(''); setCreateBlocksId(''); setCreateRelatedId('');
-        setCreateType('task'); setCreatePriority('2');
-      }
-      if (successMessage) {
-        const tempOutput = output;
-        setOutput(`✓ ${successMessage}`);
-        setIsSuccess(true); setIsError(false);
-        setTimeout(() => { setOutput(tempOutput); setIsSuccess(false); }, 2000);
-      }
-      const modifyingCommands = ['create', 'update', 'close', 'reopen', 'link'];
-      if (modifyingCommands.some(cmd => command.includes(cmd))) {
-        setTimeout(() => {
-          vscode.postMessage({ type: 'executeCommand', command: 'sync' });
-          setTimeout(() => {
-            if (typeof output === 'object' && output.command) runCommand(output.command);
-          }, 500);
-        }, 1000);
-      }
-    } else {
-      setOutput(`❌ Error: ${cmdOutput || 'Command failed'}`);
-      setIsError(true); setIsSuccess(false);
-    }
-  };
-
-  const clearOutput = () => {
-    setOutput('Ready to execute commands...');
-    setIsError(false);
-    setIsSuccess(false);
-  };
 
   const handleQuickTypeChange = (issueId, newType) => {
     runInlineAction(`update ${issueId} --type ${newType}`, `Updated ${issueId} type to ${newType}`);
@@ -267,16 +156,6 @@ const App = () => {
 
   // Create assignee change handler using the extracted function
   const handleAssigneeChange = createAssigneeChangeHandler(vscode, output, runCommand);
-
-  const runInlineAction = (command, successMessage) => {
-    // Execute command without clearing current view
-    vscode.postMessage({
-      type: 'executeCommand',
-      command: command,
-      isInlineAction: true,
-      successMessage: successMessage
-    });
-  };
 
   const handleCreateIssue = () => {
     const command = buildCreateCommand({
@@ -329,6 +208,27 @@ const App = () => {
       type: 'getIssueDetails',
       issueId: issueId
     });
+  };
+
+  const handleShowHierarchy = (issueId) => {
+    updateHierarchyIssue(issueId);
+    setShowDependencyGraph(false);
+    setShowRelationshipPanel(false);
+    setShowCreatePanel(false);
+    setShowEditPanel(false);
+
+    if (graphData) {
+      try {
+        const model = buildHierarchyModel(issueId, graphData);
+        setHierarchyModel(model);
+        setShowHierarchyView(true);
+      } catch (error) {
+        setOutput(`Hierarchy Error: ${error.message}`);
+        setIsError(true);
+      }
+    } else {
+      requestGraphData('hierarchy');
+    }
   };
 
   const handleDepAction = (action) => {
@@ -464,7 +364,20 @@ const App = () => {
           </div>
         )}
 
-        {!showDependencyGraph && (
+        {showHierarchyView && (
+          <div className="section">
+            <HierarchyView
+              hierarchy={hierarchyModel}
+              onSelectIssue={(id) => {
+                handleShowIssueInline(id);
+                handleShowHierarchy(id);
+              }}
+              onClose={() => setShowHierarchyView(false)}
+            />
+          </div>
+        )}
+
+        {!showDependencyGraph && !showHierarchyView && (
           <div className="section output-section">
             <div className="output-header">
               <div className="section-title">Results</div>
@@ -482,6 +395,7 @@ const App = () => {
               onTypeChange={handleQuickTypeChange}
               onPriorityChange={handleQuickPriorityChange}
               onAssigneeChange={handleAssigneeChange}
+              onShowHierarchy={handleShowHierarchy}
               issueDetails={issueDetails}
               loadingDetails={loadingDetails}
               vscode={vscode}

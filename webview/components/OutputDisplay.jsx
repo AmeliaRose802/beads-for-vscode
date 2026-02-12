@@ -45,7 +45,7 @@ function paginateItems(items, page, pageSize) {
   return items.slice(start, start + pageSize);
 }
 
-const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, onReopenIssue, onEditIssue, onLinkParent, onTypeChange, onPriorityChange, onAssigneeChange, issueDetails = {}, loadingDetails = {}, vscode }) => {
+const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, onReopenIssue, onEditIssue, onLinkParent, onTypeChange, onPriorityChange, onAssigneeChange, onShowHierarchy, issueDetails = {}, loadingDetails = {}, vscode }) => {
   const [draggedIssue, setDraggedIssue] = useState(null);
   const [pageSize, setPageSize] = useState(getStoredPageSize);
   const [currentPage, setCurrentPage] = useState(1);
@@ -143,6 +143,7 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
                     onTypeChange={onTypeChange}
                     onPriorityChange={onPriorityChange}
                     onAssigneeChange={onAssigneeChange}
+                    onShowHierarchy={onShowHierarchy}
                     existingAssignees={existingAssignees}
                     detailedData={issueDetails[issue.id]}
                     isLoadingDetails={loadingDetails[issue.id]}
@@ -172,6 +173,7 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
                   onClose={() => onCloseIssue(issue.id)}
                   onReopen={() => onReopenIssue(issue.id)}
                   onEdit={() => onEditIssue(issue.id)}
+                  onShowHierarchy={onShowHierarchy}
                   onAssigneeChange={onAssigneeChange}
                   existingAssignees={existingAssignees}
                   detailedData={issueDetails[issue.id]}
