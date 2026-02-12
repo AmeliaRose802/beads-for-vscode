@@ -27,6 +27,7 @@ function parseListJSON(jsonOutput, command) {
         closed_at: issue.closed_at,
         description: issue.description,
         assignee: issue.assignee,
+        labels: Array.isArray(issue.labels) ? issue.labels : [],
         dependency_count: issue.dependency_count || 0,
         dependent_count: issue.dependent_count || 0
       };

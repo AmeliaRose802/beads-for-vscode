@@ -42,6 +42,38 @@ suite('Parse Utils Tests', () => {
       const result = parseListJSON(json, 'ready');
       assert.strictEqual(result.header, 'Found 1 issue');
     });
+
+    test('Should include labels array when present', () => {
+      const json = JSON.stringify([
+        {
+          id: 't-1',
+          title: 'With labels',
+          issue_type: 'task',
+          priority: 1,
+          status: 'open',
+          labels: ['frontend', 'urgent']
+        }
+      ]);
+
+      const result = parseListJSON(json, 'list');
+      assert.deepStrictEqual(result.openIssues[0].labels, ['frontend', 'urgent']);
+    });
+
+    test('Should default labels to empty array', () => {
+      const json = JSON.stringify([
+        {
+          id: 't-1',
+          title: 'No labels',
+          issue_type: 'task',
+          priority: 1,
+          status: 'open'
+        }
+      ]);
+
+      const result = parseListJSON(json, 'list');
+      assert.ok(Array.isArray(result.openIssues[0].labels));
+      assert.strictEqual(result.openIssues[0].labels.length, 0);
+    });
   });
 
   suite('parseStatsOutput', () => {

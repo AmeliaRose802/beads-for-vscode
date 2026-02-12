@@ -235,6 +235,15 @@ const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, on
       <div className="issue-card__title">
         {issue.title}
       </div>
+      {labels.length > 0 && (
+        <div className="issue-card__tags">
+          {labels.map((label) => (
+            <span key={label} className="issue-card__tag">
+              {label}
+            </span>
+          ))}
+        </div>
+      )}
       {showQuickEdit && !isClosed && (
         <div className="issue-card__quick-edit">
           <div className="issue-card__quick-edit-group">
