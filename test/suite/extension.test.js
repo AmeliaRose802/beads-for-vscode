@@ -39,20 +39,12 @@ suite('Beads UI Extension Test Suite', () => {
   });
 
   suite('BeadsViewProvider', () => {
-    let context;
-    let mockWebviewView;
-    let provider;
-
+    let context, mockWebviewView, provider;
     setup(() => {
-      context = {
-        subscriptions: [],
-        extensionUri: vscode.Uri.file(__dirname)
-      };
-
+      context = { subscriptions: [], extensionUri: vscode.Uri.file(__dirname) };
       mockWebviewView = {
         webview: {
-          options: {},
-          html: '',
+          options: {}, html: '',
           postMessage: sinon.stub().resolves(true),
           onDidReceiveMessage: sinon.stub().returns({ dispose: () => {} })
         },
@@ -70,41 +62,29 @@ suite('Beads UI Extension Test Suite', () => {
     test('Should configure webview with correct options', () => {
       const BeadsViewProvider = getBeadsViewProviderClass();
       provider = new BeadsViewProvider(context.extensionUri);
-      
       const fsStub = sinon.stub(require('fs'), 'readFileSync').returns('<html></html>');
-      
       provider.resolveWebviewView(mockWebviewView, context, null);
-      
       assert.ok(mockWebviewView.webview.options.enableScripts);
       assert.ok(Array.isArray(mockWebviewView.webview.options.localResourceRoots));
-      
       fsStub.restore();
     });
 
     test('Should load HTML content for webview', () => {
       const BeadsViewProvider = getBeadsViewProviderClass();
       provider = new BeadsViewProvider(context.extensionUri);
-      
-      const mockHtmlContent = '<html><body>Test</body></html>';
-      const fsStub = sinon.stub(require('fs'), 'readFileSync').returns(mockHtmlContent);
-      
+      const mockHtml = '<html><body>Test</body></html>';
+      const fsStub = sinon.stub(require('fs'), 'readFileSync').returns(mockHtml);
       provider.resolveWebviewView(mockWebviewView, context, null);
-      
-      assert.strictEqual(mockWebviewView.webview.html, mockHtmlContent);
-      
+      assert.strictEqual(mockWebviewView.webview.html, mockHtml);
       fsStub.restore();
     });
 
     test('Should register message handler', () => {
       const BeadsViewProvider = getBeadsViewProviderClass();
       provider = new BeadsViewProvider(context.extensionUri);
-      
       const fsStub = sinon.stub(require('fs'), 'readFileSync').returns('<html></html>');
-      
       provider.resolveWebviewView(mockWebviewView, context, null);
-      
       assert.ok(mockWebviewView.webview.onDidReceiveMessage.calledOnce);
-      
       fsStub.restore();
     });
 
@@ -122,132 +102,74 @@ suite('Beads UI Extension Test Suite', () => {
 
   suite('Command Execution', () => {
     let provider;
-
     setup(() => {
-      const context = {
-        extensionUri: vscode.Uri.file(__dirname)
-      };
-
       const BeadsViewProvider = getBeadsViewProviderClass();
-      provider = new BeadsViewProvider(context.extensionUri);
-      
-      // Reset stub for each test
+      provider = new BeadsViewProvider(vscode.Uri.file(__dirname));
       globalExecStub.reset();
     });
 
     test('Should execute bd command successfully', async () => {
-      globalExecStub.callsFake((cmd, opts, callback) => {
-        callback(null, 'Command output', '');
-      });
-
+      globalExecStub.callsFake((cmd, opts, cb) => cb(null, 'Command output', ''));
       const result = await provider._executeBdCommand('list');
-
       assert.strictEqual(result.success, true);
       assert.strictEqual(result.output, 'Command output');
       assert.ok(globalExecStub.calledOnce);
       assert.ok(globalExecStub.firstCall.args[0].includes('bd list'));
     });
-
     test('Should handle command with error but with stdout', async () => {
-      globalExecStub.callsFake((cmd, opts, callback) => {
-        const error = new Error('Command warning');
-        error.code = 1;
-        callback(error, 'Warning output', '');
-      });
-
+      const error = new Error('Command warning'); error.code = 1;
+      globalExecStub.callsFake((cmd, opts, cb) => cb(error, 'Warning output', ''));
       const result = await provider._executeBdCommand('list');
-
       assert.strictEqual(result.success, true);
       assert.strictEqual(result.output, 'Warning output');
     });
-
     test('Should handle command with stderr', async () => {
-      globalExecStub.callsFake((cmd, opts, callback) => {
-        callback(null, '', 'Error message');
-      });
-
+      globalExecStub.callsFake((cmd, opts, cb) => cb(null, '', 'Error message'));
       const result = await provider._executeBdCommand('invalid');
-
       assert.strictEqual(result.success, true);
       assert.strictEqual(result.output, 'Error message');
     });
-
     test('Should handle command with pure error', async () => {
-      globalExecStub.callsFake((cmd, opts, callback) => {
-        callback(new Error('Command failed'), '', '');
-      });
-
+      globalExecStub.callsFake((cmd, opts, cb) => cb(new Error('Command failed'), '', ''));
       const result = await provider._executeBdCommand('invalid');
-
       assert.strictEqual(result.success, false);
       assert.ok(result.output.includes('Command failed'));
     });
 
     test('Should use workspace directory', async () => {
-      const workspacePath = path.join('test', 'workspace');
-      sinon.stub(vscode.workspace, 'workspaceFolders').value([
-        { uri: vscode.Uri.file(workspacePath) }
-      ]);
-
-      globalExecStub.callsFake((cmd, opts, callback) => {
-        callback(null, 'output', '');
-      });
-
+      sinon.stub(vscode.workspace, 'workspaceFolders').value(
+        [{ uri: vscode.Uri.file(path.join('test', 'workspace')) }]);
+      globalExecStub.callsFake((cmd, opts, cb) => cb(null, 'output', ''));
       await provider._executeBdCommand('list');
-
-      assert.ok(globalExecStub.calledOnce);
-      const opts = globalExecStub.firstCall.args[1];
-      assert.ok(opts.cwd);
+      assert.ok(globalExecStub.firstCall.args[1].cwd);
     });
-
     test('Should set BEADS_DB environment variable', async () => {
-      globalExecStub.callsFake((cmd, opts, callback) => {
-        callback(null, 'output', '');
-      });
-
+      globalExecStub.callsFake((cmd, opts, cb) => cb(null, 'output', ''));
       await provider._executeBdCommand('list');
-
       const opts = globalExecStub.firstCall.args[1];
       assert.ok(opts.env.BEADS_DB);
       assert.ok(opts.env.BEADS_DB.includes('beads.db'));
     });
-
-    test('Should respect maxBuffer setting', async () => {
-      globalExecStub.callsFake((cmd, opts, callback) => {
-        callback(null, 'output', '');
-      });
-
+    test('Should respect maxBuffer and timeout settings', async () => {
+      globalExecStub.callsFake((cmd, opts, cb) => cb(null, 'output', ''));
       await provider._executeBdCommand('list');
-
       const opts = globalExecStub.firstCall.args[1];
       assert.strictEqual(opts.maxBuffer, 10 * 1024 * 1024);
+      assert.strictEqual(opts.timeout, 30000);
     });
-
     test('Should trim output whitespace', async () => {
-      globalExecStub.callsFake((cmd, opts, callback) => {
-        callback(null, '  output with spaces  \n', '');
-      });
-
+      globalExecStub.callsFake((cmd, opts, cb) => cb(null, '  output with spaces  \n', ''));
       const result = await provider._executeBdCommand('list');
-
       assert.strictEqual(result.output, 'output with spaces');
     });
   });
 
   suite('Message Handling', () => {
-    let provider;
-    let mockWebviewView;
-    let messageHandler;
-
+    let provider, mockWebviewView, messageHandler;
     setup(() => {
-      const context = {
-        extensionUri: vscode.Uri.file(__dirname)
-      };
-
       mockWebviewView = {
         webview: {
-          options: {},
-          html: '',
+          options: {}, html: '',
           postMessage: sinon.stub().resolves(true),
           onDidReceiveMessage: sinon.stub().callsFake((handler) => {
             messageHandler = handler;
@@ -255,69 +177,91 @@ suite('Beads UI Extension Test Suite', () => {
           })
         }
       };
-
       const BeadsViewProvider = getBeadsViewProviderClass();
-      provider = new BeadsViewProvider(context.extensionUri);
-      
+      provider = new BeadsViewProvider(vscode.Uri.file(__dirname));
       const fsStub = sinon.stub(require('fs'), 'readFileSync').returns('<html></html>');
-      provider.resolveWebviewView(mockWebviewView, context, null);
+      provider.resolveWebviewView(mockWebviewView, {}, null);
       fsStub.restore();
-
       globalExecStub.reset();
     });
 
     test('Should handle executeCommand message', async () => {
+      globalExecStub.callsFake((cmd, opts, cb) => cb(null, 'test output', ''));
+      await messageHandler({ type: 'executeCommand', command: 'stats' });
+      assert.ok(mockWebviewView.webview.postMessage.called);
+      const msg = mockWebviewView.webview.postMessage.firstCall.args[0];
+      assert.strictEqual(msg.type, 'commandResult');
+      assert.strictEqual(msg.command, 'stats');
+      assert.strictEqual(msg.output, 'test output');
+      assert.strictEqual(msg.success, true);
+    });
+
+    test('Should handle useJSON list command without redundant exec', async () => {
+      const jsonOutput = JSON.stringify([{ id: 'test-1', title: 'Test' }]);
+      const graphOutput = JSON.stringify([]);
+      let callCount = 0;
       globalExecStub.callsFake((cmd, opts, callback) => {
-        callback(null, 'test output', '');
+        callCount++;
+        if (cmd.includes('graph')) {
+          callback(null, graphOutput, '');
+        } else {
+          callback(null, jsonOutput, '');
+        }
       });
 
       await messageHandler({
         type: 'executeCommand',
-        command: 'list'
+        command: 'list',
+        useJSON: true
       });
 
-      assert.ok(mockWebviewView.webview.postMessage.called);
+      // Should NOT run `bd list` in text mode first — only JSON calls
+      for (let i = 0; i < callCount; i++) {
+        const executedCmd = globalExecStub.getCall(i).args[0];
+        assert.ok(
+          executedCmd.includes('--json'),
+          `Call ${i} should use --json flag, got: ${executedCmd}`
+        );
+      }
       const message = mockWebviewView.webview.postMessage.firstCall.args[0];
-      assert.strictEqual(message.type, 'commandResult');
-      assert.strictEqual(message.command, 'list');
-      assert.strictEqual(message.output, 'test output');
+      assert.strictEqual(message.type, 'commandResultJSON');
+    });
+
+    test('Should handle isInlineAction response type', async () => {
+      globalExecStub.callsFake((cmd, opts, callback) => {
+        callback(null, 'created', '');
+      });
+
+      await messageHandler({
+        type: 'executeCommand',
+        command: 'create --title "Test"',
+        isInlineAction: true,
+        successMessage: 'Created test'
+      });
+
+      const message = mockWebviewView.webview.postMessage.firstCall.args[0];
+      assert.strictEqual(message.type, 'inlineActionResult');
       assert.strictEqual(message.success, true);
+      assert.strictEqual(message.successMessage, 'Created test');
     });
 
     test('Should handle getCwd message', async () => {
-      const workspacePath = path.join('test', 'workspace');
-      sinon.stub(vscode.workspace, 'workspaceFolders').value([
-        { uri: vscode.Uri.file(workspacePath) }
-      ]);
-
-      await messageHandler({
-        type: 'getCwd'
-      });
-
-      assert.ok(mockWebviewView.webview.postMessage.called);
-      const message = mockWebviewView.webview.postMessage.firstCall.args[0];
-      assert.strictEqual(message.type, 'cwdResult');
-      assert.ok(message.cwd);
+      sinon.stub(vscode.workspace, 'workspaceFolders').value(
+        [{ uri: vscode.Uri.file(path.join('test', 'workspace')) }]);
+      await messageHandler({ type: 'getCwd' });
+      const msg = mockWebviewView.webview.postMessage.firstCall.args[0];
+      assert.strictEqual(msg.type, 'cwdResult');
+      assert.ok(msg.cwd);
     });
-
     test('Should use process.cwd() when no workspace folders', async () => {
       sinon.stub(vscode.workspace, 'workspaceFolders').value(undefined);
-
-      await messageHandler({
-        type: 'getCwd'
-      });
-
-      assert.ok(mockWebviewView.webview.postMessage.called);
-      const message = mockWebviewView.webview.postMessage.firstCall.args[0];
-      assert.strictEqual(message.type, 'cwdResult');
-      assert.ok(message.cwd);
+      await messageHandler({ type: 'getCwd' });
+      const msg = mockWebviewView.webview.postMessage.firstCall.args[0];
+      assert.strictEqual(msg.type, 'cwdResult');
+      assert.ok(msg.cwd);
     });
-
     test('Should handle unknown message type gracefully', async () => {
-      await messageHandler({
-        type: 'unknownType'
-      });
-
+      await messageHandler({ type: 'unknownType' });
       assert.strictEqual(mockWebviewView.webview.postMessage.callCount, 0);
     });
   });
@@ -336,52 +280,29 @@ suite('Beads UI Extension Test Suite', () => {
 
   suite('Error Handling', () => {
     let provider;
-
     setup(() => {
-      const context = {
-        extensionUri: vscode.Uri.file(__dirname)
-      };
-
       const BeadsViewProvider = getBeadsViewProviderClass();
-      provider = new BeadsViewProvider(context.extensionUri);
-      
+      provider = new BeadsViewProvider(vscode.Uri.file(__dirname));
       globalExecStub.reset();
     });
 
     test('Should handle exec timeout', async () => {
-      globalExecStub.callsFake((cmd, opts, callback) => {
-        const error = new Error('Command timed out');
-        error.killed = true;
-        callback(error, '', '');
-      });
-
+      const error = new Error('Command timed out'); error.killed = true;
+      globalExecStub.callsFake((cmd, opts, cb) => cb(error, '', ''));
       const result = await provider._executeBdCommand('list');
-
       assert.strictEqual(result.success, false);
       assert.ok(result.output.includes('timed out'));
     });
-
     test('Should handle ENOENT error (command not found)', async () => {
-      globalExecStub.callsFake((cmd, opts, callback) => {
-        const error = new Error('Command not found');
-        error.code = 'ENOENT';
-        callback(error, '', '');
-      });
-
+      const error = new Error('Command not found'); error.code = 'ENOENT';
+      globalExecStub.callsFake((cmd, opts, cb) => cb(error, '', ''));
       const result = await provider._executeBdCommand('list');
-
       assert.strictEqual(result.success, false);
       assert.ok(result.output.includes('Command not found'));
     });
-
     test('Should handle buffer overflow', async () => {
-      globalExecStub.callsFake((cmd, opts, callback) => {
-        const error = new Error('maxBuffer exceeded');
-        callback(error, '', '');
-      });
-
+      globalExecStub.callsFake((cmd, opts, cb) => cb(new Error('maxBuffer exceeded'), '', ''));
       const result = await provider._executeBdCommand('list');
-
       assert.strictEqual(result.success, false);
       assert.ok(result.output.includes('maxBuffer'));
     });
@@ -389,38 +310,21 @@ suite('Beads UI Extension Test Suite', () => {
 
   suite('Security', () => {
     let provider;
-
     setup(() => {
-      const context = {
-        extensionUri: vscode.Uri.file(__dirname)
-      };
-
       const BeadsViewProvider = getBeadsViewProviderClass();
-      provider = new BeadsViewProvider(context.extensionUri);
-      
+      provider = new BeadsViewProvider(vscode.Uri.file(__dirname));
       globalExecStub.reset();
     });
 
     test('Should execute command with bd prefix', async () => {
-      globalExecStub.callsFake((cmd, opts, callback) => {
-        callback(null, 'output', '');
-      });
-
+      globalExecStub.callsFake((cmd, opts, cb) => cb(null, 'output', ''));
       await provider._executeBdCommand('list');
-
-      const command = globalExecStub.firstCall.args[0];
-      assert.ok(command.startsWith('bd '));
+      assert.ok(globalExecStub.firstCall.args[0].startsWith('bd '));
     });
-
     test('Should pass user command as-is', async () => {
-      globalExecStub.callsFake((cmd, opts, callback) => {
-        callback(null, 'output', '');
-      });
-
+      globalExecStub.callsFake((cmd, opts, cb) => cb(null, 'output', ''));
       await provider._executeBdCommand('list --state open');
-
-      const command = globalExecStub.firstCall.args[0];
-      assert.strictEqual(command, 'bd list --state open');
+      assert.strictEqual(globalExecStub.firstCall.args[0], 'bd list --state open');
     });
   });
 
@@ -440,91 +344,76 @@ suite('Beads UI Extension Test Suite', () => {
   });
 });
 
-// Helper function to get BeadsViewProvider class
+/** Helper: returns a BeadsViewProvider class matching the fixed extension.js pattern. */
 function getBeadsViewProviderClass() {
   class BeadsViewProvider {
-    constructor(extensionUri) {
-      this._extensionUri = extensionUri;
-    }
-
+    constructor(extensionUri) { this._extensionUri = extensionUri; }
     resolveWebviewView(webviewView, _context, _token) {
       this._view = webviewView;
-
-      webviewView.webview.options = {
-        enableScripts: true,
-        localResourceRoots: [this._extensionUri]
-      };
-
+      webviewView.webview.options = { enableScripts: true, localResourceRoots: [this._extensionUri] };
       webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
-
       webviewView.webview.onDidReceiveMessage(async (data) => {
-        switch (data.type) {
-          case 'executeCommand': {
-            const result = await this._executeBdCommand(data.command);
-            webviewView.webview.postMessage({
-              type: 'commandResult',
-              command: data.command,
-              ...result
-            });
-            break;
+        try {
+          switch (data.type) {
+            case 'executeCommand': {
+              if (data.useJSON && ['list', 'ready', 'blocked'].includes(data.command)) {
+                const [jsonRes, graphRes] = await Promise.all([
+                  this._executeBdCommand(`${data.command} --json`),
+                  this._executeBdCommand('graph --all --json')
+                ]);
+                const type = jsonRes.success ? 'commandResultJSON' : 'commandResult';
+                webviewView.webview.postMessage({
+                  type, command: data.command, output: jsonRes.output,
+                  ...(jsonRes.success ? { graphData: graphRes?.success ? graphRes.output : null } : {}),
+                  success: jsonRes.success
+                });
+              } else {
+                const result = await this._executeBdCommand(data.command);
+                const type = data.isInlineAction ? 'inlineActionResult' : 'commandResult';
+                webviewView.webview.postMessage({
+                  type, command: data.command, output: result.output,
+                  success: result.success,
+                  ...(data.isInlineAction ? { successMessage: data.successMessage } : {})
+                });
+              }
+              break;
+            }
+            case 'getCwd': {
+              const folders = vscode.workspace.workspaceFolders;
+              const cwd = folders ? folders[0].uri.fsPath : process.cwd();
+              webviewView.webview.postMessage({ type: 'cwdResult', cwd });
+              break;
+            }
           }
-          case 'getCwd': {
-            const workspaceFolders = vscode.workspace.workspaceFolders;
-            const cwd = workspaceFolders ? workspaceFolders[0].uri.fsPath : process.cwd();
-            webviewView.webview.postMessage({
-              type: 'cwdResult',
-              cwd: cwd
-            });
-            break;
-          }
+        } catch (err) {
+          webviewView.webview.postMessage({
+            type: 'commandResult', command: data.command || 'unknown',
+            output: `Internal error: ${err.message}`, success: false
+          });
         }
       });
     }
-
-    show() {
-      if (this._view) {
-        this._view.show(true);
-      }
-    }
-
+    show() { if (this._view) { this._view.show(true); } }
     _executeBdCommand(command) {
       return new Promise((resolve) => {
-        const workspaceFolders = vscode.workspace.workspaceFolders;
-        const cwd = workspaceFolders ? workspaceFolders[0].uri.fsPath : process.cwd();
-        
-        const fullCommand = `bd ${command}`;
-        const env = { 
-          ...process.env,
-          BEADS_DB: path.join('C:', 'Users', 'ameliapayne', 'icm_queue_tool', '.beads', 'beads.db')
-        };
-        
-        childProcess.exec(fullCommand, {
-          maxBuffer: 10 * 1024 * 1024,
-          cwd: cwd,
-          env: env
+        const folders = vscode.workspace.workspaceFolders;
+        const cwd = folders ? folders[0].uri.fsPath : process.cwd();
+        const env = { ...process.env, BEADS_DB: path.join(cwd, '.beads', 'beads.db') };
+        childProcess.exec(`bd ${command}`, {
+          maxBuffer: 10 * 1024 * 1024, cwd, env, timeout: 30000
         }, (error, stdout, stderr) => {
           if (error && !stdout && !stderr) {
-            resolve({
-              success: false,
-              output: `Error: ${error.message}`
-            });
+            resolve({ success: false, output: `Error: ${error.message}` });
           } else {
-            const output = stdout || stderr || '';
-            resolve({
-              success: !error || !!stdout,
-              output: output.trim()
-            });
+            resolve({ success: !error || !!stdout, output: (stdout || stderr || '').trim() });
           }
         });
       });
     }
-
     _getHtmlForWebview(_webview) {
-      const fs = require('fs');
       const htmlPath = path.join(this._extensionUri.fsPath, 'webview', 'index.html');
-      return fs.readFileSync(htmlPath, 'utf8');
+      return require('fs').readFileSync(htmlPath, 'utf8');
     }
   }
-
   return BeadsViewProvider;
 }

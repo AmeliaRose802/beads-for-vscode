@@ -64,30 +64,36 @@ class BeadsViewProvider {
 
     // Handle messages from the webview
     webviewView.webview.onDidReceiveMessage(async (data) => {
+      try {
       switch (data.type) {
         case 'executeCommand': {
-          const result = await this._executeBdCommand(data.command);
-          
           // Invalidate cache on modifying commands
           const modifyingCommands = ['create', 'update', 'close', 'reopen', 'link', 'dep'];
           const isModifying = modifyingCommands.some(cmd => data.command.includes(cmd));
           if (isModifying) {
             this._invalidateCache();
           }
-          
-          // Check if this is a list --json command for editing
+
+          // Check conditions BEFORE executing commands to avoid unnecessary work
           if (data.command.includes('list') && data.command.includes('--json') && data.command.includes('--id')) {
+            // Fetch a single issue by ID for editing
+            const result = await this._executeBdCommand(data.command);
             try {
               const issues = JSON.parse(result.output);
-              // Send the first issue (should be the only one since we filtered by ID)
               if (issues && issues.length > 0) {
                 webviewView.webview.postMessage({
                   type: 'issueDetails',
                   issue: issues[0]
                 });
+              } else {
+                webviewView.webview.postMessage({
+                  type: 'commandResult',
+                  command: data.command,
+                  output: 'Issue not found',
+                  success: false
+                });
               }
             } catch (e) {
-              // If JSON parsing fails, treat as regular command
               webviewView.webview.postMessage({
                 type: 'commandResult',
                 command: data.command,
@@ -95,7 +101,7 @@ class BeadsViewProvider {
               });
             }
           } else if (data.useJSON && (data.command === 'list' || data.command === 'ready' || data.command === 'blocked')) {
-            // Handle list/ready/blocked commands with JSON output
+            // Handle list/ready/blocked commands with JSON output directly
             const jsonCommand = `${data.command} --json`;
             const [jsonResult, graphResult] = await Promise.all([
               this._executeBdCommand(jsonCommand),
@@ -114,24 +120,28 @@ class BeadsViewProvider {
               webviewView.webview.postMessage({
                 type: 'commandResult',
                 command: data.command,
+                output: jsonResult.output,
+                success: false
+              });
+            }
+          } else {
+            // All other commands: execute once, then route response
+            const result = await this._executeBdCommand(data.command);
+            if (data.isInlineAction) {
+              webviewView.webview.postMessage({
+                type: 'inlineActionResult',
+                command: data.command,
+                output: result.output,
+                success: result.success,
+                successMessage: data.successMessage
+              });
+            } else {
+              webviewView.webview.postMessage({
+                type: 'commandResult',
+                command: data.command,
                 ...result
               });
             }
-          } else if (data.isInlineAction) {
-            // Handle inline action with proper success/failure feedback
-            webviewView.webview.postMessage({
-              type: 'inlineActionResult',
-              command: data.command,
-              output: result.output,
-              success: result.success,
-              successMessage: data.successMessage
-            });
-          } else {
-            webviewView.webview.postMessage({
-              type: 'commandResult',
-              command: data.command,
-              ...result
-            });
           }
           break;
         }
@@ -247,6 +257,19 @@ class BeadsViewProvider {
           break;
         }
       }
+      } catch (err) {
+        console.error('Unhandled error in message handler:', err);
+        try {
+          webviewView.webview.postMessage({
+            type: 'commandResult',
+            command: data.command || 'unknown',
+            output: `Internal error: ${err.message}`,
+            success: false
+          });
+        } catch (_postErr) {
+          // Webview may be disposed; nothing we can do
+        }
+      }
     });
   }
 
@@ -278,7 +301,8 @@ class BeadsViewProvider {
       exec(fullCommand, {
         maxBuffer: 10 * 1024 * 1024,
         cwd: cwd,
-        env: env
+        env: env,
+        timeout: 30000
       }, (error, stdout, stderr) => {
         if (error && !stdout && !stderr) {
           // Check if this is a "command not found" error
