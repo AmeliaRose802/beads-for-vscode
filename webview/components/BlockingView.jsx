@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-
+const { getStatusIcon } = require('../field-utils');
 /**
  * BlockingView - Visualizes blocking relationships and suggests completion order.
  *
@@ -89,16 +89,6 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose }) => {
   const handleNodeClick = (issue) => {
     setSelectedNode(issue.id);
     if (onIssueClick) onIssueClick(issue);
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'open': return '○';
-      case 'in_progress': return '◐';
-      case 'blocked': return '●';
-      case 'closed': return '✓';
-      default: return '○';
-    }
   };
 
   const renderFilters = () => (

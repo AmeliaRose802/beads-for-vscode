@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+const { getStatusIcon } = require('../field-utils');
 
 /**
  * DependencyGraph - Interactive visualization of issue dependencies
@@ -199,17 +200,6 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose }) => {
       allDeps.push(dep);
     });
   });
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'open': return '○';
-      case 'in_progress': return '◐';
-      case 'blocked': return '●';
-      case 'closed': return '✓';
-      case 'deferred': return '❄';
-      default: return '○';
-    }
-  };
 
   const getPriorityClass = (priority) => {
     if (priority === 0) return 'priority-p0';
