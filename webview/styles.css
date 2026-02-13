@@ -121,7 +121,7 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 }
 .output.error { color: var(--vscode-errorForeground); }
 .output.success { color: var(--vscode-terminal-ansiGreen); }
-.output code, .relationship-info code {
+.output code {
   background-color: var(--vscode-textCodeBlock-background);
   padding: 2px 4px;
   border-radius: 2px;
@@ -136,7 +136,6 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 .relationship-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 12px; }
 .relationship-actions .action-btn:first-child:last-child { grid-column: 1 / -1; }
 .relationship-actions .clear-btn { grid-column: 1 / -1; width: 100%; margin-top: 4px; }
-.relationship-info code { font-size: 10px; }
 
 /* Issue Cards */
 .issue-card {
