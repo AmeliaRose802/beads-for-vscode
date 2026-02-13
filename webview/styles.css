@@ -1719,6 +1719,16 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   font-weight: 600;
 }
 
+.hierarchy-node__visited {
+  font-size: 10px;
+  color: var(--vscode-descriptionForeground);
+  margin-left: 4px;
+}
+
+.hierarchy-node__content--back-reference {
+  opacity: 0.6;
+}
+
 .hierarchy-node__children {
   margin-left: 12px;
   border-left: 1px dashed var(--vscode-panel-border);

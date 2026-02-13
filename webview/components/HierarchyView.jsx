@@ -24,6 +24,16 @@ function HierarchyNode({ node, onSelect }) {
   const label = relationLabels[node.relationType] || (node.direction === 'incoming' ? 'Dependent' : 'Dependency');
   const icon = relationIcons[node.relationType] || (node.direction === 'incoming' ? '⬆️' : '⬇️');
 
+  const getNodeClassName = () => {
+    let className = `hierarchy-node__content hierarchy-node__content--${node.direction || 'outgoing'}`;
+    if (node.isCycle) {
+      className += ' hierarchy-node__content--cycle';
+    } else if (node.isBackReference) {
+      className += ' hierarchy-node__content--back-reference';
+    }
+    return className;
+  };
+
   return (
     <div className="hierarchy-node">
       <div className="hierarchy-node__header">
@@ -37,7 +47,7 @@ function HierarchyNode({ node, onSelect }) {
         )}
         {!hasChildren && <span className="hierarchy-node__spacer" />}
         <div
-          className={`hierarchy-node__content hierarchy-node__content--${node.direction || 'outgoing'} ${node.isCycle ? 'hierarchy-node__content--cycle' : ''}`}
+          className={getNodeClassName()}
           onClick={(e) => { e.stopPropagation(); onSelect(node.id); }}>
           <span className="hierarchy-node__icon" title={label}>{icon}</span>
           <span className="hierarchy-node__id">{node.id}</span>
@@ -51,6 +61,7 @@ function HierarchyNode({ node, onSelect }) {
             <span className="hierarchy-node__priority">P{node.priority}</span>
           )}
           {node.isCycle && <span className="hierarchy-node__cycle">Cycle</span>}
+          {node.isBackReference && <span className="hierarchy-node__visited">↩</span>}
         </div>
       </div>
       {expanded && hasChildren && (

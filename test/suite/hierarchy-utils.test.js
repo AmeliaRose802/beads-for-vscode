@@ -41,8 +41,57 @@ suite('hierarchy-utils', () => {
     assert.strictEqual(parentNode.direction, 'incoming');
   });
 
-  test('cycles are marked to prevent infinite recursion', () => {
+  test('blocking cycles are marked as cycles', () => {
     const cyclicComponents = [
+      {
+        Issues: [
+          { id: 'a', title: 'A', status: 'open', priority: 1, issue_type: 'task' },
+          { id: 'b', title: 'B', status: 'open', priority: 1, issue_type: 'task' }
+        ],
+        Dependencies: [
+          { issue_id: 'a', depends_on_id: 'b', type: 'blocks' },
+          { issue_id: 'b', depends_on_id: 'a', type: 'blocks' }
+        ]
+      }
+    ];
+
+    const model = buildHierarchyModel('a', cyclicComponents);
+    const loopNode = model.tree.children.find(node => node.id === 'b');
+    assert.ok(loopNode, 'B should appear as child of A');
+    assert.strictEqual(loopNode.children[0].id, 'a');
+    assert.strictEqual(loopNode.children[0].isCycle, true);
+    assert.strictEqual(loopNode.children[0].isBackReference, false);
+  });
+
+  test('parent-child back-references are marked as back-references not cycles', () => {
+    const parentChildComponents = [
+      {
+        Issues: [
+          { id: 'parent', title: 'Parent', status: 'open', priority: 1, issue_type: 'feature' },
+          { id: 'child', title: 'Child', status: 'open', priority: 2, issue_type: 'task' }
+        ],
+        Dependencies: [
+          { issue_id: 'child', depends_on_id: 'parent', type: 'parent-child' }
+        ]
+      }
+    ];
+
+    // Start from parent, traverse to child, which has back-edge to parent
+    const model = buildHierarchyModel('parent', parentChildComponents);
+
+    // Find the child node in the tree
+    const childNode = model.tree.children.find(node => node.id === 'child');
+    assert.ok(childNode, 'Child should appear in parent tree');
+
+    // Child has an outgoing edge to parent (traversed back)
+    const backRefNode = childNode.children.find(node => node.id === 'parent');
+    assert.ok(backRefNode, 'Parent back-reference should appear');
+    assert.strictEqual(backRefNode.isBackReference, true, 'Should be marked as back-reference');
+    assert.strictEqual(backRefNode.isCycle, false, 'Should NOT be marked as cycle');
+  });
+
+  test('related relationship back-references are marked as cycles', () => {
+    const relatedComponents = [
       {
         Issues: [
           { id: 'a', title: 'A', status: 'open', priority: 1, issue_type: 'task' },
@@ -55,10 +104,11 @@ suite('hierarchy-utils', () => {
       }
     ];
 
-    const model = buildHierarchyModel('a', cyclicComponents);
+    const model = buildHierarchyModel('a', relatedComponents);
     const loopNode = model.tree.children.find(node => node.id === 'b');
     assert.ok(loopNode, 'B should appear as child of A');
     assert.strictEqual(loopNode.children[0].id, 'a');
-    assert.strictEqual(loopNode.children[0].isCycle, true);
+    assert.strictEqual(loopNode.children[0].isCycle, true, 'Related back-reference should be cycle');
+    assert.strictEqual(loopNode.children[0].isBackReference, false);
   });
 });

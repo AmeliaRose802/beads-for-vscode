@@ -120,7 +120,12 @@ function buildParentChain(issueId, edges, issueMap) {
  */
 function buildDependencyTree(issueId, edges, issueMap, context = { visited: new Set(), relationType: null, direction: null }) {
   const issue = issueMap[issueId] || createFallbackIssue(issueId);
-  const isCycle = context.visited.has(issueId);
+  const alreadyVisited = context.visited.has(issueId);
+
+  // Parent-child back-references are structural (not blocking cycles)
+  const isBackReference = alreadyVisited && context.relationType === 'parent-child';
+  // True cycles are blocking relationships that form loops (e.g., A blocks B blocks A)
+  const isCycle = alreadyVisited && !isBackReference;
 
   const node = {
     id: issue.id,
@@ -131,10 +136,11 @@ function buildDependencyTree(issueId, edges, issueMap, context = { visited: new 
     relationType: context.relationType,
     direction: context.direction,
     isCycle,
+    isBackReference,
     children: []
   };
 
-  if (isCycle) {
+  if (alreadyVisited) {
     return node;
   }
 
