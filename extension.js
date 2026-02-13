@@ -42,8 +42,6 @@ function activate(context) {
       exec('bd init --quiet', { cwd: workspacePath }, (error, _stdout, _stderr) => {
         if (error) {
           console.error('Failed to auto-initialize bd:', error);
-        } else {
-          console.log('Beads auto-initialized successfully');
         }
       });
     }
