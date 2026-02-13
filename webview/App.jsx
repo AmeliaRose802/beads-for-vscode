@@ -29,20 +29,16 @@ const App = () => {
   const [showBlockingView, setShowBlockingView] = useState(false);
   const [blockingModel, setBlockingModel] = useState(null);
   const [graphData, setGraphData] = useState(null);
-  const [, setGraphRequestPurpose] = useState(null);
-  const [, setHierarchyIssueId] = useState(null);
   const [hierarchyModel, setHierarchyModel] = useState(null);
   const graphPurposeRef = useRef(null);
   const hierarchyIssueRef = useRef(null);
   const outputRef = useRef(output);
 
   const updateGraphPurpose = (purpose) => {
-    setGraphRequestPurpose(purpose);
     graphPurposeRef.current = purpose;
   };
 
   const updateHierarchyIssue = (issueId) => {
-    setHierarchyIssueId(issueId);
     hierarchyIssueRef.current = issueId;
   };
   

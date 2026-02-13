@@ -19,7 +19,7 @@ async function getAISuggestions(executeBdCommand, title, currentDescription) {
     try {
       existingIssues = JSON.parse(listResult.output);
     } catch (_e) {
-      console.log('Could not parse existing issues');
+      console.error('Could not parse existing issues');
     }
 
     const workspaceFiles = await getWorkspaceContext();

@@ -71,26 +71,12 @@ body {
 .clear-btn:hover { background-color: var(--vscode-button-secondaryHoverBackground); }
 
 /* Input Components */
-.command-input-group { display: flex; flex-direction: column; gap: 6px; padding: 0 4px; }
-.input-row { display: flex; gap: 4px; }
-.command-prefix {
-  background-color: var(--vscode-input-background);
-  padding: 6px 8px;
-  border-radius: 3px;
-  font-family: var(--vscode-editor-font-family);
-  font-size: 12px;
-  color: var(--vscode-input-foreground);
-  border: 1px solid var(--vscode-input-border);
-  display: flex;
-  align-items: center;
-}
-
 /* Title Input Row for Create Panel */
 .title-input-row { display: flex; gap: 8px; }
 .title-input { flex: 1; }
 .ai-suggest-btn { white-space: nowrap; min-width: 120px; }
 
-#command-input, .relationship-input, .relationship-select {
+.relationship-input, .relationship-select {
   background-color: var(--vscode-input-background);
   border: 1px solid var(--vscode-input-border);
   color: var(--vscode-input-foreground);
@@ -99,10 +85,9 @@ body {
   font-size: 12px;
   font-family: var(--vscode-editor-font-family);
 }
-#command-input { flex: 1; }
 .relationship-input, .relationship-select { width: 100%; }
 textarea.relationship-input { font-family: var(--vscode-font-family); resize: vertical; }
-#command-input:focus, .relationship-input:focus, .relationship-select:focus {
+.relationship-input:focus, .relationship-select:focus {
   outline: 1px solid var(--vscode-focusBorder);
   outline-offset: -1px;
 }
@@ -117,21 +102,6 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   font-family: var(--vscode-editor-font-family);
   border: 1px solid var(--vscode-input-border);
 }
-
-/* Command Chips */
-.common-commands { display: flex; gap: 4px; flex-wrap: wrap; padding: 0 4px; margin-top: 6px; }
-.cmd-chip {
-  background-color: var(--vscode-badge-background);
-  color: var(--vscode-badge-foreground);
-  border: none;
-  padding: 3px 8px;
-  border-radius: 10px;
-  font-size: 10px;
-  font-family: var(--vscode-editor-font-family);
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-.cmd-chip:hover { opacity: 0.8; }
 
 /* Output */
 .output-section { padding: 0 4px; }
@@ -151,7 +121,7 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 }
 .output.error { color: var(--vscode-errorForeground); }
 .output.success { color: var(--vscode-terminal-ansiGreen); }
-.output code, .relationship-info code {
+.output code {
   background-color: var(--vscode-textCodeBlock-background);
   padding: 2px 4px;
   border-radius: 2px;
@@ -166,7 +136,6 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 .relationship-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 12px; }
 .relationship-actions .action-btn:first-child:last-child { grid-column: 1 / -1; }
 .relationship-actions .clear-btn { grid-column: 1 / -1; width: 100%; margin-top: 4px; }
-.relationship-info code { font-size: 10px; }
 
 /* Issue Cards */
 .issue-card {
@@ -520,7 +489,6 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 .stat-item__bar-fill.stat-item--green { background-color: var(--vscode-terminal-ansiGreen); }
 .stat-item__bar-fill.stat-item--red { background-color: var(--vscode-errorForeground); }
 .stat-item__bar-fill.stat-item--cyan { background-color: var(--vscode-terminal-ansiCyan); }
-.stat-item__percentage { font-size: 9px; color: var(--vscode-descriptionForeground); margin-top: 2px; text-align: right; }
 .stat-item--blue { color: var(--vscode-terminal-ansiBlue); }
 .stat-item--yellow { color: var(--vscode-terminal-ansiYellow); }
 .stat-item--green { color: var(--vscode-terminal-ansiGreen); }
@@ -1349,9 +1317,6 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   border-color: var(--vscode-textLink-foreground);
   background-color: var(--vscode-list-activeSelectionBackground);
 }
-.blocking-view__node--closed {
-  opacity: 0.5;
-}
 .blocking-view__node-header {
   display: flex;
   align-items: center;
@@ -1667,14 +1632,6 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   border-radius: 4px;
   cursor: pointer;
   min-width: 120px;
-}
-
-.hierarchy-node__content--incoming {
-  border-left: 3px solid var(--vscode-textLink-foreground);
-}
-
-.hierarchy-node__content--outgoing {
-  border-left: 3px solid var(--vscode-terminal-ansiBlue);
 }
 
 .hierarchy-node__content--cycle {

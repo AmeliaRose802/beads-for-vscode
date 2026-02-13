@@ -1,10 +1,5 @@
 .vscode/**
 node_modules/**
 .gitignore
-main.js
-preload.js
-index.html
-styles.css
-renderer.js
 test/**
 .beads/**
