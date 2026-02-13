@@ -1333,8 +1333,8 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   border-radius: 4px;
   padding: 6px 8px;
   cursor: pointer;
-  min-width: 140px;
-  max-width: 200px;
+  min-width: 180px;
+  max-width: 300px;
 }
 .blocking-view__node:hover {
   border-color: var(--vscode-textLink-foreground);
@@ -1374,8 +1374,10 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   font-size: 11px;
   margin-top: 2px;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
 }
 .blocking-view__node-badge {
   font-size: 9px;
