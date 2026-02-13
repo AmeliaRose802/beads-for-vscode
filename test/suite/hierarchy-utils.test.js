@@ -90,7 +90,7 @@ suite('hierarchy-utils', () => {
     assert.strictEqual(backRefNode.isCycle, false, 'Should NOT be marked as cycle');
   });
 
-  test('related relationship back-references are marked as cycles', () => {
+  test('related relationship back-references are marked as back-references not cycles', () => {
     const relatedComponents = [
       {
         Issues: [
@@ -108,7 +108,29 @@ suite('hierarchy-utils', () => {
     const loopNode = model.tree.children.find(node => node.id === 'b');
     assert.ok(loopNode, 'B should appear as child of A');
     assert.strictEqual(loopNode.children[0].id, 'a');
-    assert.strictEqual(loopNode.children[0].isCycle, true, 'Related back-reference should be cycle');
-    assert.strictEqual(loopNode.children[0].isBackReference, false);
+    assert.strictEqual(loopNode.children[0].isBackReference, true, 'Related back-reference should be back-reference');
+    assert.strictEqual(loopNode.children[0].isCycle, false, 'Related back-reference should NOT be cycle');
+  });
+
+  test('relates-to relationship is treated as related (non-cyclic)', () => {
+    const relatedComponents = [
+      {
+        Issues: [
+          { id: 'a', title: 'A', status: 'open', priority: 1, issue_type: 'task' },
+          { id: 'b', title: 'B', status: 'open', priority: 1, issue_type: 'task' }
+        ],
+        Dependencies: [
+          { issue_id: 'a', depends_on_id: 'b', type: 'relates-to' },
+          { issue_id: 'b', depends_on_id: 'a', type: 'relates-to' }
+        ]
+      }
+    ];
+
+    const model = buildHierarchyModel('a', relatedComponents);
+    const loopNode = model.tree.children.find(node => node.id === 'b');
+    assert.ok(loopNode, 'B should appear as child of A');
+    assert.strictEqual(loopNode.children[0].id, 'a');
+    assert.strictEqual(loopNode.children[0].isBackReference, true, 'Relates-to back-reference should be back-reference');
+    assert.strictEqual(loopNode.children[0].isCycle, false, 'Relates-to back-reference should NOT be cycle');
   });
 });
