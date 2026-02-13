@@ -36,7 +36,7 @@ function buildBlockingModel(components, filters) {
   const sortedIds = topologicalSort(filteredIds, filteredEdges);
   const criticalPath = findCriticalPath(filteredIds, filteredEdges);
   const readyItems = findReadyItems(filteredIds, filteredEdges, issueMap);
-  const parallelGroups = findParallelGroups(filteredIds, filteredEdges);
+  const parallelGroups = findParallelGroups(filteredIds, filteredEdges, issueMap);
 
   const issues = filteredIds.map(id => issueMap[id]);
 
@@ -264,10 +264,16 @@ function findReadyItems(nodeIds, edges, issueMap) {
  *
  * @param {Array<string>} nodeIds - All node identifiers.
  * @param {Array<{from: string, to: string}>} edges - Directed edges.
+ * @param {Record<string, object>} [issueMap] - Optional issue lookup to ignore completed blockers.
  * @returns {Array<Array<string>>} Groups of node IDs at the same depth.
  */
-function findParallelGroups(nodeIds, edges) {
+function findParallelGroups(nodeIds, edges, issueMap) {
   if (nodeIds.length === 0) return [];
+
+  const isClosed = (id) => {
+    const status = issueMap?.[id]?.status;
+    return status === 'closed' || status === 'done';
+  };
 
   const inDegree = {};
   const outEdges = {};
@@ -277,6 +283,9 @@ function findParallelGroups(nodeIds, edges) {
   });
 
   edges.forEach(({ from, to }) => {
+    // Completed blockers should not push work into later phases.
+    if (issueMap && isClosed(from)) return;
+
     if (inDegree[to] !== undefined && outEdges[from] !== undefined) {
       inDegree[to]++;
       outEdges[from].push(to);

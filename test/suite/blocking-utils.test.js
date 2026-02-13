@@ -190,6 +190,18 @@ suite('blocking-utils', () => {
       assert.deepStrictEqual(groups[2], ['d']);
     });
 
+    test('does not increase phase when blocker is closed', () => {
+      const edges = [{ from: 'a', to: 'b' }];
+      const issueMap = {
+        a: { id: 'a', status: 'closed' },
+        b: { id: 'b', status: 'open' }
+      };
+
+      const groups = findParallelGroups(['a', 'b'], edges, issueMap);
+      assert.strictEqual(groups.length, 1);
+      assert.ok(groups[0].includes('b'));
+    });
+
     test('single group when no edges', () => {
       const groups = findParallelGroups(['a', 'b', 'c'], []);
       assert.strictEqual(groups.length, 1);
