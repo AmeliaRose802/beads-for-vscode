@@ -361,6 +361,9 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
         <span className="blocking-view__critical-label">
           Critical path ({filteredCriticalPath.length} items, longest dependency chain):
         </span>
+        <div className="blocking-view__critical-subtitle">
+          Execution order: complete items top-to-bottom
+        </div>
       </div>
       <div className="blocking-view__critical-chain">
         {filteredCriticalPath.map((issue, idx) => (
@@ -464,3 +467,4 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
 };
 
 export default BlockingView;
+

@@ -1428,6 +1428,13 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   font-size: 11px;
   color: var(--vscode-descriptionForeground);
 }
+.blocking-view__critical-subtitle {
+  font-size: 10px;
+  color: var(--vscode-descriptionForeground);
+  font-style: italic;
+  margin-top: 2px;
+  opacity: 0.8;
+}
 .blocking-view__critical-chain {
   display: flex;
   flex-direction: column;
