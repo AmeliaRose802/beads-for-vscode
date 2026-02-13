@@ -4,14 +4,16 @@ const relationLabels = {
   'parent-child': 'Parent',
   blocks: 'Blocks',
   'blocked-by': 'Blocked by',
-  related: 'Related'
+  related: 'Related',
+  'relates-to': 'Related'
 };
 
 const relationIcons = {
   'parent-child': '🪜',
   blocks: '⛔',
   'blocked-by': '🚧',
-  related: '🔗'
+  related: '🔗',
+  'relates-to': '🔗'
 };
 
 /**

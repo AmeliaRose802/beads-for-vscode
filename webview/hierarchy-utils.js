@@ -68,7 +68,8 @@ function buildEdgeList(components) {
         'ToID',
         'target_id'
       ]);
-      const type = getField(dep, ['type', 'dependency_type', 'relationship', 'relation_type']) || 'related';
+      const rawType = getField(dep, ['type', 'dependency_type', 'relationship', 'relation_type']) || 'related';
+      const type = rawType === 'relates-to' ? 'related' : rawType;
 
       if (issueId && dependsOnId) {
         edges.push({ issueId, dependsOnId, type });
@@ -122,10 +123,13 @@ function buildDependencyTree(issueId, edges, issueMap, context = { visited: new 
   const issue = issueMap[issueId] || createFallbackIssue(issueId);
   const alreadyVisited = context.visited.has(issueId);
 
-  // Parent-child back-references are structural (not blocking cycles)
-  const isBackReference = alreadyVisited && context.relationType === 'parent-child';
-  // True cycles are blocking relationships that form loops (e.g., A blocks B blocks A)
-  const isCycle = alreadyVisited && !isBackReference;
+  const nonBlockingRelationTypes = new Set(['parent-child', 'related']);
+  const blockingRelationTypes = new Set(['blocks', 'blocked-by']);
+
+  // Non-blocking back-references are normal for structural + related relationships.
+  const isBackReference = alreadyVisited && nonBlockingRelationTypes.has(context.relationType);
+  // Only blocking dependency loops should be flagged as cycles.
+  const isCycle = alreadyVisited && !isBackReference && blockingRelationTypes.has(context.relationType);
 
   const node = {
     id: issue.id,
