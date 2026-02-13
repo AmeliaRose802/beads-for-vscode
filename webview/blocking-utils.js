@@ -5,6 +5,9 @@
 
 const { getField } = require('./field-utils');
 
+const PRIORITY_WEIGHT_BASE = 3;
+const MAX_PRIORITY_LEVEL = 4;
+
 /**
  * Build a blocking model from graph components data.
  * Extracts only "blocks"/"blocked-by" edges, computes topological sort,
@@ -34,7 +37,7 @@ function buildBlockingModel(components, filters) {
   );
 
   const sortedIds = topologicalSort(filteredIds, filteredEdges);
-  const criticalPath = findCriticalPath(filteredIds, filteredEdges);
+  const criticalPath = findCriticalPath(filteredIds, filteredEdges, issueMap);
   const readyItems = findReadyItems(filteredIds, filteredEdges, issueMap);
   const parallelGroups = findParallelGroups(filteredIds, filteredEdges, issueMap);
 
@@ -166,9 +169,10 @@ function topologicalSort(nodeIds, edges) {
  *
  * @param {Array<string>} nodeIds - All node identifiers.
  * @param {Array<{from: string, to: string}>} edges - Directed edges.
+ * @param {Record<string, object>} [issueMap] - Issue lookup used for priority weighting.
  * @returns {Array<string>} Node IDs on the critical path.
  */
-function findCriticalPath(nodeIds, edges) {
+function findCriticalPath(nodeIds, edges, issueMap) {
   if (nodeIds.length === 0) return [];
 
   const outEdges = {};
@@ -187,18 +191,24 @@ function findCriticalPath(nodeIds, edges) {
 
   const sorted = topologicalSort(nodeIds, edges);
 
+  const weights = {};
+  nodeIds.forEach(id => {
+    weights[id] = getPriorityWeight(issueMap?.[id]);
+  });
+
   // Longest path DP
   const dist = {};
   const predecessor = {};
   nodeIds.forEach(id => {
-    dist[id] = 0;
+    dist[id] = weights[id];
     predecessor[id] = null;
   });
 
   sorted.forEach(id => {
     outEdges[id].forEach(toId => {
-      if (dist[id] + 1 > dist[toId]) {
-        dist[toId] = dist[id] + 1;
+      const candidateScore = dist[id] + weights[toId];
+      if (candidateScore > dist[toId]) {
+        dist[toId] = candidateScore;
         predecessor[toId] = id;
       }
     });
@@ -223,6 +233,26 @@ function findCriticalPath(nodeIds, edges) {
   }
 
   return path;
+}
+
+/**
+ * Compute a weight for priority so that higher-priority (lower number) items dominate path scoring.
+ * @param {object} issue - Issue metadata.
+ * @returns {number} Priority weight (>=1).
+ */
+function getPriorityWeight(issue) {
+  if (!issue || issue.priority === undefined || issue.priority === null) {
+    return 1;
+  }
+
+  const numericPriority = Number(issue.priority);
+  if (Number.isNaN(numericPriority)) {
+    return 1;
+  }
+
+  const clamped = Math.min(MAX_PRIORITY_LEVEL, Math.max(0, numericPriority));
+  const exponent = MAX_PRIORITY_LEVEL - clamped;
+  return Math.pow(PRIORITY_WEIGHT_BASE, exponent);
 }
 
 /**
