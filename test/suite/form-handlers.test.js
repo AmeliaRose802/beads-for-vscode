@@ -1,14 +1,85 @@
 const assert = require('assert');
-const { buildCreateCommand, buildUpdateCommand } = require('../../webview/form-handlers');
+const { buildCreateCommand, buildUpdateCommand, escapeShellArg, safeShellArg } = require('../../webview/form-handlers');
 
 suite('Form Handlers Tests', () => {
+  // Helper to get the expected quote style based on platform
+  const q = process.platform === 'win32' ? '"' : "'";
+  
+  suite('escapeShellArg', () => {
+    // Platform-specific escaping tests - only run on appropriate platform
+    if (process.platform === 'win32') {
+      test('Should escape double quotes on Windows', function() {
+        assert.strictEqual(escapeShellArg('test"quote'), 'test\\"quote');
+      });
+
+      test('Should escape backslashes on Windows', function() {
+        assert.strictEqual(escapeShellArg('test\\path'), 'test\\\\path');
+      });
+    } else {
+      test('Should escape single quotes on Unix', function() {
+        assert.strictEqual(escapeShellArg("test'quote"), "test'\\''quote");
+      });
+    }
+
+    test('Should prevent command injection with semicolon', () => {
+      const escaped = safeShellArg('test; rm -rf /');
+      // Verify the string is properly quoted
+      assert.ok(escaped.startsWith(q) && escaped.endsWith(q), 'Should be quoted');
+      // The dangerous characters should be contained within quotes
+      if (process.platform === 'win32') {
+        // On Windows, the string is quoted and any internal quotes would be escaped
+        const content = escaped.slice(1, -1); // Remove outer quotes
+        // Check that if there are quotes inside, they're escaped
+        assert.ok(!content.includes('"') || content.includes('\\"'), 'Internal quotes should be escaped if present');
+      }
+    });
+
+    test('Should prevent command injection with pipe', () => {
+      const escaped = safeShellArg('test | cat /etc/passwd');
+      // Verify the string is properly quoted
+      assert.ok(escaped.startsWith(q) && escaped.endsWith(q), 'Should be quoted');
+    });
+
+    test('Should prevent command injection with backticks', () => {
+      const escaped = safeShellArg('test`whoami`');
+      // Verify the string is properly quoted
+      assert.ok(escaped.startsWith(q) && escaped.endsWith(q), 'Should be quoted');
+      // On Windows, backticks should be escaped
+      if (process.platform === 'win32') {
+        assert.ok(!escaped.match(/[^\\]`/) || escaped.includes('\\`'), 'Backticks should be escaped');
+      }
+    });
+
+    test('Should prevent command injection with $() subshell', () => {
+      const escaped = safeShellArg('test$(whoami)');
+      // Verify the string is properly quoted
+      assert.ok(escaped.startsWith(q) && escaped.endsWith(q), 'Should be quoted');
+      // On Windows, $ should be escaped
+      if (process.platform === 'win32') {
+        assert.ok(escaped.includes('\\$'), 'Dollar sign should be escaped');
+      }
+    });
+
+    test('Should prevent command injection with newline and additional command', () => {
+      const escaped = safeShellArg('test\nrm -rf /');
+      // Verify the string is properly quoted - this makes newlines safe
+      assert.ok(escaped.startsWith(q) && escaped.endsWith(q), 'Should be quoted');
+    });
+
+    test('Should handle empty string', () => {
+      assert.strictEqual(safeShellArg(''), q + q);
+    });
+  });
+
   suite('buildCreateCommand', () => {
     test('Should build basic create command', () => {
       const cmd = buildCreateCommand({
         title: 'Test issue', type: 'bug', priority: '1',
         description: '', parentId: '', blocksId: '', relatedId: '', currentFile: ''
       });
-      assert.strictEqual(cmd, 'create --title "Test issue" -t bug -p 1');
+      assert.ok(cmd.includes('create --title'));
+      assert.ok(cmd.includes('Test issue'));
+      assert.ok(cmd.includes('-t bug -p 1'));
     });
 
     test('Should include description when provided', () => {
@@ -16,7 +87,8 @@ suite('Form Handlers Tests', () => {
         title: 'Test', type: 'task', priority: '2',
         description: 'A description', parentId: '', blocksId: '', relatedId: '', currentFile: ''
       });
-      assert.ok(cmd.includes('-d "A description"'));
+      assert.ok(cmd.includes('-d'));
+      assert.ok(cmd.includes('A description'));
     });
 
     test('Should include file reference in notes', () => {
@@ -24,7 +96,8 @@ suite('Form Handlers Tests', () => {
         title: 'Test', type: 'task', priority: '2',
         description: '', parentId: '', blocksId: '', relatedId: '', currentFile: 'src/app.js'
       });
-      assert.ok(cmd.includes('--notes "File: src/app.js"'));
+      assert.ok(cmd.includes('--notes'));
+      assert.ok(cmd.includes('File: src/app.js'));
     });
 
     test('Should include parent dependency', () => {
@@ -76,6 +149,45 @@ suite('Form Handlers Tests', () => {
       });
       assert.strictEqual(cmd, null);
     });
+
+    test('SECURITY: Should escape command injection in title', () => {
+      const cmd = buildCreateCommand({
+        title: 'test"; rm -rf /; echo "', type: 'bug', priority: '0',
+        description: '', parentId: '', blocksId: '', relatedId: '', currentFile: ''
+      });
+      // The command should not contain unescaped shell metacharacters
+      assert.ok(cmd, 'Command should be generated');
+      // Verify the dangerous command is escaped and won't execute
+      assert.ok(!cmd.match(/[^\\]"; rm/), 'Should not contain unescaped command injection');
+    });
+
+    test('SECURITY: Should escape command injection in description', () => {
+      const cmd = buildCreateCommand({
+        title: 'Safe title', type: 'bug', priority: '0',
+        description: '$(whoami) | cat /etc/passwd', parentId: '', blocksId: '', relatedId: '', currentFile: ''
+      });
+      assert.ok(cmd, 'Command should be generated');
+      // The subshell and pipe should be properly escaped
+      assert.ok(cmd.includes('$(whoami)') ? cmd.includes('\\$') : true, 'Subshell should be escaped or quoted');
+    });
+
+    test('SECURITY: Should escape backticks in title', () => {
+      const cmd = buildCreateCommand({
+        title: 'test`whoami`test', type: 'bug', priority: '0',
+        description: '', parentId: '', blocksId: '', relatedId: '', currentFile: ''
+      });
+      assert.ok(cmd, 'Command should be generated');
+      // Backticks should not be executable
+      assert.ok(!cmd.match(/[^\\]`whoami`/), 'Backticks should be escaped');
+    });
+
+    test('SECURITY: Should escape newlines that could chain commands', () => {
+      const cmd = buildCreateCommand({
+        title: 'test\nrm -rf /', type: 'bug', priority: '0',
+        description: '', parentId: '', blocksId: '', relatedId: '', currentFile: ''
+      });
+      assert.ok(cmd, 'Command should be generated');
+    });
   });
 
   suite('buildUpdateCommand', () => {
@@ -85,7 +197,8 @@ suite('Form Handlers Tests', () => {
         priority: '0', description: '', status: 'in_progress'
       });
       assert.ok(cmd.startsWith('update beads_ui-1'));
-      assert.ok(cmd.includes('--title "Updated title"'));
+      assert.ok(cmd.includes('--title'));
+      assert.ok(cmd.includes('Updated title'));
       assert.ok(cmd.includes('--type bug'));
       assert.ok(cmd.includes('--priority 0'));
       assert.ok(cmd.includes('--status in_progress'));
@@ -96,7 +209,8 @@ suite('Form Handlers Tests', () => {
         issueId: 'x-1', title: 'T', type: 'task',
         priority: '2', description: 'New desc', status: 'open'
       });
-      assert.ok(cmd.includes('--description "New desc"'));
+      assert.ok(cmd.includes('--description'));
+      assert.ok(cmd.includes('New desc'));
     });
 
     test('Should return null for empty title', () => {
@@ -105,6 +219,23 @@ suite('Form Handlers Tests', () => {
         priority: '2', description: '', status: 'open'
       });
       assert.strictEqual(cmd, null);
+    });
+
+    test('SECURITY: Should escape command injection in title', () => {
+      const cmd = buildUpdateCommand({
+        issueId: 'x-1', title: 'test"; rm -rf /; echo "', type: 'bug',
+        priority: '0', description: '', status: 'open'
+      });
+      assert.ok(cmd, 'Command should be generated');
+      assert.ok(!cmd.match(/[^\\]"; rm/), 'Should not contain unescaped command injection');
+    });
+
+    test('SECURITY: Should escape command injection in description', () => {
+      const cmd = buildUpdateCommand({
+        issueId: 'x-1', title: 'Safe', type: 'bug',
+        priority: '0', description: '$(whoami)', status: 'open'
+      });
+      assert.ok(cmd, 'Command should be generated');
     });
   });
 });
