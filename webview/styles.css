@@ -1785,3 +1785,44 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   border-left: 1px dashed var(--vscode-panel-border);
   padding-left: 8px;
 }
+
+/* Markdown rendered content */
+.md-rendered { line-height: 1.5; }
+.md-rendered p.md-paragraph { margin: 4px 0; }
+.md-rendered h1.md-heading { font-size: 1.4em; margin: 8px 0 4px; font-weight: 600; }
+.md-rendered h2.md-heading { font-size: 1.25em; margin: 8px 0 4px; font-weight: 600; }
+.md-rendered h3.md-heading { font-size: 1.1em; margin: 6px 0 4px; font-weight: 600; }
+.md-rendered h4.md-heading, .md-rendered h5.md-heading, .md-rendered h6.md-heading {
+  font-size: 1em; margin: 6px 0 2px; font-weight: 600;
+}
+.md-rendered .md-inline-code {
+  font-family: var(--vscode-editor-font-family);
+  background-color: var(--vscode-textCodeBlock-background);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+.md-rendered .md-code-block {
+  font-family: var(--vscode-editor-font-family);
+  background-color: var(--vscode-textCodeBlock-background);
+  padding: 8px;
+  border-radius: 4px;
+  margin: 6px 0;
+  overflow-x: auto;
+  font-size: 0.9em;
+  white-space: pre;
+}
+.md-rendered .md-code-block code { background: none; padding: 0; }
+.md-rendered .md-list {
+  margin: 4px 0;
+  padding-left: 20px;
+}
+.md-rendered .md-list li { margin: 2px 0; }
+.md-rendered .md-link {
+  color: var(--vscode-textLink-foreground);
+  text-decoration: none;
+}
+.md-rendered .md-link:hover {
+  text-decoration: underline;
+  color: var(--vscode-textLink-activeForeground);
+}

@@ -1,4 +1,5 @@
 import React from 'react';
+import MarkdownRenderer from './MarkdownRenderer';
 
 const IssueCardDetails = ({ 
   isLoadingDetails, 
@@ -20,25 +21,25 @@ const IssueCardDetails = ({
       {(detailedData?.description || issue.description) && (
         <div className="issue-card__description">
           <strong>Description:</strong>
-          <div>{detailedData?.description || issue.description}</div>
+          <MarkdownRenderer content={detailedData?.description || issue.description} />
         </div>
       )}
       {detailedData?.acceptance && (
         <div className="issue-card__acceptance">
           <strong>Acceptance Criteria:</strong>
-          <div>{detailedData.acceptance}</div>
+          <MarkdownRenderer content={detailedData.acceptance} />
         </div>
       )}
       {detailedData?.design && (
         <div className="issue-card__design">
           <strong>Design Notes:</strong>
-          <div>{detailedData.design}</div>
+          <MarkdownRenderer content={detailedData.design} />
         </div>
       )}
       {detailedData?.notes && (
         <div className="issue-card__notes">
           <strong>Notes:</strong>
-          <div>{detailedData.notes}</div>
+          <MarkdownRenderer content={detailedData.notes} />
         </div>
       )}
       {/* Relationships section */}
