@@ -496,27 +496,6 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 /* Output Display */
 .output-display { padding: 10px; }
 .output-display__command { color: var(--vscode-descriptionForeground); margin-bottom: 8px; }
-.output-display__header {
-  color: var(--vscode-textPreformat-foreground);
-  font-weight: 600;
-  margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--vscode-panel-border);
-}
-
-/* Issue Groups */
-.issue-group { margin-bottom: 16px; }
-.issue-group__header {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--vscode-foreground);
-  margin-bottom: 8px;
-  padding: 4px 8px;
-  background-color: var(--vscode-sideBarSectionHeader-background);
-  border-radius: 3px;
-  border-left: 3px solid var(--vscode-textLink-foreground);
-}
-.issue-group__items { margin-left: 8px; }
 
 .output-display__closed-section { margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--vscode-panel-border); }
 .output-display__closed-summary {
