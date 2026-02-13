@@ -227,6 +227,31 @@ suite('Beads UI Extension Test Suite', () => {
       assert.strictEqual(message.type, 'commandResultJSON');
     });
 
+    test('Should use --allow-stale for graph commands to prevent hanging', async () => {
+      const jsonOutput = JSON.stringify([{ id: 'test-1', title: 'Test' }]);
+      const graphOutput = JSON.stringify([]);
+      globalExecStub.callsFake((cmd, opts, callback) => {
+        if (cmd.includes('graph')) {
+          callback(null, graphOutput, '');
+        } else {
+          callback(null, jsonOutput, '');
+        }
+      });
+
+      await messageHandler({
+        type: 'executeCommand',
+        command: 'list',
+        useJSON: true
+      });
+
+      const graphCall = globalExecStub.getCalls().find(c => c.args[0].includes('graph'));
+      assert.ok(graphCall, 'Should execute a graph command');
+      assert.ok(
+        graphCall.args[0].includes('--allow-stale'),
+        `Graph command should include --allow-stale, got: ${graphCall.args[0]}`
+      );
+    });
+
     test('Should handle isInlineAction response type', async () => {
       globalExecStub.callsFake((cmd, opts, callback) => {
         callback(null, 'created', '');
@@ -359,7 +384,7 @@ function getBeadsViewProviderClass() {
               if (data.useJSON && ['list', 'ready', 'blocked'].includes(data.command)) {
                 const [jsonRes, graphRes] = await Promise.all([
                   this._executeBdCommand(`${data.command} --json`),
-                  this._executeBdCommand('graph --all --json')
+                  this._executeBdCommand('graph --all --json --allow-stale')
                 ]);
                 const type = jsonRes.success ? 'commandResultJSON' : 'commandResult';
                 webviewView.webview.postMessage({

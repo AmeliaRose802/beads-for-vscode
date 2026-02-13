@@ -105,7 +105,7 @@ class BeadsViewProvider {
             const jsonCommand = `${data.command} --json`;
             const [jsonResult, graphResult] = await Promise.all([
               this._executeBdCommand(jsonCommand),
-              this._executeBdCommand('graph --all --json')
+              this._executeBdCommand('graph --all --json --allow-stale')
             ]);
             if (jsonResult.success) {
               webviewView.webview.postMessage({
@@ -202,7 +202,7 @@ class BeadsViewProvider {
           break;
         }
         case 'getGraphData': {
-          const result = await this._executeBdCommand('graph --all --json');
+          const result = await this._executeBdCommand('graph --all --json --allow-stale');
           if (result.success) {
             try {
               const graphData = JSON.parse(result.output);
