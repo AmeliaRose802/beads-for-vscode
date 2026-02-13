@@ -8,12 +8,12 @@ export const parseComments = (output) => {
     return [];
   }
   
-  const lines = output.split('\\n');
+  const lines = output.split('\n');
   const commentList = [];
   
   for (let line of lines) {
     // Match format: [AUTHOR] Comment text at TIMESTAMP
-    const match = line.match(/^\\[(.+?)\\]\\s+(.+?)\\s+at\\s+(.+)$/);
+    const match = line.match(/^\[(.+?)\]\s+(.+?)\s+at\s+(.+)$/);
     if (match) {
       commentList.push({
         author: match[1],
