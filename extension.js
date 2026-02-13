@@ -1,5 +1,6 @@
 const vscode = require('vscode');
 const { exec } = require('child_process');
+const fs = require('fs');
 const path = require('path');
 const { getAISuggestions } = require('./ai-suggestions');
 
@@ -13,8 +14,7 @@ function activate(context) {
   if (workspaceFolders) {
     const workspacePath = workspaceFolders[0].uri.fsPath;
     const beadsDbPath = path.join(workspacePath, '.beads', 'beads.db');
-    const fs = require('fs');
-    
+
     if (!fs.existsSync(beadsDbPath)) {
       // Initialize bd quietly
       exec('bd init --quiet', { cwd: workspacePath }, (error, _stdout, _stderr) => {
@@ -391,8 +391,6 @@ class BeadsViewProvider {
   }
 
   _getBundledBdPath(platform) {
-    // Check if bundled bd binary exists
-    const fs = require('fs');
     let binaryName = 'bd';
     
     if (platform === 'win32') {
@@ -409,7 +407,6 @@ class BeadsViewProvider {
   }
 
   _getHtmlForWebview(webview) {
-    const fs = require('fs');
     const htmlPath = path.join(this._extensionUri.fsPath, 'webview', 'index.html');
     const cssPath = path.join(this._extensionUri.fsPath, 'webview', 'styles.css');
     const jsPath = path.join(this._extensionUri.fsPath, 'webview', 'bundle.js');

@@ -13,4 +13,20 @@ function getField(obj, keys) {
   return undefined;
 }
 
-module.exports = { getField };
+/**
+ * Map an issue status string to a single-character icon.
+ * @param {string} status - Issue status value.
+ * @returns {string} Status icon character.
+ */
+function getStatusIcon(status) {
+  switch (status) {
+    case 'open': return '○';
+    case 'in_progress': return '◐';
+    case 'blocked': return '●';
+    case 'closed': return '✓';
+    case 'deferred': return '❄';
+    default: return '○';
+  }
+}
+
+module.exports = { getField, getStatusIcon };

@@ -488,12 +488,10 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 .stat-item__bar-fill.stat-item--yellow { background-color: var(--vscode-terminal-ansiYellow); }
 .stat-item__bar-fill.stat-item--green { background-color: var(--vscode-terminal-ansiGreen); }
 .stat-item__bar-fill.stat-item--red { background-color: var(--vscode-errorForeground); }
-.stat-item__bar-fill.stat-item--cyan { background-color: var(--vscode-terminal-ansiCyan); }
 .stat-item--blue { color: var(--vscode-terminal-ansiBlue); }
 .stat-item--yellow { color: var(--vscode-terminal-ansiYellow); }
 .stat-item--green { color: var(--vscode-terminal-ansiGreen); }
 .stat-item--red { color: var(--vscode-errorForeground); }
-.stat-item--cyan { color: var(--vscode-terminal-ansiCyan); }
 
 /* Output Display */
 .output-display { padding: 10px; }
