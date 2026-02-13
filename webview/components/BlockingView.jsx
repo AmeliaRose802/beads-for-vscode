@@ -41,10 +41,7 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
 
   const { issues, edges, completionOrder, criticalPath, readyItems, parallelGroups } = blockingModel;
 
-  const orientedCriticalPath = useMemo(() => {
-    if (!criticalPath) return [];
-    return [...criticalPath].reverse();
-  }, [criticalPath]);
+
 
   // Apply client-side filters to the pre-computed model
   const matchesFilters = useMemo(() => {
@@ -72,7 +69,7 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
   const filterList = (list) => filteredIds ? list.filter(i => filteredIds.has(i.id)) : list;
   const filteredIssues = filterList(issues);
   const filteredCompletionOrder = filterList(completionOrder);
-  const filteredCriticalPath = filterList(orientedCriticalPath);
+  const filteredCriticalPath = filterList(criticalPath);
   const filteredReadyItems = filterList(readyItems);
   const filteredParallelGroups = (filteredIds
     ? parallelGroups.map(g => g.filter(i => filteredIds.has(i.id))).filter(g => g.length > 0)
