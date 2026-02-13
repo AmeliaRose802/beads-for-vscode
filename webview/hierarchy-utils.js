@@ -91,13 +91,18 @@ function buildDependencyTree(issueId, edges, issueMap, context = { visited: new 
   const issue = issueMap[issueId] || createFallbackIssue(issueId);
   const alreadyVisited = context.visited.has(issueId);
 
+  // Categorize relationship types
   const nonBlockingRelationTypes = new Set(['parent-child', 'related']);
   const blockingRelationTypes = new Set(['blocks', 'blocked-by']);
 
-  // Non-blocking back-references are normal for structural + related relationships.
+  // A back-reference is when we revisit a node via a non-blocking relationship.
+  // This is expected and normal for structural (parent-child) and informational (related) links.
   const isBackReference = alreadyVisited && nonBlockingRelationTypes.has(context.relationType);
-  // Only blocking dependency loops should be flagged as cycles.
-  const isCycle = alreadyVisited && !isBackReference && blockingRelationTypes.has(context.relationType);
+  
+  // A cycle is when we revisit a node via a blocking relationship (blocks/blocked-by).
+  // This indicates a true dependency cycle that prevents work from progressing.
+  // Important: Only blocking relationships can form true cycles.
+  const isCycle = alreadyVisited && blockingRelationTypes.has(context.relationType);
 
   const node = {
     id: issue.id,
