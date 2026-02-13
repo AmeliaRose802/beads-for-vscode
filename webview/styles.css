@@ -1065,6 +1065,89 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   color: var(--vscode-list-activeSelectionForeground);
 }
 
+/* Label Dropdown */
+.label-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.label-dropdown__input-wrapper {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.label-dropdown__input {
+  width: 100%;
+  background-color: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border);
+  color: var(--vscode-input-foreground);
+  padding: 6px 28px 6px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-family: var(--vscode-font-family);
+}
+
+.label-dropdown__input:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.label-dropdown__clear {
+  position: absolute;
+  right: 4px;
+  background: none;
+  border: none;
+  color: var(--vscode-descriptionForeground);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  line-height: 1;
+}
+
+.label-dropdown__clear:hover {
+  color: var(--vscode-foreground);
+  background-color: var(--vscode-toolbar-hoverBackground);
+}
+
+.label-dropdown__list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+  background-color: var(--vscode-dropdown-background);
+  border: 1px solid var(--vscode-dropdown-border);
+  border-radius: 3px;
+  max-height: 150px;
+  overflow-y: auto;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.label-dropdown__option {
+  padding: 6px 8px;
+  font-size: 12px;
+  color: var(--vscode-dropdown-foreground);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.label-dropdown__option:hover,
+.label-dropdown__option--highlighted {
+  background-color: var(--vscode-list-hoverBackground);
+}
+
+.label-dropdown__option--highlighted {
+  background-color: var(--vscode-list-activeSelectionBackground);
+  color: var(--vscode-list-activeSelectionForeground);
+}
+
 /* Hierarchy View */
 .hierarchy-view {
   background-color: var(--vscode-editor-background);
@@ -1179,6 +1262,10 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   gap: 6px;
   padding: 6px 12px;
   border-bottom: 1px solid var(--vscode-panel-border);
+}
+.blocking-view__filter-dropdown {
+  flex: 1;
+  min-width: 0;
 }
 .blocking-view__filter-select,
 .blocking-view__filter-input {

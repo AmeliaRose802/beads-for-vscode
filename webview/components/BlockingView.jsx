@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import LabelDropdown from './LabelDropdown';
 const { getStatusIcon } = require('../field-utils');
 /**
  * BlockingView - Visualizes blocking relationships and suggests completion order.
@@ -40,6 +41,19 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
   }
 
   const { issues, edges, completionOrder, criticalPath, readyItems, parallelGroups } = blockingModel;
+
+  const availableLabels = useMemo(() => {
+    if (!Array.isArray(issues)) return [];
+    const labelSet = new Set();
+    issues.forEach(issue => {
+      if (Array.isArray(issue.labels)) {
+        issue.labels.filter(Boolean).forEach(label => labelSet.add(label));
+      }
+    });
+    return Array.from(labelSet).sort((a, b) =>
+      a.localeCompare(b, undefined, { sensitivity: 'base' })
+    );
+  }, [issues]);
 
   // Apply client-side filters to the pre-computed model
   const matchesFilters = useMemo(() => {
@@ -225,13 +239,15 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
         onChange={(e) => setFilterAssignee(e.target.value)}
         aria-label="Filter by assignee"
       />
-      <input
-        className="blocking-view__filter-input"
-        placeholder="Filter label..."
-        value={filterLabel}
-        onChange={(e) => setFilterLabel(e.target.value)}
-        aria-label="Filter by label"
-      />
+      <div className="blocking-view__filter-dropdown">
+        <LabelDropdown
+          value={filterLabel}
+          onChange={setFilterLabel}
+          labels={availableLabels}
+          placeholder="Filter label..."
+          ariaLabel="Filter by label"
+        />
+      </div>
     </div>
   );
 
