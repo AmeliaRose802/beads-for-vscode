@@ -331,7 +331,7 @@ const App = () => {
         <div className="section">
           <div className="section-title">Quick Actions</div>
           <div className="button-grid">
-            <button className="action-btn" onClick={() => runCommand('list')} title="Show all issues (open, in progress, blocked)">📋 List</button>
+            <button className="action-btn" onClick={() => runCommand('list')} title="Show all issues including open, closed, and blocked">📋 List</button>
             <button className="action-btn" onClick={() => runCommand('ready')} title="Show unblocked issues ready to work on">✅ Ready</button>
             <button className="action-btn" onClick={() => runCommand('blocked')} title="Show issues blocked by dependencies">🚫 Blocked</button>
             <button className="action-btn" onClick={() => runCommand('stats')} title="Show project statistics">📊 Stats</button>

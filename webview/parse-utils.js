@@ -209,16 +209,25 @@ function parseListJSON(jsonOutput, command, graphData) {
     });
 
     const hierarchy = buildHierarchyFromGraph(openIssues, graphData);
+    const totalCount = openIssues.length + closedIssues.length;
     const blockedCount = openIssues.filter(i => i.isBlocked).length;
-    const headerParts = [`Found ${openIssues.length} issue${openIssues.length !== 1 ? 's' : ''}`];
+    const details = [];
+    if (closedIssues.length > 0) {
+      details.push(`${openIssues.length} open`);
+      details.push(`${closedIssues.length} closed`);
+    }
     if (blockedCount > 0) {
-      headerParts.push(`(${blockedCount} blocked)`);
+      details.push(`${blockedCount} blocked`);
+    }
+    let header = `Found ${totalCount} issue${totalCount !== 1 ? 's' : ''}`;
+    if (details.length > 0) {
+      header += ` (${details.join(', ')})`;
     }
 
     return {
       type: 'list',
       command,
-      header: headerParts.join(' '),
+      header: header,
       openIssues,
       closedIssues,
       hierarchy

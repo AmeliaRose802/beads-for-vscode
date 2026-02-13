@@ -33,14 +33,14 @@ suite('Parse Utils Tests', () => {
       assert.strictEqual(result.openIssues[0].dependent_count, 0);
     });
 
-    test('Should count only open issues in header', () => {
+    test('Should count all issues in header with breakdown', () => {
       const json = JSON.stringify([
         { id: 't-1', title: 'Open', issue_type: 'task', priority: 1, status: 'open' },
         { id: 't-2', title: 'Closed', issue_type: 'task', priority: 1, status: 'closed' }
       ]);
 
       const result = parseListJSON(json, 'ready');
-      assert.strictEqual(result.header, 'Found 1 issue');
+      assert.strictEqual(result.header, 'Found 2 issues (1 open, 1 closed)');
     });
 
     test('Should include labels array when present', () => {
@@ -171,6 +171,31 @@ suite('Parse Utils Tests', () => {
 
       const result = parseListJSON(json, 'list');
       assert.strictEqual(result.header, 'Found 1 issue');
+    });
+
+    test('Should show total count with open, closed, and blocked breakdown', () => {
+      const json = JSON.stringify([
+        { id: 'a', title: 'A', issue_type: 'task', priority: 1, status: 'open' },
+        { id: 'b', title: 'B', issue_type: 'task', priority: 2, status: 'open' },
+        { id: 'c', title: 'C', issue_type: 'task', priority: 2, status: 'closed' }
+      ]);
+
+      const graph = JSON.stringify([
+        {
+          IssueMap: {
+            'a': { id: 'a', status: 'open' },
+            'b': { id: 'b', status: 'open' }
+          },
+          Dependencies: [
+            { from_id: 'a', to_id: 'b', type: 'blocks' }
+          ]
+        }
+      ]);
+
+      const result = parseListJSON(json, 'list', graph);
+      assert.strictEqual(result.header, 'Found 3 issues (2 open, 1 closed, 1 blocked)');
+      assert.strictEqual(result.openIssues.length, 2);
+      assert.strictEqual(result.closedIssues.length, 1);
     });
   });
 

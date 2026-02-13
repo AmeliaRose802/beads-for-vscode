@@ -88,7 +88,7 @@ suite('JSON Parsing Tests', () => {
     
     assert.strictEqual(result.openIssues.length, 2);
     assert.strictEqual(result.closedIssues.length, 1);
-    assert.strictEqual(result.header, 'Found 2 issues');
+    assert.strictEqual(result.header, 'Found 3 issues (2 open, 1 closed)');
   });
 
   test('Should sort closed issues by closed_at date (most recent first)', () => {
