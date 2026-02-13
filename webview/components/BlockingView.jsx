@@ -41,8 +41,6 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
 
   const { issues, edges, completionOrder, criticalPath, readyItems, parallelGroups } = blockingModel;
 
-
-
   // Apply client-side filters to the pre-computed model
   const matchesFilters = useMemo(() => {
     const hasPriority = filterPriority !== '';

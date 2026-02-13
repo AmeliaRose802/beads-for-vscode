@@ -1,4 +1,4 @@
-const { getField } = require('./field-utils');
+const { getField, buildIssueMap, DEP_ISSUE_KEYS, DEP_TARGET_KEYS, DEP_TYPE_KEYS } = require('./field-utils');
 
 /**
  * Build the hierarchy model (parent chain + dependency tree) for an issue.
@@ -25,29 +25,6 @@ function buildHierarchyModel(issueId, components) {
 }
 
 /**
- * Build a map of issue id to issue details from graph components.
- * @param {Array} components - Graph data components.
- * @returns {Record<string, object>} Issue lookup table.
- */
-function buildIssueMap(components) {
-  const map = {};
-
-  components.forEach(component => {
-    if (component && component.IssueMap && typeof component.IssueMap === 'object') {
-      Object.assign(map, component.IssueMap);
-    }
-
-    (component?.Issues || []).forEach(issue => {
-      if (issue && issue.id) {
-        map[issue.id] = issue;
-      }
-    });
-  });
-
-  return map;
-}
-
-/**
  * Normalize dependency edges into a simple list.
  * @param {Array} components - Graph components containing Dependencies.
  * @returns {Array<{issueId: string, dependsOnId: string, type: string}>} Edge list.
@@ -57,18 +34,9 @@ function buildEdgeList(components) {
 
   components.forEach(component => {
     (component?.Dependencies || []).forEach(dep => {
-      const issueId = getField(dep, ['issue_id', 'IssueID', 'issueId', 'issue']);
-      const dependsOnId = getField(dep, [
-        'depends_on_id',
-        'DependsOnID',
-        'dependsOnId',
-        'depends_on',
-        'dependsOn',
-        'to_id',
-        'ToID',
-        'target_id'
-      ]);
-      const rawType = getField(dep, ['type', 'dependency_type', 'relationship', 'relation_type']) || 'related';
+      const issueId = getField(dep, DEP_ISSUE_KEYS);
+      const dependsOnId = getField(dep, DEP_TARGET_KEYS);
+      const rawType = getField(dep, DEP_TYPE_KEYS) || 'related';
       const type = rawType === 'relates-to' ? 'related' : rawType;
 
       if (issueId && dependsOnId) {

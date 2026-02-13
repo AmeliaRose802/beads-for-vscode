@@ -3,7 +3,7 @@
  * @module webview/parse-utils
  */
 
-const { getField } = require('./field-utils');
+const { getField, DEP_ISSUE_KEYS, DEP_TARGET_KEYS, DEP_TYPE_KEYS } = require('./field-utils');
 
 /**
  * Format a priority value into a normalized string like 'p0', 'p1', etc.
@@ -75,22 +75,13 @@ function buildParentLookup(graphComponents) {
 
   graphComponents.forEach(component => {
     (component?.Dependencies || []).forEach(dep => {
-      const type = getField(dep, ['type', 'dependency_type', 'relationship', 'relation_type']);
+      const type = getField(dep, DEP_TYPE_KEYS);
       if (type !== 'parent-child') {
         return;
       }
 
-      const childId = getField(dep, ['issue_id', 'IssueID', 'issueId', 'issue']);
-      const parentId = getField(dep, [
-        'depends_on_id',
-        'DependsOnID',
-        'dependsOnId',
-        'depends_on',
-        'dependsOn',
-        'to_id',
-        'ToID',
-        'target_id'
-      ]);
+      const childId = getField(dep, DEP_ISSUE_KEYS);
+      const parentId = getField(dep, DEP_TARGET_KEYS);
 
       if (childId && parentId) {
         parentLookup[childId] = parentId;

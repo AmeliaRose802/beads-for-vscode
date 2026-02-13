@@ -3,7 +3,7 @@
  * @module webview/blocking-utils
  */
 
-const { getField } = require('./field-utils');
+const { getField, buildIssueMap, DEP_FROM_KEYS, DEP_TO_KEYS, DEP_TYPE_KEYS } = require('./field-utils');
 
 const PRIORITY_WEIGHT_BASE = 3;
 const MAX_PRIORITY_LEVEL = 4;
@@ -74,25 +74,14 @@ function emptyModel() {
  * @returns {{ issueMap: Record<string, object>, edges: Array<{from: string, to: string}> }}
  */
 function extractBlockingGraph(components) {
-  const issueMap = {};
+  const issueMap = buildIssueMap(components);
   const edges = [];
 
   components.forEach(component => {
-    if (component && component.IssueMap && typeof component.IssueMap === 'object') {
-      Object.entries(component.IssueMap).forEach(([id, issue]) => {
-        issueMap[id] = issue;
-      });
-    }
-    (component?.Issues || []).forEach(issue => {
-      if (issue && issue.id) {
-        issueMap[issue.id] = issue;
-      }
-    });
-
     (component?.Dependencies || []).forEach(dep => {
-      const fromId = getField(dep, ['from_id', 'FromID', 'fromId', 'issue_id', 'IssueID', 'issueId']);
-      const toId = getField(dep, ['to_id', 'ToID', 'toId', 'depends_on_id', 'DependsOnID', 'dependsOnId']);
-      const type = getField(dep, ['type', 'dependency_type', 'relationship']) || 'related';
+      const fromId = getField(dep, DEP_FROM_KEYS);
+      const toId = getField(dep, DEP_TO_KEYS);
+      const type = getField(dep, DEP_TYPE_KEYS) || 'related';
 
       if (fromId && toId && (type === 'blocks' || type === 'blocked-by')) {
         // Normalize: "A blocks B" means B depends on A => edge from A to B
