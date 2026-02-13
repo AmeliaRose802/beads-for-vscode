@@ -428,6 +428,12 @@ const App = () => {
               blockingModel={blockingModel}
               onIssueClick={(issue) => handleShowIssueInline(issue.id)}
               onClose={() => setShowBlockingView(false)}
+              onDepAction={(action, fromId, toId) => {
+                runInlineAction(
+                  `dep ${action} ${fromId} --blocks ${toId}`,
+                  `${action === 'add' ? 'Linked' : 'Unlinked'} ${fromId} → ${toId}`
+                );
+              }}
             />
           </div>
         )}

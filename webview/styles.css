@@ -1528,6 +1528,93 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   white-space: nowrap;
 }
 
+/* Inline dependency editing */
+.blocking-view__arrow-down--interactive,
+.blocking-view__critical-arrow--interactive {
+  cursor: pointer;
+  position: relative;
+  border-radius: 3px;
+  transition: background-color 0.15s;
+}
+.blocking-view__arrow-down--interactive:hover,
+.blocking-view__critical-arrow--interactive:hover {
+  background-color: var(--vscode-list-hoverBackground);
+  color: var(--vscode-textLink-foreground);
+}
+.blocking-view__edge-menu {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 100%;
+  z-index: 10;
+  background-color: var(--vscode-editorWidget-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+  padding: 6px;
+  min-width: 200px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+.blocking-view__edge-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+.blocking-view__edge-menu-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--vscode-textLink-foreground);
+}
+.blocking-view__edge-menu-close {
+  background: none;
+  border: none;
+  color: var(--vscode-foreground);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0 2px;
+}
+.blocking-view__edge-menu-close:hover {
+  color: var(--vscode-errorForeground);
+}
+.blocking-view__edge-menu-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.blocking-view__edge-menu-btn {
+  background-color: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  border: none;
+  border-radius: 3px;
+  padding: 4px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  text-align: left;
+}
+.blocking-view__edge-menu-btn:hover {
+  background-color: var(--vscode-button-secondaryHoverBackground);
+}
+.blocking-view__edge-menu-btn--remove {
+  color: var(--vscode-errorForeground);
+}
+.blocking-view__edge-menu-input-row {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+.blocking-view__edge-menu-input {
+  flex: 1;
+  padding: 3px 6px;
+  font-size: 11px;
+  background-color: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+  border-radius: 3px;
+  font-family: var(--vscode-editor-font-family);
+}
+
 .hierarchy-view__crumb:hover {
   background: var(--vscode-button-secondaryHoverBackground);
 }

@@ -3,14 +3,17 @@ const { getStatusIcon } = require('../field-utils');
 /**
  * BlockingView - Visualizes blocking relationships and suggests completion order.
  *
- * @param {{ blockingModel: object, onIssueClick: Function, onClose: Function }} props
+ * @param {{ blockingModel: object, onIssueClick: Function, onClose: Function, onDepAction: Function }} props
  */
-const BlockingView = ({ blockingModel, onIssueClick, onClose }) => {
+const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => {
   const [activeTab, setActiveTab] = useState('graph');
   const [filterPriority, setFilterPriority] = useState('');
   const [filterAssignee, setFilterAssignee] = useState('');
   const [filterLabel, setFilterLabel] = useState('');
   const [selectedNode, setSelectedNode] = useState(null);
+  const [activeEdgeMenu, setActiveEdgeMenu] = useState(null);
+  const [retargetState, setRetargetState] = useState(null);
+  const [addLinkState, setAddLinkState] = useState(null);
 
   const criticalPathIds = useMemo(() => {
     if (!blockingModel?.criticalPath) return new Set();
@@ -89,6 +92,115 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose }) => {
   const handleNodeClick = (issue) => {
     setSelectedNode(issue.id);
     if (onIssueClick) onIssueClick(issue);
+  };
+
+  const handleEdgeClick = (fromId, toId, event) => {
+    event.stopPropagation();
+    setActiveEdgeMenu({ fromId, toId });
+    setRetargetState(null);
+    setAddLinkState(null);
+  };
+
+  const closeEdgeMenu = () => {
+    setActiveEdgeMenu(null);
+    setRetargetState(null);
+    setAddLinkState(null);
+  };
+
+  const handleRemoveLink = (fromId, toId) => {
+    if (onDepAction) {
+      onDepAction('remove', fromId, toId);
+    }
+    closeEdgeMenu();
+  };
+
+  const handleRetarget = (fromId, oldToId, newToId) => {
+    if (onDepAction && newToId.trim()) {
+      onDepAction('remove', fromId, oldToId);
+      onDepAction('add', fromId, newToId.trim());
+    }
+    closeEdgeMenu();
+  };
+
+  const handleAddLink = (fromId, toId) => {
+    if (onDepAction && toId.trim()) {
+      onDepAction('add', fromId, toId.trim());
+    }
+    closeEdgeMenu();
+  };
+
+  const renderEdgeMenu = (fromId, toId) => {
+    if (!activeEdgeMenu || activeEdgeMenu.fromId !== fromId || activeEdgeMenu.toId !== toId) {
+      return null;
+    }
+
+    return (
+      <div className="blocking-view__edge-menu">
+        <div className="blocking-view__edge-menu-header">
+          <span className="blocking-view__edge-menu-label">
+            {fromId} → {toId}
+          </span>
+          <button
+            className="blocking-view__edge-menu-close"
+            onClick={closeEdgeMenu}
+          >✕</button>
+        </div>
+        <div className="blocking-view__edge-menu-actions">
+          <button
+            className="blocking-view__edge-menu-btn blocking-view__edge-menu-btn--remove"
+            onClick={() => handleRemoveLink(fromId, toId)}
+          >🗑 Remove link</button>
+          {retargetState ? (
+            <div className="blocking-view__edge-menu-input-row">
+              <input
+                className="blocking-view__edge-menu-input"
+                placeholder="New target ID..."
+                value={retargetState.newTarget}
+                onChange={(e) => setRetargetState({ ...retargetState, newTarget: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleRetarget(fromId, toId, retargetState.newTarget);
+                  if (e.key === 'Escape') setRetargetState(null);
+                }}
+                autoFocus
+              />
+              <button
+                className="blocking-view__edge-menu-btn"
+                onClick={() => handleRetarget(fromId, toId, retargetState.newTarget)}
+              >✓</button>
+            </div>
+          ) : (
+            <button
+              className="blocking-view__edge-menu-btn"
+              onClick={() => setRetargetState({ newTarget: '' })}
+            >🔄 Re-target</button>
+          )}
+          {addLinkState ? (
+            <div className="blocking-view__edge-menu-input-row">
+              <input
+                className="blocking-view__edge-menu-input"
+                placeholder="Target ID..."
+                value={addLinkState.targetId}
+                onChange={(e) => setAddLinkState({ ...addLinkState, targetId: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleAddLink(fromId, addLinkState.targetId);
+                  if (e.key === 'Escape') setAddLinkState(null);
+                }}
+                autoFocus
+              />
+              <button
+                className="blocking-view__edge-menu-btn"
+                onClick={() => handleAddLink(fromId, addLinkState.targetId)}
+              >✓</button>
+            </div>
+          ) : (
+            <button
+              className="blocking-view__edge-menu-btn"
+              onClick={() => setAddLinkState({ targetId: '' })}
+            >➕ Add link from {fromId}</button>
+          )}
+        </div>
+      </div>
+    );
   };
 
   const renderFilters = () => (
@@ -186,7 +298,20 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose }) => {
                 })}
               </div>
               {depth < filteredParallelGroups.length - 1 && (
-                <div className="blocking-view__arrow-down">↓</div>
+                <div className="blocking-view__arrow-down blocking-view__arrow-down--interactive"
+                  onClick={(e) => {
+                    const fromIds = group.map(i => i.id);
+                    const nextGroup = filteredParallelGroups[depth + 1];
+                    if (fromIds.length === 1 && nextGroup && nextGroup.length === 1) {
+                      handleEdgeClick(fromIds[0], nextGroup[0].id, e);
+                    }
+                  }}
+                  title="Click to edit dependency"
+                >
+                  ↓
+                  {group.length === 1 && filteredParallelGroups[depth + 1]?.length === 1 &&
+                    renderEdgeMenu(group[0].id, filteredParallelGroups[depth + 1][0].id)}
+                </div>
               )}
             </div>
           ))}
@@ -250,7 +375,14 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose }) => {
               <span className="blocking-view__critical-priority">P{issue.priority}</span>
             </div>
             {idx < filteredCriticalPath.length - 1 && (
-              <div className="blocking-view__critical-arrow">↓ blocks</div>
+              <div
+                className="blocking-view__critical-arrow blocking-view__critical-arrow--interactive"
+                onClick={(e) => handleEdgeClick(issue.id, filteredCriticalPath[idx + 1].id, e)}
+                title={`Edit: ${issue.id} blocks ${filteredCriticalPath[idx + 1].id}`}
+              >
+                ↓ blocks
+                {renderEdgeMenu(issue.id, filteredCriticalPath[idx + 1].id)}
+              </div>
             )}
           </div>
         ))}
