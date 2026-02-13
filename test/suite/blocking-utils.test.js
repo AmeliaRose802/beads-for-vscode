@@ -130,6 +130,32 @@ suite('blocking-utils', () => {
       const path = findCriticalPath([], []);
       assert.deepStrictEqual(path, []);
     });
+
+    test('prioritizes higher-priority shorter chain over longer lower-priority chain', () => {
+      const edges = [
+        { from: 'p1a', to: 'p1b' },
+        { from: 'p2a', to: 'p2b' },
+        { from: 'p2b', to: 'p2c' },
+        { from: 'p2c', to: 'p2d' }
+      ];
+
+      const issueMap = {
+        p1a: { id: 'p1a', priority: 1 },
+        p1b: { id: 'p1b', priority: 1 },
+        p2a: { id: 'p2a', priority: 2 },
+        p2b: { id: 'p2b', priority: 2 },
+        p2c: { id: 'p2c', priority: 2 },
+        p2d: { id: 'p2d', priority: 2 }
+      };
+
+      const path = findCriticalPath(
+        ['p1a', 'p1b', 'p2a', 'p2b', 'p2c', 'p2d'],
+        edges,
+        issueMap
+      );
+
+      assert.deepStrictEqual(path, ['p1a', 'p1b']);
+    });
   });
 
   suite('findReadyItems', () => {
@@ -316,6 +342,29 @@ suite('blocking-utils', () => {
       // blocked-by reverses: x blocks y
       const orderIds = model.completionOrder.map(i => i.id);
       assert.strictEqual(orderIds.indexOf('x') < orderIds.indexOf('y'), true);
+    });
+
+    test('critical path favors higher-priority shorter chain', () => {
+      const components = [
+        {
+          Issues: [
+            { id: 'p1a', title: 'P1 A', status: 'open', priority: 1, issue_type: 'bug' },
+            { id: 'p1b', title: 'P1 B', status: 'open', priority: 1, issue_type: 'bug' },
+            { id: 'p2a', title: 'P2 A', status: 'open', priority: 2, issue_type: 'task' },
+            { id: 'p2b', title: 'P2 B', status: 'open', priority: 2, issue_type: 'task' },
+            { id: 'p2c', title: 'P2 C', status: 'open', priority: 2, issue_type: 'task' }
+          ],
+          Dependencies: [
+            { from_id: 'p1a', to_id: 'p1b', type: 'blocks' },
+            { from_id: 'p2a', to_id: 'p2b', type: 'blocks' },
+            { from_id: 'p2b', to_id: 'p2c', type: 'blocks' }
+          ]
+        }
+      ];
+
+      const model = buildBlockingModel(components);
+      const pathIds = model.criticalPath.map(i => i.id);
+      assert.deepStrictEqual(pathIds, ['p1a', 'p1b']);
     });
 
     test('ignores non-blocking edge types', () => {
