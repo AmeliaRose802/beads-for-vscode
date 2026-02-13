@@ -70,6 +70,19 @@ body {
 }
 .clear-btn:hover { background-color: var(--vscode-button-secondaryHoverBackground); }
 
+/* Output header actions */
+.output-header__actions { display: flex; gap: 4px; align-items: center; }
+.refresh-btn {
+  background-color: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  border: none;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.refresh-btn:hover { background-color: var(--vscode-button-secondaryHoverBackground); }
+
 /* Input Components */
 /* Title Input Row for Create Panel */
 .title-input-row { display: flex; gap: 8px; }

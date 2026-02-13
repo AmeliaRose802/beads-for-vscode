@@ -5,9 +5,15 @@
 const MODIFYING_COMMANDS = ['create', 'update', 'close', 'reopen', 'link'];
 
 /**
+ * Commands whose results can be cached for instant navigation.
+ * @type {string[]}
+ */
+const CACHEABLE_COMMANDS = ['list', 'ready', 'blocked', 'stats'];
+
+/**
  * Create shared action handlers for the main app component.
  * @param {object} ctx - Context with state setters and utilities.
- * @returns {{displayResult: Function, runCommand: Function, requestGraphData: Function, handleInlineActionResult: Function, clearOutput: Function, runInlineAction: Function}}
+ * @returns {{displayResult: Function, runCommand: Function, requestGraphData: Function, handleInlineActionResult: Function, clearOutput: Function, runInlineAction: Function, refreshCommand: Function}}
  */
 function createAppActions(ctx) {
   const {
@@ -35,6 +41,9 @@ function createAppActions(ctx) {
     outputRef
   } = ctx;
 
+  /** @type {Map<string, {output: any, isError: boolean}>} */
+  const pageCache = new Map();
+
   const closeAllPanels = () => {
     setShowRelationshipPanel(false);
     setShowCreatePanel(false);
@@ -44,18 +53,26 @@ function createAppActions(ctx) {
   };
 
   const displayResult = (command, resultOutput, success) => {
+    let parsed;
     if (command.includes('list') || command.includes('ready') || command.includes('blocked')) {
-      const parsed = parseListJSON(resultOutput, command);
+      parsed = parseListJSON(resultOutput, command);
       setOutput(parsed);
     } else if (command.includes('stats')) {
-      const parsed = parseStatsOutput(resultOutput);
+      parsed = parseStatsOutput(resultOutput);
       parsed.command = command;
       setOutput(parsed);
     } else {
-      setOutput(`$ bd ${command}\n\n${resultOutput}`);
+      parsed = `$ bd ${command}\n\n${resultOutput}`;
+      setOutput(parsed);
     }
     setIsError(!success);
     setIsSuccess(success);
+
+    // Cache successful results for cacheable commands
+    const cacheKey = CACHEABLE_COMMANDS.find(c => command.includes(c));
+    if (cacheKey && success) {
+      pageCache.set(cacheKey, { output: parsed, isError: false });
+    }
   };
 
   const runInlineAction = (command, successMessage) => {
@@ -67,11 +84,22 @@ function createAppActions(ctx) {
     });
   };
 
-  const runCommand = (command) => {
+  const runCommand = (command, forceRefresh = false) => {
+    closeAllPanels();
+
+    // Serve from cache if available and not forcing refresh
+    const cacheKey = CACHEABLE_COMMANDS.find(c => command === c);
+    if (!forceRefresh && cacheKey && pageCache.has(cacheKey)) {
+      const cached = pageCache.get(cacheKey);
+      setOutput(cached.output);
+      setIsError(cached.isError);
+      setIsSuccess(false);
+      return;
+    }
+
     setOutput(`$ bd ${command}\n\nExecuting...`);
     setIsError(false);
     setIsSuccess(false);
-    closeAllPanels();
 
     const useJSON = command === 'list' || command === 'ready' || command === 'blocked';
 
@@ -91,6 +119,14 @@ function createAppActions(ctx) {
         });
       }, 1000);
     }
+  };
+
+  /**
+   * Force a fresh fetch for the given command, bypassing cache.
+   * @param {string} command - The command to refresh
+   */
+  const refreshCommand = (command) => {
+    runCommand(command, true);
   };
 
   const requestGraphData = (purpose = 'graph') => {
@@ -136,17 +172,31 @@ function createAppActions(ctx) {
         setTimeout(() => { setOutput(tempOutput); setIsSuccess(false); }, 2000);
       }
       if (MODIFYING_COMMANDS.some(cmd => command.includes(cmd))) {
+        // Invalidate all cached pages since data changed
+        pageCache.clear();
         setTimeout(() => {
           vscode.postMessage({ type: 'executeCommand', command: 'sync' });
           setTimeout(() => {
             const currentOutput = outputRef.current;
-            if (typeof currentOutput === 'object' && currentOutput.command) runCommand(currentOutput.command);
+            if (typeof currentOutput === 'object' && currentOutput.command) runCommand(currentOutput.command, true);
           }, 500);
         }, 1000);
       }
     } else {
       setOutput(`❌ Error: ${cmdOutput || 'Command failed'}`);
       setIsError(true); setIsSuccess(false);
+    }
+  };
+
+  /**
+   * Store a page result in the cache for instant navigation.
+   * @param {string} command - The command that produced the result
+   * @param {any} output - The parsed output to cache
+   */
+  const cachePageResult = (command, output) => {
+    const cacheKey = CACHEABLE_COMMANDS.find(c => command.includes(c));
+    if (cacheKey) {
+      pageCache.set(cacheKey, { output, isError: false });
     }
   };
 
@@ -159,12 +209,14 @@ function createAppActions(ctx) {
   return {
     displayResult,
     runCommand,
+    refreshCommand,
     requestGraphData,
     requestBlockingData,
     handleInlineActionResult,
     clearOutput,
     runInlineAction,
-    closeAllPanels
+    closeAllPanels,
+    cachePageResult
   };
 }
 

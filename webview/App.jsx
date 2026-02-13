@@ -73,12 +73,14 @@ const App = () => {
   const {
     displayResult,
     runCommand,
+    refreshCommand,
     requestGraphData,
     requestBlockingData,
     handleInlineActionResult,
     clearOutput,
     runInlineAction,
-    closeAllPanels
+    closeAllPanels,
+    cachePageResult
   } = createAppActions({
     parseListJSON,
     parseStatsOutput,
@@ -117,6 +119,7 @@ const App = () => {
         parseListJSON,
         displayResult,
         handleInlineActionResult,
+        cachePageResult,
         setOutput,
         setIsError,
         setCwd,
@@ -441,7 +444,12 @@ const App = () => {
           <div className="section output-section">
             <div className="output-header">
               <div className="section-title">Results</div>
-              <button className="clear-btn" onClick={clearOutput}>Clear</button>
+              <div className="output-header__actions">
+                {typeof output === 'object' && output.command && (
+                  <button className="refresh-btn" onClick={() => refreshCommand(output.command)} title="Refresh data">🔄</button>
+                )}
+                <button className="clear-btn" onClick={clearOutput}>Clear</button>
+              </div>
             </div>
             <OutputDisplay 
               output={output} 

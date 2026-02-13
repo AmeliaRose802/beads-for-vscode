@@ -17,6 +17,9 @@ function processMessage(message, ctx) {
       } else {
         ctx.setOutput(parsed);
         ctx.setIsError(false);
+        if (ctx.cachePageResult) {
+          ctx.cachePageResult(message.command, parsed);
+        }
       }
       break;
     }
