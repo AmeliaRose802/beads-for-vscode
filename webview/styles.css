@@ -71,26 +71,12 @@ body {
 .clear-btn:hover { background-color: var(--vscode-button-secondaryHoverBackground); }
 
 /* Input Components */
-.command-input-group { display: flex; flex-direction: column; gap: 6px; padding: 0 4px; }
-.input-row { display: flex; gap: 4px; }
-.command-prefix {
-  background-color: var(--vscode-input-background);
-  padding: 6px 8px;
-  border-radius: 3px;
-  font-family: var(--vscode-editor-font-family);
-  font-size: 12px;
-  color: var(--vscode-input-foreground);
-  border: 1px solid var(--vscode-input-border);
-  display: flex;
-  align-items: center;
-}
-
 /* Title Input Row for Create Panel */
 .title-input-row { display: flex; gap: 8px; }
 .title-input { flex: 1; }
 .ai-suggest-btn { white-space: nowrap; min-width: 120px; }
 
-#command-input, .relationship-input, .relationship-select {
+.relationship-input, .relationship-select {
   background-color: var(--vscode-input-background);
   border: 1px solid var(--vscode-input-border);
   color: var(--vscode-input-foreground);
@@ -99,10 +85,9 @@ body {
   font-size: 12px;
   font-family: var(--vscode-editor-font-family);
 }
-#command-input { flex: 1; }
 .relationship-input, .relationship-select { width: 100%; }
 textarea.relationship-input { font-family: var(--vscode-font-family); resize: vertical; }
-#command-input:focus, .relationship-input:focus, .relationship-select:focus {
+.relationship-input:focus, .relationship-select:focus {
   outline: 1px solid var(--vscode-focusBorder);
   outline-offset: -1px;
 }
