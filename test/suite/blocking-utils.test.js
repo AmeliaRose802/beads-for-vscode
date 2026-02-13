@@ -9,7 +9,8 @@ const {
 } = require('../../webview/blocking-utils');
 
 suite('blocking-utils', () => {
-  // Shared fixture: A blocks B, B blocks C (linear chain)
+  // Shared fixture: linear chain where B depends on A and C depends on B.
+  // In beads graph data this is represented as issue -> depends_on.
   const linearComponents = [
     {
       Issues: [
@@ -18,13 +19,13 @@ suite('blocking-utils', () => {
         { id: 'c', title: 'C', status: 'open', priority: 1, issue_type: 'bug' }
       ],
       Dependencies: [
-        { from_id: 'a', to_id: 'b', type: 'blocks' },
-        { from_id: 'b', to_id: 'c', type: 'blocks' }
+        { issue_id: 'b', depends_on_id: 'a', type: 'blocks' },
+        { issue_id: 'c', depends_on_id: 'b', type: 'blocks' }
       ]
     }
   ];
 
-  // Diamond: A blocks B and C, both B and C block D
+  // Diamond: B and C both depend on A, and D depends on both B and C.
   const diamondComponents = [
     {
       Issues: [
@@ -34,10 +35,10 @@ suite('blocking-utils', () => {
         { id: 'd', title: 'D', status: 'open', priority: 1, issue_type: 'task' }
       ],
       Dependencies: [
-        { from_id: 'a', to_id: 'b', type: 'blocks' },
-        { from_id: 'a', to_id: 'c', type: 'blocks' },
-        { from_id: 'b', to_id: 'd', type: 'blocks' },
-        { from_id: 'c', to_id: 'd', type: 'blocks' }
+        { issue_id: 'b', depends_on_id: 'a', type: 'blocks' },
+        { issue_id: 'c', depends_on_id: 'a', type: 'blocks' },
+        { issue_id: 'd', depends_on_id: 'b', type: 'blocks' },
+        { issue_id: 'd', depends_on_id: 'c', type: 'blocks' }
       ]
     }
   ];

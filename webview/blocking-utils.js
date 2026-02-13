@@ -84,12 +84,9 @@ function extractBlockingGraph(components) {
       const type = getField(dep, DEP_TYPE_KEYS) || 'related';
 
       if (fromId && toId && (type === 'blocks' || type === 'blocked-by')) {
-        // Normalize: "A blocks B" means B depends on A => edge from A to B
-        if (type === 'blocks') {
-          edges.push({ from: fromId, to: toId });
-        } else {
-          edges.push({ from: toId, to: fromId });
-        }
+        // Graph data uses issue -> depends_on orientation.
+        // Normalize to edges from blocker to blocked: target/depends_on (blocker) -> issue (blocked).
+        edges.push({ from: toId, to: fromId });
       }
     });
   });
