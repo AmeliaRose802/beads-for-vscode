@@ -61,6 +61,7 @@ function createAppActions(ctx) {
     setShowCreatePanel(false);
     setShowEditPanel(false);
     setShowHierarchyView(false);
+    setShowBlockingView(false);
 
     const useJSON = command === 'list' || command === 'ready' || command === 'blocked';
 
