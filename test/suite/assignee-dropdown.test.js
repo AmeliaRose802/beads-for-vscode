@@ -15,7 +15,7 @@ suite('AssigneeDropdown component', () => {
   test('Component accepts required props', () => {
     const source = fs.readFileSync(componentPath, 'utf8');
     assert.ok(source.includes('value'), 'should accept value prop');
-    assert.ok(source.includes('onChange'), 'should accept onChange prop');
+    assert.ok(source.includes('onCommit'), 'should accept onCommit prop');
     assert.ok(source.includes('existingAssignees'), 'should accept existingAssignees prop');
   });
 
@@ -23,6 +23,14 @@ suite('AssigneeDropdown component', () => {
     const source = fs.readFileSync(componentPath, 'utf8');
     assert.ok(source.includes('type="text"'), 'should render a text input for custom entry');
     assert.ok(source.includes('handleInputChange'), 'should handle text input changes');
+  });
+
+  test('Typing does not commit on each keystroke', () => {
+    const source = fs.readFileSync(componentPath, 'utf8');
+    const funcMatch = source.match(/const handleInputChange[\s\S]*?^\s\s};/m);
+    assert.ok(funcMatch, 'should find handleInputChange function');
+    const funcBody = funcMatch[0];
+    assert.ok(!funcBody.includes('onCommit('), 'handleInputChange should not call onCommit');
   });
 
   test('Component renders dropdown list from existing assignees', () => {
@@ -36,7 +44,7 @@ suite('AssigneeDropdown component', () => {
     const source = fs.readFileSync(componentPath, 'utf8');
     assert.ok(source.includes('handleClear'), 'should have clear handler');
     assert.ok(source.includes('assignee-dropdown__clear'), 'should render clear button');
-    assert.ok(source.includes("onChange('')"), 'clear should emit empty string');
+    assert.ok(source.includes("onCommit('')"), 'clear should commit empty string');
   });
 
   test('Component supports keyboard navigation', () => {

@@ -177,10 +177,18 @@ const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, on
   const handleAssigneeChange = async (newAssignee) => {
     if (!onAssigneeChange) return;
 
+    const currentAssignee = (issue.assignee || detailedData?.assignee || '').trim();
+    const nextAssignee = (newAssignee || '').trim();
+    if (nextAssignee === currentAssignee) {
+      setIsEditingAssignee(false);
+      setAssigneeSaveState('idle');
+      return;
+    }
+
     setAssigneeSaveState('saving');
     
     try {
-      await onAssigneeChange(issue.id, newAssignee);
+      await onAssigneeChange(issue.id, nextAssignee);
       setAssigneeSaveState('saved');
       
       // Reset to idle after showing saved state
@@ -266,7 +274,7 @@ const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, on
                 <div className="issue-card__assignee-input-wrapper" onClick={(e) => e.stopPropagation()}>
                   <AssigneeDropdown
                     value={issue.assignee || detailedData?.assignee || ''}
-                    onChange={handleAssigneeChange}
+                    onCommit={handleAssigneeChange}
                     existingAssignees={existingAssignees || []}
                     placeholder="Select or type assignee"
                   />

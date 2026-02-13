@@ -6,12 +6,13 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
  *
  * @param {object} props
  * @param {string} props.value - Current assignee value
- * @param {Function} props.onChange - Called with new assignee string
+ * @param {Function} [props.onChange] - Called with draft assignee string as the user types
+ * @param {Function} [props.onCommit] - Called when the assignee should be saved (Enter/blur/selection)
  * @param {string[]} props.existingAssignees - Known assignee names from issues
  * @param {string} [props.placeholder] - Input placeholder text
  * @returns {React.ReactElement}
  */
-const AssigneeDropdown = ({ value, onChange, existingAssignees, placeholder }) => {
+const AssigneeDropdown = ({ value, onChange, onCommit, existingAssignees, placeholder }) => {
   const [inputValue, setInputValue] = useState(value || '');
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
@@ -55,7 +56,8 @@ const AssigneeDropdown = ({ value, onChange, existingAssignees, placeholder }) =
 
   const selectAssignee = (assignee) => {
     setInputValue(assignee);
-    onChange(assignee);
+    if (onChange) onChange(assignee);
+    if (onCommit) onCommit(assignee);
     setIsOpen(false);
     setHighlightedIndex(-1);
   };
@@ -65,18 +67,38 @@ const AssigneeDropdown = ({ value, onChange, existingAssignees, placeholder }) =
     setInputValue(val);
     setIsOpen(true);
     setHighlightedIndex(-1);
-    onChange(val);
+    if (onChange) onChange(val);
   };
 
   const handleClear = () => {
     setInputValue('');
-    onChange('');
+    if (onChange) onChange('');
+    if (onCommit) onCommit('');
     setIsOpen(false);
     setHighlightedIndex(-1);
     if (inputRef.current) inputRef.current.focus();
   };
 
   const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (isOpen && highlightedIndex >= 0 && highlightedIndex < filteredAssignees.length) {
+        selectAssignee(filteredAssignees[highlightedIndex]);
+      } else {
+        setIsOpen(false);
+        setHighlightedIndex(-1);
+        if (onCommit) onCommit(inputValue);
+      }
+      return;
+    }
+
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      setIsOpen(false);
+      setHighlightedIndex(-1);
+      return;
+    }
+
     if (!isOpen && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
       setIsOpen(true);
       e.preventDefault();
@@ -96,19 +118,6 @@ const AssigneeDropdown = ({ value, onChange, existingAssignees, placeholder }) =
       e.preventDefault();
       setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : 0));
       break;
-    case 'Enter':
-      e.preventDefault();
-      if (highlightedIndex >= 0 && highlightedIndex < filteredAssignees.length) {
-        selectAssignee(filteredAssignees[highlightedIndex]);
-      } else {
-        setIsOpen(false);
-      }
-      break;
-    case 'Escape':
-      e.preventDefault();
-      setIsOpen(false);
-      setHighlightedIndex(-1);
-      break;
     }
   };
 
@@ -116,6 +125,12 @@ const AssigneeDropdown = ({ value, onChange, existingAssignees, placeholder }) =
     if (filteredAssignees.length > 0) {
       setIsOpen(true);
     }
+  };
+
+  const handleBlur = () => {
+    setIsOpen(false);
+    setHighlightedIndex(-1);
+    if (onCommit) onCommit(inputValue);
   };
 
   return (
@@ -129,6 +144,7 @@ const AssigneeDropdown = ({ value, onChange, existingAssignees, placeholder }) =
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           onFocus={handleFocus}
+          onBlur={handleBlur}
           placeholder={placeholder || 'Type or select assignee'}
           role="combobox"
           aria-expanded={isOpen}
@@ -138,6 +154,7 @@ const AssigneeDropdown = ({ value, onChange, existingAssignees, placeholder }) =
         {inputValue && (
           <button
             className="assignee-dropdown__clear"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={handleClear}
             title="Clear assignee"
             type="button"

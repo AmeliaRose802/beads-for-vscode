@@ -67,7 +67,8 @@ suite('Inline Assignee Editing', () => {
     const source = fs.readFileSync(issueCardPath, 'utf8');
     assert.ok(source.includes('<AssigneeDropdown'), 'should render AssigneeDropdown component');
     assert.ok(source.includes('value={issue.assignee'), 'should pass current assignee as value');
-    assert.ok(source.includes('onChange={handleAssigneeChange}'), 'should pass change handler');
+    assert.ok(source.includes('onCommit={handleAssigneeChange}'), 'should pass commit handler');
+    assert.ok(!source.includes('onChange={handleAssigneeChange}'), 'should not save on each keystroke');
     assert.ok(source.includes('existingAssignees={existingAssignees'), 'should pass existing assignees');
   });
 
