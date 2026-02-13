@@ -185,6 +185,7 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 .issue-card__badge--type-bug { background-color: var(--vscode-errorForeground); }
 .issue-card__badge--type-feature { background-color: var(--vscode-terminal-ansiCyan); }
 .issue-card__badge--type-task { background-color: var(--vscode-terminal-ansiBlue); }
+.issue-card__badge--blocked { background-color: var(--vscode-errorForeground); font-weight: 600; }
 .issue-card__status { font-size: 10px; font-weight: 500; }
 .issue-card__status--open { color: var(--vscode-terminal-ansiBlue); }
 .issue-card__status--in-progress { color: var(--vscode-terminal-ansiYellow); }

@@ -289,6 +289,11 @@ const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, on
           <span className={`issue-card__status issue-card__status--${issue.status.replace('_', '-')}`}>
             ● {issue.status}
           </span>
+          {issue.isBlocked && (
+            <span className="issue-card__badge issue-card__badge--blocked" title="Blocked by open dependencies">
+              🚫 blocked
+            </span>
+          )}
           {totalRelationships > 0 && (
             <span className="issue-card__relationships-badge" title={`${issue.dependency_count || 0} dependencies, ${issue.dependent_count || 0} dependents`}>
               🔗 {totalRelationships}

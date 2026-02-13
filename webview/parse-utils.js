@@ -3,7 +3,7 @@
  * @module webview/parse-utils
  */
 
-const { getField, DEP_ISSUE_KEYS, DEP_TARGET_KEYS, DEP_TYPE_KEYS } = require('./field-utils');
+const { getField, buildIssueMap, DEP_ISSUE_KEYS, DEP_TARGET_KEYS, DEP_TYPE_KEYS, DEP_FROM_KEYS, DEP_TO_KEYS } = require('./field-utils');
 
 /**
  * Format a priority value into a normalized string like 'p0', 'p1', etc.
@@ -45,6 +45,50 @@ function normalizeIssue(issue) {
     dependency_count: issue.dependency_count || 0,
     dependent_count: issue.dependent_count || 0
   };
+}
+
+/**
+ * Build a set of issue IDs that are blocked by open dependencies.
+ * An item is blocked if it has an incoming "blocks" edge from a non-closed item.
+ * @param {string|Array} graphData - Raw graph data
+ * @returns {Set<string>} Set of blocked issue IDs
+ */
+function buildBlockedSet(graphData) {
+  const components = parseGraphComponents(graphData);
+  if (components.length === 0) return new Set();
+
+  const issueMap = buildIssueMap(components);
+  const blockedBy = {};
+
+  components.forEach(component => {
+    (component?.Dependencies || []).forEach(dep => {
+      const fromId = getField(dep, DEP_FROM_KEYS);
+      const toId = getField(dep, DEP_TO_KEYS);
+      const type = getField(dep, DEP_TYPE_KEYS) || 'related';
+
+      if (!fromId || !toId) return;
+      if (type === 'blocks') {
+        if (!blockedBy[toId]) blockedBy[toId] = [];
+        blockedBy[toId].push(fromId);
+      } else if (type === 'blocked-by') {
+        if (!blockedBy[fromId]) blockedBy[fromId] = [];
+        blockedBy[fromId].push(toId);
+      }
+    });
+  });
+
+  const blockedSet = new Set();
+  for (const [id, blockers] of Object.entries(blockedBy)) {
+    const hasOpenBlocker = blockers.some(blockerId => {
+      const blocker = issueMap[blockerId];
+      return !blocker || (blocker.status !== 'closed' && blocker.status !== 'done');
+    });
+    if (hasOpenBlocker) {
+      blockedSet.add(id);
+    }
+  }
+
+  return blockedSet;
 }
 
 /**
@@ -143,6 +187,7 @@ function parseListJSON(jsonOutput, command, graphData) {
     const issues = JSON.parse(jsonOutput);
     const openIssues = [];
     const closedIssues = [];
+    const blockedSet = buildBlockedSet(graphData);
 
     issues.forEach(issue => {
       const normalizedIssue = normalizeIssue(issue);
@@ -151,6 +196,7 @@ function parseListJSON(jsonOutput, command, graphData) {
       if (normalizedIssue.status === 'closed') {
         closedIssues.push(normalizedIssue);
       } else {
+        normalizedIssue.isBlocked = blockedSet.has(normalizedIssue.id);
         openIssues.push(normalizedIssue);
       }
     });
@@ -163,11 +209,16 @@ function parseListJSON(jsonOutput, command, graphData) {
     });
 
     const hierarchy = buildHierarchyFromGraph(openIssues, graphData);
+    const blockedCount = openIssues.filter(i => i.isBlocked).length;
+    const headerParts = [`Found ${openIssues.length} issue${openIssues.length !== 1 ? 's' : ''}`];
+    if (blockedCount > 0) {
+      headerParts.push(`(${blockedCount} blocked)`);
+    }
 
     return {
       type: 'list',
       command,
-      header: `Found ${openIssues.length} issue${openIssues.length !== 1 ? 's' : ''}`,
+      header: headerParts.join(' '),
       openIssues,
       closedIssues,
       hierarchy

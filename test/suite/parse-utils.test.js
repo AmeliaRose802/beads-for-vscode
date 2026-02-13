@@ -95,6 +95,83 @@ suite('Parse Utils Tests', () => {
       assert.strictEqual(result.hierarchy[0].children.length, 1);
       assert.strictEqual(result.hierarchy[0].children[0].issue.id, 'child-1');
     });
+
+    test('Should mark issues as blocked when they have open blocking dependencies', () => {
+      const json = JSON.stringify([
+        { id: 'blocker-1', title: 'Blocker', issue_type: 'task', priority: 1, status: 'open' },
+        { id: 'blocked-1', title: 'Blocked', issue_type: 'task', priority: 2, status: 'open' }
+      ]);
+
+      const graph = JSON.stringify([
+        {
+          IssueMap: {
+            'blocker-1': { id: 'blocker-1', status: 'open' },
+            'blocked-1': { id: 'blocked-1', status: 'open' }
+          },
+          Dependencies: [
+            { from_id: 'blocker-1', to_id: 'blocked-1', type: 'blocks' }
+          ]
+        }
+      ]);
+
+      const result = parseListJSON(json, 'list', graph);
+      assert.strictEqual(result.openIssues.find(i => i.id === 'blocked-1').isBlocked, true);
+      assert.strictEqual(result.openIssues.find(i => i.id === 'blocker-1').isBlocked, false);
+    });
+
+    test('Should not mark issues as blocked when blockers are closed', () => {
+      const json = JSON.stringify([
+        { id: 'blocked-1', title: 'Was Blocked', issue_type: 'task', priority: 2, status: 'open' }
+      ]);
+
+      const graph = JSON.stringify([
+        {
+          IssueMap: {
+            'blocker-1': { id: 'blocker-1', status: 'closed' },
+            'blocked-1': { id: 'blocked-1', status: 'open' }
+          },
+          Dependencies: [
+            { from_id: 'blocker-1', to_id: 'blocked-1', type: 'blocks' }
+          ]
+        }
+      ]);
+
+      const result = parseListJSON(json, 'list', graph);
+      assert.strictEqual(result.openIssues[0].isBlocked, false);
+    });
+
+    test('Should include blocked count in header', () => {
+      const json = JSON.stringify([
+        { id: 'a', title: 'A', issue_type: 'task', priority: 1, status: 'open' },
+        { id: 'b', title: 'B', issue_type: 'task', priority: 2, status: 'open' },
+        { id: 'c', title: 'C', issue_type: 'task', priority: 2, status: 'open' }
+      ]);
+
+      const graph = JSON.stringify([
+        {
+          IssueMap: {
+            'a': { id: 'a', status: 'open' },
+            'b': { id: 'b', status: 'open' },
+            'c': { id: 'c', status: 'open' }
+          },
+          Dependencies: [
+            { from_id: 'a', to_id: 'b', type: 'blocks' }
+          ]
+        }
+      ]);
+
+      const result = parseListJSON(json, 'list', graph);
+      assert.strictEqual(result.header, 'Found 3 issues (1 blocked)');
+    });
+
+    test('Should not show blocked count when no items are blocked', () => {
+      const json = JSON.stringify([
+        { id: 'a', title: 'A', issue_type: 'task', priority: 1, status: 'open' }
+      ]);
+
+      const result = parseListJSON(json, 'list');
+      assert.strictEqual(result.header, 'Found 1 issue');
+    });
   });
 
   suite('parseStatsOutput', () => {
