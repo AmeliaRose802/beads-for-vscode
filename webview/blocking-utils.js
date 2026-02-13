@@ -84,10 +84,23 @@ function extractBlockingGraph(components) {
       const type = getField(dep, DEP_TYPE_KEYS) || 'related';
 
       if (fromId && toId && (type === 'blocks' || type === 'blocked-by')) {
-        // Normalize: "A blocks B" means B depends on A => edge from A to B
-        if (type === 'blocks') {
+        const hasBeadsIssueKey = Object.prototype.hasOwnProperty.call(dep, 'issue_id')
+          || Object.prototype.hasOwnProperty.call(dep, 'IssueID')
+          || Object.prototype.hasOwnProperty.call(dep, 'issueId');
+        const hasBeadsDependsOnKey = Object.prototype.hasOwnProperty.call(dep, 'depends_on_id')
+          || Object.prototype.hasOwnProperty.call(dep, 'DependsOnID')
+          || Object.prototype.hasOwnProperty.call(dep, 'dependsOnId');
+        const isBeadsOrientation = hasBeadsIssueKey || hasBeadsDependsOnKey;
+
+        if (isBeadsOrientation) {
+          // Beads graph data uses issue -> depends_on orientation.
+          // Normalize to edges from blocker to blocked: depends_on (blocker) -> issue (blocked).
+          edges.push({ from: toId, to: fromId });
+        } else if (type === 'blocks') {
+          // Legacy from/to format where `from` blocks `to`.
           edges.push({ from: fromId, to: toId });
         } else {
+          // Legacy `blocked-by` format where `from` is blocked by `to`.
           edges.push({ from: toId, to: fromId });
         }
       }
