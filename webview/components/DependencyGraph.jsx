@@ -42,8 +42,8 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose }) => {
       });
 
       deps.forEach(dep => {
-        const from = dep.from_id || dep.FromID;
-        const to = dep.to_id || dep.ToID;
+        const from = dep.depends_on_id || dep.from_id || dep.FromID;
+        const to = dep.issue_id || dep.to_id || dep.ToID;
         if (inDegree[to] !== undefined) {
           inDegree[to]++;
         }
@@ -294,8 +294,8 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose }) => {
               </marker>
             </defs>
             {allDeps.map((dep, idx) => {
-              const fromId = dep.from_id || dep.FromID;
-              const toId = dep.to_id || dep.ToID;
+              const fromId = dep.depends_on_id || dep.from_id || dep.FromID;
+              const toId = dep.issue_id || dep.to_id || dep.ToID;
               const fromPos = nodePositions[fromId];
               const toPos = nodePositions[toId];
               
