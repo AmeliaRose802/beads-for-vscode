@@ -35,6 +35,14 @@ function createAppActions(ctx) {
     outputRef
   } = ctx;
 
+  const closeAllPanels = () => {
+    setShowRelationshipPanel(false);
+    setShowCreatePanel(false);
+    setShowEditPanel(false);
+    setShowHierarchyView(false);
+    setShowBlockingView(false);
+  };
+
   const displayResult = (command, resultOutput, success) => {
     if (command.includes('list') || command.includes('ready') || command.includes('blocked')) {
       const parsed = parseListJSON(resultOutput, command);
@@ -63,11 +71,7 @@ function createAppActions(ctx) {
     setOutput(`$ bd ${command}\n\nExecuting...`);
     setIsError(false);
     setIsSuccess(false);
-    setShowRelationshipPanel(false);
-    setShowCreatePanel(false);
-    setShowEditPanel(false);
-    setShowHierarchyView(false);
-    setShowBlockingView(false);
+    closeAllPanels();
 
     const useJSON = command === 'list' || command === 'ready' || command === 'blocked';
 
@@ -94,15 +98,9 @@ function createAppActions(ctx) {
     setOutput(purpose === 'graph' ? 'Loading dependency graph...' : 'Loading hierarchy data...');
     setIsError(false);
     setIsSuccess(false);
-    setShowRelationshipPanel(false);
-    setShowCreatePanel(false);
-    setShowEditPanel(false);
-    setShowBlockingView(false);
-    if (purpose === 'graph') {
-      setShowHierarchyView(false);
-    } else {
+    closeAllPanels();
+    if (purpose !== 'graph') {
       setHierarchyModel(null);
-      setShowHierarchyView(false);
     }
 
     vscode.postMessage({
@@ -115,10 +113,7 @@ function createAppActions(ctx) {
     setOutput('Loading blocking view...');
     setIsError(false);
     setIsSuccess(false);
-    setShowRelationshipPanel(false);
-    setShowCreatePanel(false);
-    setShowEditPanel(false);
-    setShowHierarchyView(false);
+    closeAllPanels();
     setBlockingModel(null);
 
     vscode.postMessage({
@@ -168,7 +163,8 @@ function createAppActions(ctx) {
     requestBlockingData,
     handleInlineActionResult,
     clearOutput,
-    runInlineAction
+    runInlineAction,
+    closeAllPanels
   };
 }
 

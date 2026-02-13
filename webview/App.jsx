@@ -77,7 +77,8 @@ const App = () => {
     requestBlockingData,
     handleInlineActionResult,
     clearOutput,
-    runInlineAction
+    runInlineAction,
+    closeAllPanels
   } = createAppActions({
     parseListJSON,
     parseStatsOutput,
@@ -256,10 +257,8 @@ const App = () => {
 
   const handleShowHierarchy = (issueId) => {
     updateHierarchyIssue(issueId);
+    closeAllPanels();
     setShowDependencyGraph(false);
-    setShowRelationshipPanel(false);
-    setShowCreatePanel(false);
-    setShowEditPanel(false);
 
     if (graphData) {
       try {
