@@ -1,4 +1,10 @@
 /**
+ * Commands that modify issue state and require a sync + refresh.
+ * @type {string[]}
+ */
+const MODIFYING_COMMANDS = ['create', 'update', 'close', 'reopen', 'link'];
+
+/**
  * Create shared action handlers for the main app component.
  * @param {object} ctx - Context with state setters and utilities.
  * @returns {{displayResult: Function, runCommand: Function, requestGraphData: Function, handleInlineActionResult: Function, clearOutput: Function, runInlineAction: Function}}
@@ -71,8 +77,7 @@ function createAppActions(ctx) {
       useJSON
     });
 
-    const modifyingCommands = ['create', 'update', 'close', 'reopen', 'link'];
-    const isModifying = modifyingCommands.some(cmd => command.includes(cmd));
+    const isModifying = MODIFYING_COMMANDS.some(cmd => command.includes(cmd));
 
     if (isModifying) {
       setTimeout(() => {
@@ -135,8 +140,7 @@ function createAppActions(ctx) {
         setIsSuccess(true); setIsError(false);
         setTimeout(() => { setOutput(tempOutput); setIsSuccess(false); }, 2000);
       }
-      const modifyingCommands = ['create', 'update', 'close', 'reopen', 'link'];
-      if (modifyingCommands.some(cmd => command.includes(cmd))) {
+      if (MODIFYING_COMMANDS.some(cmd => command.includes(cmd))) {
         setTimeout(() => {
           vscode.postMessage({ type: 'executeCommand', command: 'sync' });
           setTimeout(() => {
