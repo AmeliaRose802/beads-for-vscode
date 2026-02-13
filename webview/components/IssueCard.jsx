@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AssigneeDropdown from './AssigneeDropdown';
+import IssueCardDetails from './IssueCardDetails';
+import { parseComments } from './utils';
 
 const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, onPriorityChange, onAssigneeChange, onShowHierarchy, existingAssignees, detailedData, isLoadingDetails, onDragStart, onDrop, isDragging, isDropTarget, vscode }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -11,10 +13,105 @@ const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, on
   const [loadingDeps, setLoadingDeps] = useState(false);
   const [isEditingAssignee, setIsEditingAssignee] = useState(false);
   const [assigneeSaveState, setAssigneeSaveState] = useState('idle'); // idle, saving, saved, error
+  const [shouldLoadDeps, setShouldLoadDeps] = useState(false);
+  const [shouldLoadComments, setShouldLoadComments] = useState(false);
   const isClosed = issue.status === 'closed';
 
   // Calculate total relationship count
   const totalRelationships = (issue.dependency_count || 0) + (issue.dependent_count || 0);
+
+  // useEffect to handle dependencies loading with cleanup
+  useEffect(() => {
+    if (!shouldLoadDeps || !vscode || totalRelationships === 0 || loadingDeps) {
+      return;
+    }
+
+    setLoadingDeps(true);
+    let cleanedUp = false;
+    
+    vscode.postMessage({
+      type: 'getDependencies',
+      issueId: issue.id
+    });
+
+    const depsHandler = (event) => {
+      if (cleanedUp) return; // Ignore if already cleaned up
+      
+      const message = event.data;
+      if (message.type === 'dependenciesResult' && message.issueId === issue.id) {
+        setLoadingDeps(false);
+        setDependencies(message.dependencies || []);
+        setDependents(message.dependents || []);
+        setShouldLoadDeps(false); // Reset trigger
+      }
+    };
+
+    window.addEventListener('message', depsHandler);
+
+    // Timeout fallback like App.jsx
+    const timeoutId = setTimeout(() => {
+      if (!cleanedUp) {
+        setLoadingDeps(false);
+        setShouldLoadDeps(false);
+        console.warn(`Dependencies loading timeout for issue ${issue.id}`);
+      }
+    }, 5000);
+
+    // Cleanup function
+    return () => {
+      cleanedUp = true;
+      window.removeEventListener('message', depsHandler);
+      clearTimeout(timeoutId);
+    };
+  }, [shouldLoadDeps, vscode, issue.id, totalRelationships, loadingDeps]);
+
+  // useEffect to handle comments loading with cleanup
+  useEffect(() => {
+    if (!shouldLoadComments || !vscode || loadingComments) {
+      return;
+    }
+
+    setLoadingComments(true);
+    let cleanedUp = false;
+
+    vscode.postMessage({
+      type: 'getComments',
+      issueId: issue.id
+    });
+
+    const handler = (event) => {
+      if (cleanedUp) return; // Ignore if already cleaned up
+      
+      const message = event.data;
+      if (message.type === 'commentsResult' && message.issueId === issue.id) {
+        setLoadingComments(false);
+        if (message.success && message.output) {
+          // Parse comments from text output
+          const parsed = parseComments(message.output);
+          setComments(parsed);
+        }
+        setShouldLoadComments(false); // Reset trigger
+      }
+    };
+
+    window.addEventListener('message', handler);
+
+    // Timeout fallback like App.jsx
+    const timeoutId = setTimeout(() => {
+      if (!cleanedUp) {
+        setLoadingComments(false);
+        setShouldLoadComments(false);
+        console.warn(`Comments loading timeout for issue ${issue.id}`);
+      }
+    }, 5000);
+
+    // Cleanup function
+    return () => {
+      cleanedUp = true;
+      window.removeEventListener('message', handler);
+      clearTimeout(timeoutId);
+    };
+  }, [shouldLoadComments, vscode, issue.id, loadingComments]);
 
   const handleCardClick = (e) => {
     // Don't trigger card click if clicking on action buttons, quick edit, or assignee editor
@@ -32,49 +129,14 @@ const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, on
       onClick();
     }
     
-    // Load dependencies on expansion if there are any and not already loaded
+    // Trigger dependencies loading on expansion if there are any and not already loaded
     if (willExpand && totalRelationships > 0 && dependencies === null && !loadingDeps && vscode) {
-      setLoadingDeps(true);
-      vscode.postMessage({
-        type: 'getDependencies',
-        issueId: issue.id
-      });
-      
-      const depsHandler = (event) => {
-        const message = event.data;
-        if (message.type === 'dependenciesResult' && message.issueId === issue.id) {
-          setLoadingDeps(false);
-          setDependencies(message.dependencies || []);
-          setDependents(message.dependents || []);
-          window.removeEventListener('message', depsHandler);
-        }
-      };
-      window.addEventListener('message', depsHandler);
+      setShouldLoadDeps(true);
     }
     
-    // Load comments on expansion if not already loaded
+    // Trigger comments loading on expansion if not already loaded
     if (willExpand && comments.length === 0 && !loadingComments && vscode) {
-      setLoadingComments(true);
-      // Send message to get comments
-      vscode.postMessage({
-        type: 'getComments',
-        issueId: issue.id
-      });
-      
-      // Listen for comments response
-      const handler = (event) => {
-        const message = event.data;
-        if (message.type === 'commentsResult' && message.issueId === issue.id) {
-          setLoadingComments(false);
-          if (message.success && message.output) {
-            // Parse comments from text output
-            const parsed = parseComments(message.output);
-            setComments(parsed);
-          }
-          window.removeEventListener('message', handler);
-        }
-      };
-      window.addEventListener('message', handler);
+      setShouldLoadComments(true);
     }
   };
 
@@ -83,29 +145,6 @@ const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, on
     if (onShowHierarchy) {
       onShowHierarchy(issue.id);
     }
-  };
-
-  const parseComments = (output) => {
-    if (output.includes('No comments')) {
-      return [];
-    }
-    
-    const lines = output.split('\\n');
-    const commentList = [];
-    
-    for (let line of lines) {
-      // Match format: [AUTHOR] Comment text at TIMESTAMP
-      const match = line.match(/^\\[(.+?)\\]\\s+(.+?)\\s+at\\s+(.+)$/);
-      if (match) {
-        commentList.push({
-          author: match[1],
-          text: match[2],
-          timestamp: match[3]
-        });
-      }
-    }
-    
-    return commentList;
   };
 
   const handleDragStart = (e) => {
@@ -371,98 +410,17 @@ const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, on
       )}
       {isExpanded && (
         <div className="issue-card__details">
-          {isLoadingDetails ? (
-            <div className="issue-card__loading">⏳ Loading details...</div>
-          ) : (
-            <>
-              {(detailedData?.description || issue.description) && (
-                <div className="issue-card__description">
-                  <strong>Description:</strong>
-                  <div>{detailedData?.description || issue.description}</div>
-                </div>
-              )}
-              {detailedData?.acceptance && (
-                <div className="issue-card__acceptance">
-                  <strong>Acceptance Criteria:</strong>
-                  <div>{detailedData.acceptance}</div>
-                </div>
-              )}
-              {detailedData?.design && (
-                <div className="issue-card__design">
-                  <strong>Design Notes:</strong>
-                  <div>{detailedData.design}</div>
-                </div>
-              )}
-              {detailedData?.notes && (
-                <div className="issue-card__notes">
-                  <strong>Notes:</strong>
-                  <div>{detailedData.notes}</div>
-                </div>
-              )}
-              {/* Relationships section */}
-              {totalRelationships > 0 && (
-                <div className="issue-card__relationships">
-                  <strong>Relationships:</strong>
-                  {loadingDeps && (
-                    <div className="issue-card__loading">⏳ Loading relationships...</div>
-                  )}
-                  {!loadingDeps && dependencies !== null && (
-                    <div className="issue-card__relationships-content">
-                      {dependencies.length > 0 && (
-                        <div className="issue-card__relationship-group">
-                          <span className="issue-card__relationship-label">Depends on ({dependencies.length}):</span>
-                          <div className="issue-card__relationship-list">
-                            {dependencies.map((dep, idx) => (
-                              <span key={idx} className="issue-card__relationship-item issue-card__relationship-item--dependency">
-                                {dep.to_id || dep.ToID || dep.target_id || dep.id || JSON.stringify(dep)}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {dependents && dependents.length > 0 && (
-                        <div className="issue-card__relationship-group">
-                          <span className="issue-card__relationship-label">Depended on by ({dependents.length}):</span>
-                          <div className="issue-card__relationship-list">
-                            {dependents.map((dep, idx) => (
-                              <span key={idx} className="issue-card__relationship-item issue-card__relationship-item--dependent">
-                                {dep.from_id || dep.FromID || dep.source_id || dep.id || JSON.stringify(dep)}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {dependencies.length === 0 && (!dependents || dependents.length === 0) && (
-                        <div className="issue-card__relationship-empty">No detailed relationship info available</div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-              {loadingComments && (
-                <div className="issue-card__loading">⏳ Loading comments...</div>
-              )}
-              {!loadingComments && comments.length > 0 && (
-                <div className="issue-card__comments">
-                  <strong>Comments ({comments.length}):</strong>
-                  {comments.map((comment, idx) => (
-                    <div key={idx} className="issue-card__comment">
-                      <div className="issue-card__comment-header">
-                        <span className="issue-card__comment-author">{comment.author}</span>
-                        <span className="issue-card__comment-time">{comment.timestamp}</span>
-                      </div>
-                      <div className="issue-card__comment-text">{comment.text}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="issue-card__metadata">
-                <div><strong>Created:</strong> {issue.created_at ? new Date(issue.created_at).toLocaleString() : 'N/A'}</div>
-                {issue.updated_at && <div><strong>Updated:</strong> {new Date(issue.updated_at).toLocaleString()}</div>}
-                {issue.closed_at && <div><strong>Closed:</strong> {new Date(issue.closed_at).toLocaleString()}</div>}
-              </div>
-            </>
-          )}
+          <IssueCardDetails 
+            isLoadingDetails={isLoadingDetails}
+            detailedData={detailedData}
+            issue={issue}
+            totalRelationships={totalRelationships}
+            loadingDeps={loadingDeps}
+            dependencies={dependencies}
+            dependents={dependents}
+            loadingComments={loadingComments}
+            comments={comments}
+          />
         </div>
       )}
     </div>
