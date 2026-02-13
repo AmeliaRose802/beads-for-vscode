@@ -384,5 +384,80 @@ suite('blocking-utils', () => {
       assert.strictEqual(model.edges.length, 0);
       assert.strictEqual(model.readyItems.length, 2);
     });
+
+    test('parent-child edges do not create false blocking cycles', () => {
+      const components = [
+        {
+          Issues: [
+            { id: 'epic', title: 'Epic', status: 'open', priority: 1, issue_type: 'epic' },
+            { id: 'a', title: 'A', status: 'open', priority: 1, issue_type: 'task' },
+            { id: 'b', title: 'B', status: 'open', priority: 1, issue_type: 'task' },
+            { id: 'c', title: 'C', status: 'open', priority: 1, issue_type: 'task' }
+          ],
+          Dependencies: [
+            { issue_id: 'a', depends_on_id: 'epic', type: 'parent-child' },
+            { issue_id: 'b', depends_on_id: 'epic', type: 'parent-child' },
+            { issue_id: 'c', depends_on_id: 'epic', type: 'parent-child' },
+            { issue_id: 'b', depends_on_id: 'a', type: 'blocks' },
+            { issue_id: 'c', depends_on_id: 'b', type: 'blocks' }
+          ]
+        }
+      ];
+      const model = buildBlockingModel(components);
+      // Only blocks edges should appear, not parent-child
+      assert.strictEqual(model.edges.length, 2);
+      const orderIds = model.completionOrder.map(i => i.id);
+      assert.strictEqual(orderIds.indexOf('a') < orderIds.indexOf('b'), true);
+      assert.strictEqual(orderIds.indexOf('b') < orderIds.indexOf('c'), true);
+    });
+
+    test('closed blockers do not push items into later phases', () => {
+      const components = [
+        {
+          Issues: [
+            { id: 'a', title: 'A', status: 'closed', priority: 1, issue_type: 'task' },
+            { id: 'b', title: 'B', status: 'open', priority: 1, issue_type: 'task' },
+            { id: 'c', title: 'C', status: 'open', priority: 1, issue_type: 'task' }
+          ],
+          Dependencies: [
+            { issue_id: 'b', depends_on_id: 'a', type: 'blocks' },
+            { issue_id: 'c', depends_on_id: 'b', type: 'blocks' }
+          ]
+        }
+      ];
+      const model = buildBlockingModel(components);
+      // a is closed, so b should be in Phase 1 (unblocked), c in Phase 2
+      assert.strictEqual(model.parallelGroups.length, 2);
+      assert.ok(model.parallelGroups[0].some(i => i.id === 'b'));
+      assert.ok(model.parallelGroups[1].some(i => i.id === 'c'));
+    });
+
+    test('beads orientation produces correct phase order', () => {
+      const components = [
+        {
+          Issues: [
+            { id: 'v', title: 'Versioning', status: 'open', priority: 1, issue_type: 'task' },
+            { id: 'p', title: 'Packaging', status: 'open', priority: 1, issue_type: 'task' },
+            { id: 'u', title: 'UI button', status: 'open', priority: 1, issue_type: 'task' },
+            { id: 'd', title: 'Docs', status: 'open', priority: 1, issue_type: 'task' }
+          ],
+          Dependencies: [
+            { issue_id: 'p', depends_on_id: 'v', type: 'blocks' },
+            { issue_id: 'u', depends_on_id: 'p', type: 'blocks' },
+            { issue_id: 'd', depends_on_id: 'u', type: 'blocks' }
+          ]
+        }
+      ];
+      const model = buildBlockingModel(components);
+      // Phase 1: v (no blockers)
+      // Phase 2: p (blocked by v)
+      // Phase 3: u (blocked by p)
+      // Phase 4: d (blocked by u)
+      assert.strictEqual(model.parallelGroups.length, 4);
+      assert.deepStrictEqual(model.parallelGroups[0].map(i => i.id), ['v']);
+      assert.deepStrictEqual(model.parallelGroups[1].map(i => i.id), ['p']);
+      assert.deepStrictEqual(model.parallelGroups[2].map(i => i.id), ['u']);
+      assert.deepStrictEqual(model.parallelGroups[3].map(i => i.id), ['d']);
+    });
   });
 });
