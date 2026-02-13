@@ -41,6 +41,11 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
 
   const { issues, edges, completionOrder, criticalPath, readyItems, parallelGroups } = blockingModel;
 
+  const orientedCriticalPath = useMemo(() => {
+    if (!criticalPath) return [];
+    return [...criticalPath].reverse();
+  }, [criticalPath]);
+
   // Apply client-side filters to the pre-computed model
   const matchesFilters = useMemo(() => {
     const hasPriority = filterPriority !== '';
@@ -67,7 +72,7 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
   const filterList = (list) => filteredIds ? list.filter(i => filteredIds.has(i.id)) : list;
   const filteredIssues = filterList(issues);
   const filteredCompletionOrder = filterList(completionOrder);
-  const filteredCriticalPath = filterList(criticalPath);
+  const filteredCriticalPath = filterList(orientedCriticalPath);
   const filteredReadyItems = filterList(readyItems);
   const filteredParallelGroups = (filteredIds
     ? parallelGroups.map(g => g.filter(i => filteredIds.has(i.id))).filter(g => g.length > 0)
@@ -362,7 +367,7 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
           Critical path ({filteredCriticalPath.length} items, longest dependency chain):
         </span>
         <div className="blocking-view__critical-subtitle">
-          Execution order: complete items top-to-bottom
+          Flow: blockers start at the top, most-blocked work lands at the bottom.
         </div>
       </div>
       <div className="blocking-view__critical-chain">
