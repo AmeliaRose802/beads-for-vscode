@@ -2,72 +2,67 @@ const assert = require('assert');
 const { buildCreateCommand, buildUpdateCommand, escapeShellArg, safeShellArg } = require('../../webview/form-handlers');
 
 suite('Form Handlers Tests', () => {
-  // Helper to get the expected quote style based on platform
-  const q = process.platform === 'win32' ? '"' : "'";
+  // Cross-platform: always double-quote
+  const q = '"';
   
   suite('escapeShellArg', () => {
-    // Platform-specific escaping tests - only run on appropriate platform
-    if (process.platform === 'win32') {
-      test('Should escape double quotes on Windows', function() {
-        assert.strictEqual(escapeShellArg('test"quote'), 'test\\"quote');
-      });
+    test('Should escape double quotes', function() {
+      assert.strictEqual(escapeShellArg('test"quote'), 'test\\"quote');
+    });
 
-      test('Should escape backslashes on Windows', function() {
-        assert.strictEqual(escapeShellArg('test\\path'), 'test\\\\path');
-      });
-    } else {
-      test('Should escape single quotes on Unix', function() {
-        assert.strictEqual(escapeShellArg("test'quote"), "test'\\''quote");
-      });
-    }
+    test('Should escape backslashes', function() {
+      assert.strictEqual(escapeShellArg('test\\path'), 'test\\\\path');
+    });
+
+    test('Should escape dollar signs', function() {
+      assert.strictEqual(escapeShellArg('test$var'), 'test\\$var');
+    });
+
+    test('Should escape backticks', function() {
+      assert.strictEqual(escapeShellArg('test`cmd`'), 'test\\`cmd\\`');
+    });
+
+    test('Should escape exclamation marks', function() {
+      assert.strictEqual(escapeShellArg('test!bang'), 'test\\!bang');
+    });
 
     test('Should prevent command injection with semicolon', () => {
       const escaped = safeShellArg('test; rm -rf /');
-      // Verify the string is properly quoted
       assert.ok(escaped.startsWith(q) && escaped.endsWith(q), 'Should be quoted');
-      // The dangerous characters should be contained within quotes
-      if (process.platform === 'win32') {
-        // On Windows, the string is quoted and any internal quotes would be escaped
-        const content = escaped.slice(1, -1); // Remove outer quotes
-        // Check that if there are quotes inside, they're escaped
-        assert.ok(!content.includes('"') || content.includes('\\"'), 'Internal quotes should be escaped if present');
-      }
+      // The semicolon is safely contained within double quotes
+      assert.ok(escaped.includes('test; rm -rf /'), 'Content should be preserved inside quotes');
     });
 
     test('Should prevent command injection with pipe', () => {
       const escaped = safeShellArg('test | cat /etc/passwd');
-      // Verify the string is properly quoted
       assert.ok(escaped.startsWith(q) && escaped.endsWith(q), 'Should be quoted');
     });
 
     test('Should prevent command injection with backticks', () => {
       const escaped = safeShellArg('test`whoami`');
-      // Verify the string is properly quoted
       assert.ok(escaped.startsWith(q) && escaped.endsWith(q), 'Should be quoted');
-      // On Windows, backticks should be escaped
-      if (process.platform === 'win32') {
-        assert.ok(!escaped.match(/[^\\]`/) || escaped.includes('\\`'), 'Backticks should be escaped');
-      }
+      assert.ok(escaped.includes('\\`'), 'Backticks should be escaped');
     });
 
     test('Should prevent command injection with $() subshell', () => {
       const escaped = safeShellArg('test$(whoami)');
-      // Verify the string is properly quoted
       assert.ok(escaped.startsWith(q) && escaped.endsWith(q), 'Should be quoted');
-      // On Windows, $ should be escaped
-      if (process.platform === 'win32') {
-        assert.ok(escaped.includes('\\$'), 'Dollar sign should be escaped');
-      }
+      assert.ok(escaped.includes('\\$'), 'Dollar sign should be escaped');
     });
 
     test('Should prevent command injection with newline and additional command', () => {
       const escaped = safeShellArg('test\nrm -rf /');
-      // Verify the string is properly quoted - this makes newlines safe
       assert.ok(escaped.startsWith(q) && escaped.endsWith(q), 'Should be quoted');
     });
 
     test('Should handle empty string', () => {
       assert.strictEqual(safeShellArg(''), q + q);
+    });
+
+    test('Should handle non-string input', () => {
+      assert.strictEqual(escapeShellArg(null), '');
+      assert.strictEqual(escapeShellArg(undefined), '');
+      assert.strictEqual(escapeShellArg(123), '');
     });
   });
 
@@ -167,8 +162,7 @@ suite('Form Handlers Tests', () => {
         description: '$(whoami) | cat /etc/passwd', parentId: '', blocksId: '', relatedId: '', currentFile: ''
       });
       assert.ok(cmd, 'Command should be generated');
-      // The subshell and pipe should be properly escaped
-      assert.ok(cmd.includes('$(whoami)') ? cmd.includes('\\$') : true, 'Subshell should be escaped or quoted');
+      assert.ok(cmd.includes('\\$'), 'Dollar sign should be escaped');
     });
 
     test('SECURITY: Should escape backticks in title', () => {
@@ -236,6 +230,7 @@ suite('Form Handlers Tests', () => {
         priority: '0', description: '$(whoami)', status: 'open'
       });
       assert.ok(cmd, 'Command should be generated');
+      assert.ok(cmd.includes('\\$'), 'Dollar sign should be escaped');
     });
   });
 });

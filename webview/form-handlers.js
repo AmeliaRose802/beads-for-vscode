@@ -1,33 +1,32 @@
 /**
  * Escapes a string for safe use in a shell command.
- * Prevents command injection by escaping shell metacharacters.
+ * Uses double-quote escaping that works on both Windows (cmd.exe/PowerShell)
+ * and Unix shells. This runs in a webview (browser context) where
+ * process.platform is unavailable, so we use a cross-platform strategy.
  * @param {string} str - The string to escape
  * @returns {string} The escaped string safe for shell execution
  */
 function escapeShellArg(str) {
   if (typeof str !== 'string') return '';
-  
-  // On Windows, use double quotes and escape internal quotes and backslashes
-  if (process.platform === 'win32') {
-    // Replace backslashes and double quotes with escaped versions
-    return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\$/g, '\\$').replace(/`/g, '\\`');
-  }
-  
-  // On Unix-like systems, escape single quotes and wrap in single quotes
-  // This is the safest approach: replace ' with '\'' (end quote, escaped quote, start quote)
-  return str.replace(/'/g, "'\\''");
+
+  // Escape backslashes first, then double quotes, dollar signs, and backticks.
+  // These are the metacharacters that are dangerous inside double quotes
+  // on both Windows and Unix shells.
+  return str
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\$/g, '\\$')
+    .replace(/`/g, '\\`')
+    .replace(/!/g, '\\!');
 }
 
 /**
- * Wraps an escaped string in the appropriate quotes for the platform.
+ * Wraps an escaped string in double quotes (cross-platform safe).
  * @param {string} str - The string to quote (should already be escaped)
  * @returns {string} The quoted string
  */
 function quoteShellArg(str) {
-  if (process.platform === 'win32') {
-    return `"${str}"`;
-  }
-  return `'${str}'`;
+  return `"${str}"`;
 }
 
 /**

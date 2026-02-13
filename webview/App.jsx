@@ -7,7 +7,7 @@ import DependencyGraph from './components/DependencyGraph';
 import HierarchyView from './components/HierarchyView';
 import BlockingView from './components/BlockingView';
 const { parseListJSON, parseStatsOutput } = require('./parse-utils');
-const { buildCreateCommand, buildUpdateCommand } = require('./form-handlers');
+const { buildCreateCommand, buildUpdateCommand, safeShellArg } = require('./form-handlers');
 const { buildHierarchyModel } = require('./hierarchy-utils');
 const { buildBlockingModel } = require('./blocking-utils');
 const { processMessage } = require('./message-handler');
@@ -166,7 +166,7 @@ const App = () => {
 
   const handleAssigneeChange = (issueId, newAssignee) => {
     return new Promise((resolve, reject) => {
-      const assigneeArg = newAssignee.trim() ? `--assignee "${newAssignee}"` : '--assignee ""';
+      const assigneeArg = newAssignee.trim() ? `--assignee ${safeShellArg(newAssignee)}` : '--assignee ""';
       const command = `update ${issueId} ${assigneeArg}`;
       const successMsg = newAssignee.trim() 
         ? `Assigned ${issueId} to ${newAssignee}`
@@ -283,9 +283,16 @@ const App = () => {
       setIsError(true);
       return;
     }
+    // Validate bead IDs match expected pattern (alphanumeric, hyphens, underscores)
+    const beadIdPattern = /^[a-zA-Z0-9_-]+$/;
+    if (!beadIdPattern.test(sourceBead.trim()) || !beadIdPattern.test(targetBead.trim())) {
+      setOutput('Error: Bead IDs may only contain letters, numbers, hyphens, and underscores');
+      setIsError(true);
+      return;
+    }
     const verb = action === 'add' ? 'Linked' : 'Unlinked';
     const arrow = action === 'add' ? '→' : '⇸';
-    runInlineAction(`dep ${action} ${sourceBead} --${relationType} ${targetBead}`, `${verb} ${sourceBead} ${arrow} ${targetBead}`);
+    runInlineAction(`dep ${action} ${sourceBead.trim()} --${relationType} ${targetBead.trim()}`, `${verb} ${sourceBead} ${arrow} ${targetBead}`);
     setSourceBead('');
     setTargetBead('');
   };

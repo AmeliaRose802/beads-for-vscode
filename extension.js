@@ -5,6 +5,28 @@ const path = require('path');
 const { getAISuggestions } = require('./ai-suggestions');
 
 /**
+ * Allowed bd subcommands. Commands from the webview must start with one of
+ * these tokens to be executed. This prevents arbitrary command injection.
+ * @type {string[]}
+ */
+const ALLOWED_BD_SUBCOMMANDS = [
+  'create', 'update', 'close', 'reopen', 'list', 'show', 'ready',
+  'blocked', 'stats', 'dep', 'graph', 'sync', 'comments', 'label',
+  'init', 'info'
+];
+
+/**
+ * Validate that a command string starts with an allowed bd subcommand.
+ * @param {string} command - The command string to validate
+ * @returns {boolean} True if the command is allowed
+ */
+function isAllowedCommand(command) {
+  const trimmed = command.trim();
+  const firstToken = trimmed.split(/\s+/)[0];
+  return ALLOWED_BD_SUBCOMMANDS.includes(firstToken);
+}
+
+/**
  * Activate the Beads UI extension.
  * @param {import('vscode').ExtensionContext} context - VS Code extension context
  */
@@ -281,6 +303,15 @@ class BeadsViewProvider {
 
   _executeBdCommand(command) {
     return new Promise((resolve) => {
+      // Validate command against allowed subcommands
+      if (!isAllowedCommand(command)) {
+        resolve({
+          success: false,
+          output: `Error: Command rejected — unrecognized bd subcommand`
+        });
+        return;
+      }
+
       const workspaceFolders = vscode.workspace.workspaceFolders;
       const cwd = workspaceFolders ? workspaceFolders[0].uri.fsPath : process.cwd();
       
