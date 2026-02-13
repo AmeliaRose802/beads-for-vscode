@@ -25,23 +25,18 @@ A VS Code extension providing a user interface for the beads (bd) command-line i
 - **✅ Ready**: Show ready work (`bd ready`)
 - **🚫 Blocked**: Display blocked issues (`bd blocked`)
 - **📊 Stats**: Show project statistics (`bd stats`)
-- **ℹ️ Info**: View database information (`bd info`)
-- **➕ Create**: Create a new issue (sets up the create command)
+- **➕ Create**: Create a new issue
+- **🔗 Links**: Manage dependencies between issues
+- **🔀 Graph**: Visualize dependency relationships
+- **🚧 Blocking**: View blocking chains and completion order
 
 ### Custom Commands
 
-Enter any bd command in the input field:
-- `list --state open`
-- `show 1`
-- `update 1 --state in-progress`
-- `close 1`
-- `create --title "New feature"`
-
-Press Enter or click the ▶ button to execute.
+The extension executes bd commands through its sidebar panel. Use the Create panel for new issues or the Links panel for managing dependencies.
 
 ## Requirements
 
-- VS Code 1.75.0 or higher
+- VS Code 1.106.1 or higher
 - The `bd` command-line tool must be installed and available in your PATH
   - Install from: https://github.com/steveyegge/beads
   - If not installed, you'll see an error message with installation instructions
@@ -87,7 +82,7 @@ npm run test:coverage
 
 ### Testing
 
-This extension includes comprehensive test coverage with 50+ tests:
+This extension includes comprehensive test coverage with 100+ tests:
 
 ```bash
 # Run all tests (lint + integration tests)
@@ -115,7 +110,7 @@ npm run test:coverage
 - ✅ AI suggestion response parsing
 - ✅ Pre-commit hook configuration
 
-For detailed testing documentation, see [TESTING.md](./TESTING.md).
+For detailed testing documentation, see [TESTING.md](./docs/TESTING.md).
 
 ## License
 
