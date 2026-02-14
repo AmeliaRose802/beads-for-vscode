@@ -16,6 +16,28 @@ const ALLOWED_BD_SUBCOMMANDS = [
 ];
 
 /**
+ * Parse a command string into an array of arguments, respecting
+ * double-quoted segments so that multi-word values stay as one token.
+ * Quotes are stripped from the resulting tokens.
+ * @param {string} command - The command string to parse
+ * @returns {string[]} Array of argument tokens
+ */
+function parseCommandArgs(command) {
+  const args = [];
+  const regex = /"((?:[^"\\]|\\.)*)"|(\S+)/g;
+  let match;
+  while ((match = regex.exec(command)) !== null) {
+    if (match[1] !== undefined) {
+      // Quoted segment – unescape inner backslash sequences
+      args.push(match[1].replace(/\\(.)/g, '$1'));
+    } else {
+      args.push(match[2]);
+    }
+  }
+  return args;
+}
+
+/**
  * Validate that a command string starts with an allowed bd subcommand.
  * @param {string} command - The command string to validate
  * @returns {boolean} True if the command is allowed
@@ -318,8 +340,8 @@ class BeadsViewProvider {
       const bundledBdPath = this._getBundledBdPath(platform);
       const bdCommand = bundledBdPath || 'bd';
       
-      // Split command into arguments array to avoid shell injection
-      const args = command.trim().split(/\s+/);
+      // Parse command into arguments array, respecting quoted strings
+      const args = parseCommandArgs(command);
       
       // Use the current workspace's beads database
       const beadsDbPath = path.join(cwd, '.beads', 'beads.db');
@@ -461,5 +483,6 @@ module.exports = {
   activate,
   deactivate,
   isAllowedCommand,
+  parseCommandArgs,
   ALLOWED_BD_SUBCOMMANDS
 };

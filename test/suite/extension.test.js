@@ -4,7 +4,7 @@ const sinon = require('sinon');
 const path = require('path');
 const childProcess = require('child_process');
 const extension = require('../../extension');
-const { isAllowedCommand } = extension;
+const { isAllowedCommand, parseCommandArgs } = extension;
 
 suite('Beads UI Extension Test Suite', () => {
   let globalExecFileStub;
@@ -352,6 +352,13 @@ suite('Beads UI Extension Test Suite', () => {
       await provider._executeBdCommand('list --state open');
       assert.deepStrictEqual(globalExecFileStub.firstCall.args[1], ['list', '--state', 'open']);
     });
+    test('Should preserve quoted multi-word strings as single args', async () => {
+      globalExecFileStub.callsFake((file, args, opts, cb) => cb(null, 'output', ''));
+      await provider._executeBdCommand('create --title "Fix the login bug" -t bug');
+      assert.deepStrictEqual(globalExecFileStub.firstCall.args[1], [
+        'create', '--title', 'Fix the login bug', '-t', 'bug'
+      ]);
+    });
     test('Should reject unrecognized subcommands', async () => {
       const result = await provider._executeBdCommand('rm -rf /');
       assert.strictEqual(result.success, false);
@@ -375,6 +382,34 @@ suite('Beads UI Extension Test Suite', () => {
         const result = await provider._executeBdCommand(cmd);
         assert.strictEqual(result.success, true, `${cmd} should be allowed`);
       }
+    });
+  });
+
+  suite('parseCommandArgs', () => {
+    test('Should split simple space-separated args', () => {
+      assert.deepStrictEqual(parseCommandArgs('list --json'), ['list', '--json']);
+    });
+    test('Should keep double-quoted multi-word string as one token', () => {
+      assert.deepStrictEqual(
+        parseCommandArgs('create --title "Fix the login bug" -t bug'),
+        ['create', '--title', 'Fix the login bug', '-t', 'bug']
+      );
+    });
+    test('Should handle escaped quotes inside quoted string', () => {
+      assert.deepStrictEqual(
+        parseCommandArgs('create --title "Say \\"hello\\" world"'),
+        ['create', '--title', 'Say "hello" world']
+      );
+    });
+    test('Should handle empty input', () => {
+      assert.deepStrictEqual(parseCommandArgs(''), []);
+      assert.deepStrictEqual(parseCommandArgs('   '), []);
+    });
+    test('Should handle multiple quoted args', () => {
+      assert.deepStrictEqual(
+        parseCommandArgs('update bd-1 --title "New title" -d "A long description"'),
+        ['update', 'bd-1', '--title', 'New title', '-d', 'A long description']
+      );
     });
   });
 
@@ -453,7 +488,7 @@ function getBeadsViewProviderClass() {
         const folders = vscode.workspace.workspaceFolders;
         const cwd = folders ? folders[0].uri.fsPath : process.cwd();
         const env = { ...process.env, BEADS_DB: path.join(cwd, '.beads', 'beads.db') };
-        const args = command.trim().split(/\s+/);
+        const args = parseCommandArgs(command);
         childProcess.execFile('bd', args, {
           maxBuffer: 10 * 1024 * 1024, cwd, env, timeout: 30000
         }, (error, stdout, stderr) => {
