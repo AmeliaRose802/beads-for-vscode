@@ -208,6 +208,19 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 .issue-card__header { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 6px; }
 .issue-card__badges { display: flex; align-items: center; gap: 6px; }
 .issue-card__id { font-family: var(--vscode-editor-font-family); font-weight: 600; font-size: 11px; color: var(--vscode-textLink-foreground); }
+.issue-card__copy-btn {
+  background: transparent;
+  border: none;
+  color: var(--vscode-descriptionForeground);
+  cursor: pointer;
+  font-size: 10px;
+  padding: 0 2px;
+  line-height: 1;
+  transition: color 0.2s;
+}
+.issue-card__copy-btn:hover {
+  color: var(--vscode-textLink-foreground);
+}
 .issue-card__badge { padding: 2px 5px; border-radius: 3px; font-size: 10px; color: var(--vscode-badge-foreground); }
 .issue-card__badge--priority { font-weight: 600; }
 .issue-card__badge--priority-p0 { background-color: var(--vscode-errorForeground); }
