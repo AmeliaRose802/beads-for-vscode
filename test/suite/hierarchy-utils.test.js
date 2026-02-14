@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { buildHierarchyModel } = require('../../webview/hierarchy-utils');
+const { buildHierarchyModel, filterHierarchyTree } = require('../../webview/hierarchy-utils');
 
 suite('hierarchy-utils', () => {
   const components = [
@@ -132,5 +132,69 @@ suite('hierarchy-utils', () => {
     assert.strictEqual(loopNode.children[0].id, 'a');
     assert.strictEqual(loopNode.children[0].isBackReference, true, 'Relates-to back-reference should be back-reference');
     assert.strictEqual(loopNode.children[0].isCycle, false, 'Relates-to back-reference should NOT be cycle');
+  });
+
+  suite('filterHierarchyTree', () => {
+    test('returns all children when all types enabled', () => {
+      const model = buildHierarchyModel('child', components);
+      const allTypes = new Set(['parent-child', 'blocks', 'blocked-by', 'related']);
+      const filtered = filterHierarchyTree(model.tree, allTypes);
+      assert.strictEqual(filtered.children.length, model.tree.children.length);
+    });
+
+    test('filters out blocked-by when only parent-child enabled', () => {
+      const model = buildHierarchyModel('child', components);
+      const filtered = filterHierarchyTree(model.tree, new Set(['parent-child']));
+      const types = filtered.children.map(c => c.relationType);
+      assert.ok(types.every(t => t === 'parent-child'), 'Only parent-child nodes should remain');
+      assert.ok(!types.includes('blocked-by'), 'blocked-by nodes should be filtered out');
+    });
+
+    test('filters out parent-child when only blocking types enabled', () => {
+      const model = buildHierarchyModel('child', components);
+      const filtered = filterHierarchyTree(model.tree, new Set(['blocks', 'blocked-by']));
+      const types = filtered.children.map(c => c.relationType);
+      assert.ok(!types.includes('parent-child'), 'parent-child should be filtered out');
+    });
+
+    test('returns empty children when no types enabled', () => {
+      const model = buildHierarchyModel('child', components);
+      const filtered = filterHierarchyTree(model.tree, new Set());
+      assert.strictEqual(filtered.children.length, 0);
+    });
+
+    test('returns null/undefined input unchanged', () => {
+      assert.strictEqual(filterHierarchyTree(null, new Set(['blocks'])), null);
+      assert.strictEqual(filterHierarchyTree(undefined, new Set(['blocks'])), undefined);
+    });
+
+    test('filters recursively through subtrees', () => {
+      const deepComponents = [
+        {
+          Issues: [
+            { id: 'a', title: 'A', status: 'open', priority: 1, issue_type: 'task' },
+            { id: 'b', title: 'B', status: 'open', priority: 1, issue_type: 'task' },
+            { id: 'c', title: 'C', status: 'open', priority: 1, issue_type: 'task' }
+          ],
+          Dependencies: [
+            { issue_id: 'a', depends_on_id: 'b', type: 'blocks' },
+            { issue_id: 'b', depends_on_id: 'c', type: 'related' }
+          ]
+        }
+      ];
+      const model = buildHierarchyModel('a', deepComponents);
+      const filtered = filterHierarchyTree(model.tree, new Set(['blocks']));
+      const bNode = filtered.children.find(c => c.id === 'b');
+      assert.ok(bNode, 'B should remain (blocks type)');
+      const relatedInB = bNode.children.filter(c => c.relationType === 'related');
+      assert.strictEqual(relatedInB.length, 0, 'Related children of B should be filtered');
+    });
+
+    test('preserves root node regardless of filter', () => {
+      const model = buildHierarchyModel('child', components);
+      const filtered = filterHierarchyTree(model.tree, new Set());
+      assert.strictEqual(filtered.id, model.tree.id);
+      assert.strictEqual(filtered.title, model.tree.title);
+    });
   });
 });

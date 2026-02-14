@@ -1809,24 +1809,46 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   color: var(--vscode-descriptionForeground);
 }
 
-.hierarchy-view__legend {
+/* Filter bar replaces legend — see .hierarchy-view__filter-* */
+
+.hierarchy-view__filter-bar {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
   flex-wrap: wrap;
   justify-content: flex-end;
   flex: 1;
 }
 
-.hierarchy-view__legend-item {
+.hierarchy-view__filter-toggle {
   font-size: 10px;
   color: var(--vscode-descriptionForeground);
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  background: transparent;
+  user-select: none;
 }
 
-.hierarchy-view__legend-icon {
+.hierarchy-view__filter-toggle--active {
+  background: var(--vscode-button-secondaryBackground);
+  border-color: var(--vscode-button-border);
+  color: var(--vscode-foreground);
+}
+
+.hierarchy-view__filter-toggle:hover {
+  background: var(--vscode-button-secondaryHoverBackground);
+}
+
+.hierarchy-view__filter-checkbox {
+  display: none;
+}
+
+.hierarchy-view__filter-icon {
   font-size: 12px;
 }
 

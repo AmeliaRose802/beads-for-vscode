@@ -170,4 +170,26 @@ function createFallbackIssue(issueId) {
   };
 }
 
-module.exports = { buildHierarchyModel };
+/**
+ * Filter a hierarchy tree to only include nodes matching the enabled relationship types.
+ * The root node is always kept. Children whose relationType is not in the enabled set
+ * are pruned, along with their subtrees.
+ *
+ * @param {object} tree - The dependency tree root node from buildHierarchyModel.
+ * @param {Set<string>} enabledTypes - Set of relationship type strings to keep (e.g. 'blocks', 'parent-child').
+ * @returns {object} A new tree with filtered children.
+ */
+function filterHierarchyTree(tree, enabledTypes) {
+  if (!tree) return tree;
+  if (!enabledTypes || enabledTypes.size === 0) {
+    return { ...tree, children: [] };
+  }
+
+  const filteredChildren = (tree.children || [])
+    .filter(child => !child.relationType || enabledTypes.has(child.relationType))
+    .map(child => filterHierarchyTree(child, enabledTypes));
+
+  return { ...tree, children: filteredChildren };
+}
+
+module.exports = { buildHierarchyModel, filterHierarchyTree };

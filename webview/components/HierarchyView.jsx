@@ -1,4 +1,12 @@
 import React, { useState, useMemo } from 'react';
+const { filterHierarchyTree } = require('../hierarchy-utils');
+
+const FILTER_TYPES = [
+  { key: 'parent-child', label: 'Parent', icon: '🪜' },
+  { key: 'blocks', label: 'Blocks', icon: '⛔' },
+  { key: 'blocked-by', label: 'Blocked by', icon: '🚧' },
+  { key: 'related', label: 'Related', icon: '🔗' }
+];
 
 const relationLabels = {
   'parent-child': 'Parent',
@@ -78,10 +86,35 @@ function HierarchyNode({ node, onSelect }) {
 }
 
 const HierarchyView = ({ hierarchy, onSelectIssue, onClose }) => {
+  const [enabledTypes, setEnabledTypes] = useState(() =>
+    new Set(FILTER_TYPES.map(t => t.key))
+  );
+
+  const toggleType = (key) => {
+    setEnabledTypes(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
   const parentChain = hierarchy?.parentChain || [];
   const tree = hierarchy?.tree;
   const rootIssue = hierarchy?.issue;
   const hasRelationships = Boolean(tree && Array.isArray(tree.children) && tree.children.length > 0);
+
+  const filteredTree = useMemo(() => {
+    if (!tree) return tree;
+    return filterHierarchyTree(tree, enabledTypes);
+  }, [tree, enabledTypes]);
+
+  const hasVisibleChildren = Boolean(
+    filteredTree && Array.isArray(filteredTree.children) && filteredTree.children.length > 0
+  );
 
   const ancestorLabels = useMemo(() => {
     if (!parentChain.length) return null;
@@ -112,11 +145,19 @@ const HierarchyView = ({ hierarchy, onSelectIssue, onClose }) => {
             </div>
           )}
         </div>
-        <div className="hierarchy-view__legend">
-          <span className="hierarchy-view__legend-item"><span className="hierarchy-view__legend-icon">🪜</span> Parent</span>
-          <span className="hierarchy-view__legend-item"><span className="hierarchy-view__legend-icon">⛔</span> Blocks</span>
-          <span className="hierarchy-view__legend-item"><span className="hierarchy-view__legend-icon">🚧</span> Blocked by</span>
-          <span className="hierarchy-view__legend-item"><span className="hierarchy-view__legend-icon">🔗</span> Related</span>
+        <div className="hierarchy-view__filter-bar" role="group" aria-label="Relationship type filters">
+          {FILTER_TYPES.map(({ key, label, icon }) => (
+            <label key={key} className={`hierarchy-view__filter-toggle${enabledTypes.has(key) ? ' hierarchy-view__filter-toggle--active' : ''}`}>
+              <input
+                type="checkbox"
+                className="hierarchy-view__filter-checkbox"
+                checked={enabledTypes.has(key)}
+                onChange={() => toggleType(key)}
+              />
+              <span className="hierarchy-view__filter-icon">{icon}</span>
+              {label}
+            </label>
+          ))}
         </div>
         {onClose && (
           <button className="hierarchy-view__close-btn" onClick={onClose}>✕</button>
@@ -124,9 +165,16 @@ const HierarchyView = ({ hierarchy, onSelectIssue, onClose }) => {
       </div>
 
       {tree && hasRelationships ? (
-        <div className="hierarchy-view__tree">
-          <HierarchyNode node={tree} onSelect={onSelectIssue} />
-        </div>
+        hasVisibleChildren ? (
+          <div className="hierarchy-view__tree">
+            <HierarchyNode node={filteredTree} onSelect={onSelectIssue} />
+          </div>
+        ) : (
+          <div className="hierarchy-view__empty" role="status">
+            <div>No relationships match the active filters.</div>
+            <div>Enable more relationship types above to see connections.</div>
+          </div>
+        )
       ) : (
         <div className="hierarchy-view__empty" role="status">
           <div>No relationships found for this item.</div>
