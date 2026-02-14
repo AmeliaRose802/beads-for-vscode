@@ -1533,6 +1533,24 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   margin-top: 2px;
   opacity: 0.8;
 }
+.blocking-view__critical-callout {
+  border: 1px solid var(--vscode-textLink-foreground);
+  border-left-width: 3px;
+  border-radius: 4px;
+  padding: 6px 8px;
+  margin-bottom: 8px;
+  background-color: var(--vscode-editorWidget-background);
+}
+.blocking-view__critical-callout-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--vscode-foreground);
+}
+.blocking-view__critical-callout-title {
+  font-size: 10px;
+  color: var(--vscode-descriptionForeground);
+  margin-top: 2px;
+}
 .blocking-view__critical-chain {
   display: flex;
   flex-direction: column;
@@ -1555,6 +1573,10 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   cursor: pointer;
   width: 100%;
   font-size: 12px;
+}
+.blocking-view__critical-node--actionable {
+  border-color: var(--vscode-textLink-foreground);
+  box-shadow: 0 0 0 1px var(--vscode-textLink-foreground);
 }
 .blocking-view__critical-node:hover {
   background-color: var(--vscode-list-hoverBackground);
