@@ -9,6 +9,7 @@ suite('Inline Assignee Editing', () => {
   const outputDisplayPath = path.join(ROOT, 'webview', 'components', 'OutputDisplay.jsx');
   const appPath = path.join(ROOT, 'webview', 'App.jsx');
   const stylesPath = path.join(ROOT, 'webview', 'styles.css');
+  const hierarchyViewPath = path.join(ROOT, 'webview', 'components', 'HierarchyView.jsx');
 
   test('IssueCard accepts onAssigneeChange prop', () => {
     const source = fs.readFileSync(issueCardPath, 'utf8');
@@ -253,5 +254,19 @@ suite('Inline Assignee Editing', () => {
     for (const [state, icon] of Object.entries(indicators)) {
       assert.ok(source.includes(icon), `should show ${icon} for ${state} state`);
     }
+  });
+
+  test('Hierarchy action is hidden when there are no relationships', () => {
+    const source = fs.readFileSync(issueCardPath, 'utf8');
+    const guardPattern = /{totalRelationships > 0 &&\s*\(/;
+    assert.ok(guardPattern.test(source), 'hierarchy button should only render when related work exists');
+  });
+
+  test('Hierarchy view shows an empty state when no relationships exist', () => {
+    const source = fs.readFileSync(hierarchyViewPath, 'utf8');
+    assert.ok(
+      source.includes('No relationships found for this item.'),
+      'Hierarchy view should explain when no relationships are available'
+    );
   });
 });
