@@ -1614,6 +1614,105 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.blocking-view__plan {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.blocking-view__plan-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+.blocking-view__plan-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+}
+.blocking-view__plan-input {
+  width: 80px;
+  padding: 3px 6px;
+  font-size: 11px;
+  background-color: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border);
+  border-radius: 3px;
+}
+.blocking-view__plan-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+}
+.blocking-view__plan-stat {
+  white-space: nowrap;
+}
+.blocking-view__plan-empty {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  padding: 6px 0;
+}
+.blocking-view__plan-wave {
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+  padding: 6px 8px;
+  background-color: var(--vscode-editorWidget-background);
+}
+.blocking-view__plan-wave-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.blocking-view__plan-wave-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--vscode-textLink-foreground);
+}
+.blocking-view__plan-wave-meta {
+  font-size: 10px;
+  color: var(--vscode-descriptionForeground);
+}
+.blocking-view__plan-items {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.blocking-view__plan-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.blocking-view__plan-item:hover {
+  background-color: var(--vscode-list-hoverBackground);
+}
+.blocking-view__plan-item--ready {
+  border-left: 3px solid var(--vscode-testing-iconPassed, #73c991);
+}
+.blocking-view__plan-status {
+  font-size: 11px;
+}
+.blocking-view__plan-id {
+  font-family: var(--vscode-editor-font-family);
+  font-weight: 600;
+  color: var(--vscode-textLink-foreground);
+}
+.blocking-view__plan-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 /* Inline dependency editing */
 .blocking-view__arrow-down--interactive,
