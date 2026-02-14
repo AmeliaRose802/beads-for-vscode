@@ -7,6 +7,17 @@ const { getField, buildIssueMap, DEP_FROM_KEYS, DEP_TO_KEYS, DEP_TYPE_KEYS } = r
 
 const PRIORITY_WEIGHT_BASE = 3;
 const MAX_PRIORITY_LEVEL = 4;
+const ESTIMATE_MINUTES_KEYS = [
+  'estimate_minutes',
+  'estimateMinutes',
+  'EstimateMinutes',
+  'estimate_min',
+  'estimateMin',
+  'estimate',
+  'Estimate',
+  'duration_minutes',
+  'durationMinutes'
+];
 
 /**
  * Build a blocking model from graph components data.
@@ -171,7 +182,7 @@ function topologicalSort(nodeIds, edges) {
  *
  * @param {Array<string>} nodeIds - All node identifiers.
  * @param {Array<{from: string, to: string}>} edges - Directed edges.
- * @param {Record<string, object>} [issueMap] - Issue lookup used for priority weighting.
+ * @param {Record<string, object>} [issueMap] - Issue lookup used for priority weighting and estimates.
  * @returns {Array<string>} Node IDs on the critical path.
  */
 function findCriticalPath(nodeIds, edges, issueMap) {
@@ -193,9 +204,25 @@ function findCriticalPath(nodeIds, edges, issueMap) {
 
   const sorted = topologicalSort(nodeIds, edges);
 
+  const estimateById = {};
+  let hasEstimates = false;
+  nodeIds.forEach(id => {
+    const estimate = getEstimateMinutes(issueMap?.[id]);
+    if (estimate !== null) {
+      estimateById[id] = estimate;
+      hasEstimates = true;
+    }
+  });
+
   const weights = {};
   nodeIds.forEach(id => {
-    weights[id] = getPriorityWeight(issueMap?.[id]);
+    const priorityWeight = getPriorityWeight(issueMap?.[id]);
+    if (hasEstimates) {
+      const estimateMinutes = estimateById[id];
+      weights[id] = estimateMinutes === undefined ? 1 : estimateMinutes;
+    } else {
+      weights[id] = priorityWeight;
+    }
   });
 
   // Longest path DP
@@ -255,6 +282,29 @@ function getPriorityWeight(issue) {
   const clamped = Math.min(MAX_PRIORITY_LEVEL, Math.max(0, numericPriority));
   const exponent = MAX_PRIORITY_LEVEL - clamped;
   return Math.pow(PRIORITY_WEIGHT_BASE, exponent);
+}
+
+/**
+ * Extract an estimated duration in minutes from an issue if available.
+ * @param {object} issue - Issue metadata.
+ * @returns {number|null} Estimate in minutes or null if not present/invalid.
+ */
+function getEstimateMinutes(issue) {
+  if (!issue) {
+    return null;
+  }
+
+  const raw = getField(issue, ESTIMATE_MINUTES_KEYS);
+  if (raw === undefined || raw === null) {
+    return null;
+  }
+
+  const minutes = Number(raw);
+  if (!Number.isFinite(minutes) || minutes < 0) {
+    return null;
+  }
+
+  return minutes;
 }
 
 /**

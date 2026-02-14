@@ -158,6 +158,28 @@ suite('blocking-utils', () => {
 
       assert.deepStrictEqual(path, ['p1a', 'p1b']);
     });
+
+    test('uses estimated duration when available', () => {
+      const edges = [
+        { from: 'a', to: 'b' },
+        { from: 'b', to: 'c' },
+        { from: 'c', to: 'd' },
+        { from: 'x', to: 'y' }
+      ];
+
+      const issueMap = {
+        a: { id: 'a', estimate_minutes: 30 },
+        b: { id: 'b', estimate_minutes: 30 },
+        c: { id: 'c', estimate_minutes: 30 },
+        d: { id: 'd', estimate_minutes: 30 },
+        x: { id: 'x', estimate_minutes: 60 },
+        y: { id: 'y', estimate_minutes: 3 * 24 * 60 }
+      };
+
+      const path = findCriticalPath(['a', 'b', 'c', 'd', 'x', 'y'], edges, issueMap);
+
+      assert.deepStrictEqual(path, ['x', 'y']);
+    });
   });
 
   suite('findReadyItems', () => {
