@@ -91,6 +91,34 @@ suite('BlockingView inline dependency editing', () => {
       );
     });
 
+    test('critical callout exists in component', () => {
+      assert.ok(
+        blockingViewSrc.includes('blocking-view__critical-callout'),
+        'BlockingView should include critical callout class'
+      );
+    });
+
+    test('critical actionable node class exists in component', () => {
+      assert.ok(
+        blockingViewSrc.includes('blocking-view__critical-node--actionable'),
+        'BlockingView should include actionable critical node class'
+      );
+    });
+
+    test('has isClosedStatus helper', () => {
+      assert.ok(
+        blockingViewSrc.includes('isClosedStatus'),
+        'BlockingView should include isClosedStatus helper'
+      );
+    });
+
+    test('critical callout includes unblock text', () => {
+      assert.ok(
+        blockingViewSrc.includes('Unblock'),
+        'BlockingView should include unblock callout text'
+      );
+    });
+
     test('edge menu has remove option', () => {
       assert.ok(
         blockingViewSrc.includes('Remove link'),
@@ -211,6 +239,20 @@ suite('BlockingView inline dependency editing', () => {
       assert.ok(
         stylesSrc.includes('.blocking-view__critical-arrow--interactive'),
         'CSS should define interactive critical arrow styles'
+      );
+    });
+
+    test('defines critical callout styles', () => {
+      assert.ok(
+        stylesSrc.includes('.blocking-view__critical-callout'),
+        'CSS should define critical callout styles'
+      );
+    });
+
+    test('defines actionable critical node styles', () => {
+      assert.ok(
+        stylesSrc.includes('.blocking-view__critical-node--actionable'),
+        'CSS should define actionable critical node styles'
       );
     });
 
