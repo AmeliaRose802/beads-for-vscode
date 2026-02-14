@@ -5,7 +5,8 @@ const {
   findCriticalPath,
   findReadyItems,
   findParallelGroups,
-  applyFilters
+  applyFilters,
+  calculateFanOut
 } = require('../../webview/blocking-utils');
 const { buildPlanSchedule } = require('../../webview/plan-utils');
 
@@ -340,6 +341,95 @@ suite('blocking-utils', () => {
     });
   });
 
+  suite('calculateFanOut', () => {
+    test('calculates fan-out for linear chain', () => {
+      const edges = [
+        { from: 'a', to: 'b' },
+        { from: 'b', to: 'c' }
+      ];
+      const fanOut = calculateFanOut(['a', 'b', 'c'], edges);
+      
+      assert.strictEqual(fanOut['a'], 2); // a unblocks b and c
+      assert.strictEqual(fanOut['b'], 1); // b unblocks c
+      assert.strictEqual(fanOut['c'], 0); // c unblocks nothing
+    });
+
+    test('calculates fan-out for diamond dependency', () => {
+      const edges = [
+        { from: 'a', to: 'b' },
+        { from: 'a', to: 'c' },
+        { from: 'b', to: 'd' },
+        { from: 'c', to: 'd' }
+      ];
+      const fanOut = calculateFanOut(['a', 'b', 'c', 'd'], edges);
+      
+      assert.strictEqual(fanOut['a'], 3); // a unblocks b, c, and d (transitively)
+      assert.strictEqual(fanOut['b'], 1); // b unblocks d
+      assert.strictEqual(fanOut['c'], 1); // c unblocks d
+      assert.strictEqual(fanOut['d'], 0); // d unblocks nothing
+    });
+
+    test('handles multiple branches from one node', () => {
+      // a blocks b, c, d, and e
+      // b also blocks f
+      const edges = [
+        { from: 'a', to: 'b' },
+        { from: 'a', to: 'c' },
+        { from: 'a', to: 'd' },
+        { from: 'a', to: 'e' },
+        { from: 'b', to: 'f' }
+      ];
+      const fanOut = calculateFanOut(['a', 'b', 'c', 'd', 'e', 'f'], edges);
+      
+      assert.strictEqual(fanOut['a'], 5); // a unblocks b, c, d, e, and f (through b)
+      assert.strictEqual(fanOut['b'], 1); // b unblocks f
+      assert.strictEqual(fanOut['c'], 0);
+      assert.strictEqual(fanOut['d'], 0);
+      assert.strictEqual(fanOut['e'], 0);
+      assert.strictEqual(fanOut['f'], 0);
+    });
+
+    test('returns zero for nodes with no outgoing edges', () => {
+      const edges = [];
+      const fanOut = calculateFanOut(['a', 'b', 'c'], edges);
+      
+      assert.strictEqual(fanOut['a'], 0);
+      assert.strictEqual(fanOut['b'], 0);
+      assert.strictEqual(fanOut['c'], 0);
+    });
+
+    test('handles single node', () => {
+      const fanOut = calculateFanOut(['only'], []);
+      assert.strictEqual(fanOut['only'], 0);
+    });
+
+    test('handles empty input', () => {
+      const fanOut = calculateFanOut([], []);
+      assert.deepStrictEqual(fanOut, {});
+    });
+
+    test('complex tree structure', () => {
+      // Tree: a -> b -> d
+      //            -> e
+      //       a -> c -> f
+      const edges = [
+        { from: 'a', to: 'b' },
+        { from: 'a', to: 'c' },
+        { from: 'b', to: 'd' },
+        { from: 'b', to: 'e' },
+        { from: 'c', to: 'f' }
+      ];
+      const fanOut = calculateFanOut(['a', 'b', 'c', 'd', 'e', 'f'], edges);
+      
+      assert.strictEqual(fanOut['a'], 5); // a unblocks everything
+      assert.strictEqual(fanOut['b'], 2); // b unblocks d and e
+      assert.strictEqual(fanOut['c'], 1); // c unblocks f
+      assert.strictEqual(fanOut['d'], 0);
+      assert.strictEqual(fanOut['e'], 0);
+      assert.strictEqual(fanOut['f'], 0);
+    });
+  });
+
   suite('buildBlockingModel', () => {
     test('builds complete model from linear components', () => {
       const model = buildBlockingModel(linearComponents);
@@ -347,6 +437,7 @@ suite('blocking-utils', () => {
       assert.ok(model.completionOrder.length > 0);
       assert.ok(model.criticalPath.length > 0);
       assert.ok(model.readyItems.length > 0);
+      assert.ok(model.fanOutCounts);
     });
 
     test('completion order respects dependencies', () => {
@@ -524,6 +615,22 @@ suite('blocking-utils', () => {
       assert.deepStrictEqual(model.parallelGroups[1].map(i => i.id), ['p']);
       assert.deepStrictEqual(model.parallelGroups[2].map(i => i.id), ['u']);
       assert.deepStrictEqual(model.parallelGroups[3].map(i => i.id), ['d']);
+    });
+
+    test('includes fan-out counts in model', () => {
+      const model = buildBlockingModel(linearComponents);
+      assert.ok(model.fanOutCounts);
+      assert.strictEqual(model.fanOutCounts['a'], 2); // a unblocks b and c
+      assert.strictEqual(model.fanOutCounts['b'], 1); // b unblocks c
+      assert.strictEqual(model.fanOutCounts['c'], 0); // c unblocks nothing
+    });
+
+    test('fan-out counts reflect diamond dependencies', () => {
+      const model = buildBlockingModel(diamondComponents);
+      assert.strictEqual(model.fanOutCounts['a'], 3); // a unblocks b, c, d
+      assert.strictEqual(model.fanOutCounts['b'], 1); // b unblocks d
+      assert.strictEqual(model.fanOutCounts['c'], 1); // c unblocks d
+      assert.strictEqual(model.fanOutCounts['d'], 0); // d unblocks nothing
     });
   });
 });

@@ -1,6 +1,5 @@
 /**
  * Blocking view utilities: topological sort, critical path, and completion order.
- * @module webview/blocking-utils
  */
 
 const { getField, buildIssueMap, DEP_FROM_KEYS, DEP_TO_KEYS, DEP_TYPE_KEYS } = require('./field-utils');
@@ -19,18 +18,7 @@ const ESTIMATE_MINUTES_KEYS = [
   'durationMinutes'
 ];
 
-/**
- * Build a blocking model from graph components data.
- * Extracts only "blocks"/"blocked-by" edges, computes topological sort,
- * critical path, and parallel work opportunities.
- *
- * @param {Array} components - Graph data from `bd graph --all --json`.
- * @param {object} [filters] - Optional filters to apply.
- * @param {number} [filters.priority] - Filter by priority (0-4).
- * @param {string} [filters.assignee] - Filter by assignee.
- * @param {string} [filters.label] - Filter by label.
- * @returns {{ issues: Array, edges: Array, completionOrder: Array, criticalPath: Array, readyItems: Array, parallelGroups: Array<Array> }}
- */
+/** Build blocking model from graph components. */
 function buildBlockingModel(components, filters) {
   if (!Array.isArray(components) || components.length === 0) {
     return emptyModel();
@@ -51,6 +39,7 @@ function buildBlockingModel(components, filters) {
   const criticalPath = findCriticalPath(filteredIds, filteredEdges, issueMap);
   const readyItems = findReadyItems(filteredIds, filteredEdges, issueMap);
   const parallelGroups = findParallelGroups(filteredIds, filteredEdges, issueMap);
+  const fanOutCounts = calculateFanOut(filteredIds, filteredEdges);
 
   const issues = filteredIds.map(id => issueMap[id]);
 
@@ -60,14 +49,12 @@ function buildBlockingModel(components, filters) {
     completionOrder: sortedIds.map(id => issueMap[id]),
     criticalPath: criticalPath.map(id => issueMap[id]),
     readyItems: readyItems.map(id => issueMap[id]),
-    parallelGroups: parallelGroups.map(group => group.map(id => issueMap[id]))
+    parallelGroups: parallelGroups.map(group => group.map(id => issueMap[id])),
+    fanOutCounts
   };
 }
 
-/**
- * Return an empty blocking model.
- * @returns {{ issues: Array, edges: Array, completionOrder: Array, criticalPath: Array, readyItems: Array, parallelGroups: Array }}
- */
+/** Return empty blocking model. */
 function emptyModel() {
   return {
     issues: [],
@@ -75,15 +62,12 @@ function emptyModel() {
     completionOrder: [],
     criticalPath: [],
     readyItems: [],
-    parallelGroups: []
+    parallelGroups: [],
+    fanOutCounts: {}
   };
 }
 
-/**
- * Extract issues and blocking edges from graph components.
- * @param {Array} components - Graph data components.
- * @returns {{ issueMap: Record<string, object>, edges: Array<{from: string, to: string}> }}
- */
+/** Extract issues and blocking edges from graph components. */
 function extractBlockingGraph(components) {
   const issueMap = buildIssueMap(components);
   const edges = [];
@@ -121,15 +105,7 @@ function extractBlockingGraph(components) {
   return { issueMap, edges };
 }
 
-/**
- * Perform topological sort using Kahn's algorithm.
- * Returns items in dependency-safe completion order (dependencies first).
- * Handles cycles by appending remaining nodes at the end.
- *
- * @param {Array<string>} nodeIds - All node identifiers.
- * @param {Array<{from: string, to: string}>} edges - Directed edges (from blocks to).
- * @returns {Array<string>} Sorted node IDs.
- */
+/** Topological sort using Kahn's algorithm. Returns items in dependency-safe order. */
 function topologicalSort(nodeIds, edges) {
   const inDegree = {};
   const outEdges = {};
@@ -176,15 +152,55 @@ function topologicalSort(nodeIds, edges) {
   return sorted;
 }
 
-/**
- * Find the critical path (longest chain of blocking dependencies).
- * Uses dynamic programming on the DAG to find the longest path.
- *
- * @param {Array<string>} nodeIds - All node identifiers.
- * @param {Array<{from: string, to: string}>} edges - Directed edges.
- * @param {Record<string, object>} [issueMap] - Issue lookup used for priority weighting and estimates.
- * @returns {Array<string>} Node IDs on the critical path.
- */
+/** Calculate fan-out impact (how many items each node transitively unblocks). */
+function calculateFanOut(nodeIds, edges) {
+  const outEdges = {};
+  nodeIds.forEach(id => { outEdges[id] = []; });
+  
+  edges.forEach(({ from, to }) => {
+    if (outEdges[from]) {
+      outEdges[from].push(to);
+    }
+  });
+
+  // Compute transitive closure using DFS
+  const fanOut = {};
+  const visited = new Set();
+
+  function dfs(nodeId) {
+    if (visited.has(nodeId)) {
+      return fanOut[nodeId] || new Set();
+    }
+    
+    visited.add(nodeId);
+    const reachable = new Set();
+    
+    outEdges[nodeId].forEach(childId => {
+      reachable.add(childId);
+      const childDescendants = dfs(childId);
+      childDescendants.forEach(d => reachable.add(d));
+    });
+    
+    fanOut[nodeId] = reachable;
+    return reachable;
+  }
+
+  nodeIds.forEach(id => {
+    if (!visited.has(id)) {
+      dfs(id);
+    }
+  });
+
+  // Convert sets to counts
+  const fanOutCounts = {};
+  nodeIds.forEach(id => {
+    fanOutCounts[id] = fanOut[id] ? fanOut[id].size : 0;
+  });
+
+  return fanOutCounts;
+}
+
+/** Find critical path (longest chain of blocking dependencies) using DP. */
 function findCriticalPath(nodeIds, edges, issueMap) {
   if (nodeIds.length === 0) return [];
 
@@ -264,11 +280,7 @@ function findCriticalPath(nodeIds, edges, issueMap) {
   return path;
 }
 
-/**
- * Compute a weight for priority so that higher-priority (lower number) items dominate path scoring.
- * @param {object} issue - Issue metadata.
- * @returns {number} Priority weight (>=1).
- */
+/** Compute priority weight (higher-priority/lower-number items get higher weight). */
 function getPriorityWeight(issue) {
   if (!issue || issue.priority === undefined || issue.priority === null) {
     return 1;
@@ -284,11 +296,7 @@ function getPriorityWeight(issue) {
   return Math.pow(PRIORITY_WEIGHT_BASE, exponent);
 }
 
-/**
- * Extract an estimated duration in minutes from an issue if available.
- * @param {object} issue - Issue metadata.
- * @returns {number|null} Estimate in minutes or null if not present/invalid.
- */
+/** Extract estimated duration in minutes from an issue if available. */
 function getEstimateMinutes(issue) {
   if (!issue) {
     return null;
@@ -307,15 +315,7 @@ function getEstimateMinutes(issue) {
   return minutes;
 }
 
-/**
- * Find items that are currently unblocked (no incomplete blockers).
- * An item is ready if it has no incoming blocking edges from non-closed items.
- *
- * @param {Array<string>} nodeIds - All node identifiers.
- * @param {Array<{from: string, to: string}>} edges - Directed edges (from blocks to).
- * @param {Record<string, object>} issueMap - Issue data lookup.
- * @returns {Array<string>} IDs of ready items.
- */
+/** Find items that are currently unblocked (no incomplete blockers). */
 function findReadyItems(nodeIds, edges, issueMap) {
   const blockedBy = {};
   nodeIds.forEach(id => { blockedBy[id] = []; });
@@ -340,15 +340,7 @@ function findReadyItems(nodeIds, edges, issueMap) {
   });
 }
 
-/**
- * Identify groups of items that can be worked on in parallel.
- * Items at the same topological depth can be done simultaneously.
- *
- * @param {Array<string>} nodeIds - All node identifiers.
- * @param {Array<{from: string, to: string}>} edges - Directed edges.
- * @param {Record<string, object>} [issueMap] - Optional issue lookup to ignore completed blockers.
- * @returns {Array<Array<string>>} Groups of node IDs at the same depth.
- */
+/** Identify groups of items that can be worked on in parallel. */
 function findParallelGroups(nodeIds, edges, issueMap) {
   if (nodeIds.length === 0) return [];
 
@@ -417,16 +409,7 @@ function findParallelGroups(nodeIds, edges, issueMap) {
     .map(key => groups[key]);
 }
 
-/**
- * Apply filters to a list of issue IDs.
- * @param {Array<string>} ids - Issue IDs to filter.
- * @param {Record<string, object>} issueMap - Issue lookup table.
- * @param {object} filters - Filter criteria.
- * @param {number} [filters.priority] - Priority level to match.
- * @param {string} [filters.assignee] - Assignee to match.
- * @param {string} [filters.label] - Label to match.
- * @returns {Array<string>} Filtered issue IDs.
- */
+/** Apply filters to a list of issue IDs. */
 function applyFilters(ids, issueMap, filters) {
   return ids.filter(id => {
     const issue = issueMap[id];
@@ -452,5 +435,6 @@ module.exports = {
   findCriticalPath,
   findReadyItems,
   findParallelGroups,
-  applyFilters
+  applyFilters,
+  calculateFanOut
 };

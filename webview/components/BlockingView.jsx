@@ -2,11 +2,8 @@ import React, { useState, useMemo } from 'react';
 import BlockingPlanView from './BlockingPlanView';
 import LabelDropdown from './LabelDropdown';
 const { getStatusIcon } = require('../field-utils');
-/**
- * BlockingView - Visualizes blocking relationships and suggests completion order.
- *
- * @param {{ blockingModel: object, onIssueClick: Function, onClose: Function, onDepAction: Function }} props
- */
+
+/** BlockingView - Visualizes blocking relationships and suggests completion order. */
 const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => {
   const [activeTab, setActiveTab] = useState('graph');
   const [filterPriority, setFilterPriority] = useState('');
@@ -16,14 +13,17 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
   const [activeEdgeMenu, setActiveEdgeMenu] = useState(null);
   const [retargetState, setRetargetState] = useState(null);
   const [addLinkState, setAddLinkState] = useState(null);
+  
   const criticalPathIds = useMemo(() => {
     if (!blockingModel?.criticalPath) return new Set();
     return new Set(blockingModel.criticalPath.map(i => i.id));
   }, [blockingModel]);
+  
   const readyIds = useMemo(() => {
     if (!blockingModel?.readyItems) return new Set();
     return new Set(blockingModel.readyItems.map(i => i.id));
   }, [blockingModel]);
+  
   if (!blockingModel) {
     return (
       <div className="blocking-view blocking-view--empty">
@@ -37,7 +37,7 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
       </div>
     );
   }
-  const { issues, edges, completionOrder, criticalPath, readyItems, parallelGroups } = blockingModel;
+  const { issues, edges, completionOrder, criticalPath, readyItems, parallelGroups, fanOutCounts } = blockingModel;
   const availableLabels = useMemo(() => {
     if (!Array.isArray(issues)) return [];
     const labelSet = new Set();
@@ -50,7 +50,7 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
       a.localeCompare(b, undefined, { sensitivity: 'base' })
     );
   }, [issues]);
-  // Apply client-side filters to the pre-computed model
+  
   const matchesFilters = useMemo(() => {
     const hasPriority = filterPriority !== '';
     const hasAssignee = filterAssignee.trim() !== '';
@@ -59,17 +59,15 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
     return (issue) => {
       if (hasPriority && String(issue.priority) !== filterPriority) return false;
       if (hasAssignee && !(issue.assignee || '').toLowerCase().includes(filterAssignee.toLowerCase())) return false;
-      if (hasLabel) {
-        const labels = Array.isArray(issue.labels) ? issue.labels : [];
-        if (!labels.some(l => l.toLowerCase().includes(filterLabel.toLowerCase()))) return false;
-      }
+      if (hasLabel && !Array.isArray(issue.labels)?.some(l => l.toLowerCase().includes(filterLabel.toLowerCase()))) return false;
       return true;
     };
   }, [filterPriority, filterAssignee, filterLabel]);
+  
   const filteredIds = useMemo(() => {
-    if (!matchesFilters) return null;
-    return new Set(issues.filter(matchesFilters).map(i => i.id));
+    return matchesFilters ? new Set(issues.filter(matchesFilters).map(i => i.id)) : null;
   }, [issues, matchesFilters]);
+  
   const filterList = (list) => filteredIds ? list.filter(i => filteredIds.has(i.id)) : list;
   const filteredIssues = filterList(issues);
   const filteredCompletionOrder = filterList(completionOrder);
@@ -94,27 +92,30 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
       </div>
     );
   }
+  
   const handleNodeClick = (issue) => {
     setSelectedNode(issue.id);
     if (onIssueClick) onIssueClick(issue);
   };
+  
   const handleEdgeClick = (fromId, toId, event) => {
     event.stopPropagation();
     setActiveEdgeMenu({ fromId, toId });
     setRetargetState(null);
     setAddLinkState(null);
   };
+  
   const closeEdgeMenu = () => {
     setActiveEdgeMenu(null);
     setRetargetState(null);
     setAddLinkState(null);
   };
+  
   const handleRemoveLink = (fromId, toId) => {
-    if (onDepAction) {
-      onDepAction('remove', fromId, toId);
-    }
+    if (onDepAction) onDepAction('remove', fromId, toId);
     closeEdgeMenu();
   };
+  
   const handleRetarget = (fromId, oldToId, newToId) => {
     if (onDepAction && newToId.trim()) {
       onDepAction('remove', fromId, oldToId);
@@ -122,12 +123,12 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
     }
     closeEdgeMenu();
   };
+  
   const handleAddLink = (fromId, toId) => {
-    if (onDepAction && toId.trim()) {
-      onDepAction('add', fromId, toId.trim());
-    }
+    if (onDepAction && toId.trim()) onDepAction('add', fromId, toId.trim());
     closeEdgeMenu();
   };
+  
   const renderEdgeMenu = (fromId, toId) => {
     if (!activeEdgeMenu || activeEdgeMenu.fromId !== fromId || activeEdgeMenu.toId !== toId) {
       return null;
@@ -233,6 +234,7 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
       </div>
     </div>
   );
+  
   const renderGraphTab = () => {
     const issueMap = {};
     filteredIssues.forEach(i => { issueMap[i.id] = i; });
@@ -271,18 +273,10 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
                     isSelected ? 'blocking-view__node--selected' : '',
                     `blocking-view__node--${issue.status || 'open'}`
                   ].filter(Boolean).join(' ');
-
                   return (
-                    <div
-                      key={issue.id}
-                      className={nodeClass}
-                      onClick={() => handleNodeClick(issue)}
-                      title={`${issue.id}: ${issue.title}`}
-                    >
+                    <div key={issue.id} className={nodeClass} onClick={() => handleNodeClick(issue)} title={`${issue.id}: ${issue.title}`}>
                       <div className="blocking-view__node-header">
-                        <span className="blocking-view__node-status">
-                          {getStatusIcon(issue.status)}
-                        </span>
+                        <span className="blocking-view__node-status">{getStatusIcon(issue.status)}</span>
                         <span className="blocking-view__node-id">{issue.id}</span>
                         <span className="blocking-view__node-priority">P{issue.priority}</span>
                       </div>
@@ -354,14 +348,8 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
   const renderCriticalTab = () => {
     const actionableCritical = filteredCriticalPath.find(issue => !isClosedStatus(issue));
     const actionableIndex = actionableCritical ? filteredCriticalPath.indexOf(actionableCritical) : -1;
-    const actionableRemainingCount = actionableIndex >= 0
-      ? filteredCriticalPath.slice(actionableIndex + 1).filter(issue => !isClosedStatus(issue)).length
-      : 0;
-    const actionableMessage = actionableCritical
-      ? (actionableRemainingCount > 0
-        ? `Unblock ${actionableRemainingCount} item${actionableRemainingCount !== 1 ? 's' : ''} by completing ${actionableCritical.id} first.`
-        : `Complete ${actionableCritical.id} to finish the critical path.`)
-      : null;
+    const actionableRemainingCount = actionableIndex >= 0 ? filteredCriticalPath.slice(actionableIndex + 1).filter(issue => !isClosedStatus(issue)).length : 0;
+    const actionableMessage = actionableCritical ? (actionableRemainingCount > 0 ? `Unblock ${actionableRemainingCount} item${actionableRemainingCount !== 1 ? 's' : ''} by completing ${actionableCritical.id} first.` : `Complete ${actionableCritical.id} to finish the critical path.`) : null;
 
     return (
       <div className="blocking-view__critical">
@@ -380,29 +368,36 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
           </div>
         )}
         <div className="blocking-view__critical-chain">
-          {filteredCriticalPath.map((issue, idx) => (
-            <div key={issue.id} className="blocking-view__critical-item">
-              <div
-                className={`blocking-view__critical-node${actionableCritical && issue.id === actionableCritical.id ? ' blocking-view__critical-node--actionable' : ''}`}
-                onClick={() => handleNodeClick(issue)}
-              >
-                <span className="blocking-view__critical-status">{getStatusIcon(issue.status)}</span>
-                <span className="blocking-view__critical-id">{issue.id}</span>
-                <span className="blocking-view__critical-title">{issue.title}</span>
-                <span className="blocking-view__critical-priority">P{issue.priority}</span>
-              </div>
-              {idx < filteredCriticalPath.length - 1 && (
+          {filteredCriticalPath.map((issue, idx) => {
+            const fanOutCount = fanOutCounts?.[issue.id] || 0;
+            const fanOutLabel = fanOutCount > 0 ? `Unblocks ${fanOutCount} item${fanOutCount !== 1 ? 's' : ''}` : 'No downstream items';
+            return (
+              <div key={issue.id} className="blocking-view__critical-item">
                 <div
-                  className="blocking-view__critical-arrow blocking-view__critical-arrow--interactive"
-                  onClick={(e) => handleEdgeClick(issue.id, filteredCriticalPath[idx + 1].id, e)}
-                  title={`Edit: ${issue.id} blocks ${filteredCriticalPath[idx + 1].id}`}
+                  className={`blocking-view__critical-node${actionableCritical && issue.id === actionableCritical.id ? ' blocking-view__critical-node--actionable' : ''}`}
+                  onClick={() => handleNodeClick(issue)}
                 >
-                  ↓ blocks
-                  {renderEdgeMenu(issue.id, filteredCriticalPath[idx + 1].id)}
+                  <span className="blocking-view__critical-status">{getStatusIcon(issue.status)}</span>
+                  <span className="blocking-view__critical-id">{issue.id}</span>
+                  <span className="blocking-view__critical-title">{issue.title}</span>
+                  <span className="blocking-view__critical-priority">P{issue.priority}</span>
+                  {fanOutCount > 0 && (
+                    <span className="blocking-view__critical-fanout" title={fanOutLabel}>🔓 {fanOutCount}</span>
+                  )}
                 </div>
-              )}
-            </div>
-          ))}
+                {idx < filteredCriticalPath.length - 1 && (
+                  <div
+                    className="blocking-view__critical-arrow blocking-view__critical-arrow--interactive"
+                    onClick={(e) => handleEdgeClick(issue.id, filteredCriticalPath[idx + 1].id, e)}
+                    title={`Edit: ${issue.id} blocks ${filteredCriticalPath[idx + 1].id}`}
+                  >
+                    ↓ blocks
+                    {renderEdgeMenu(issue.id, filteredCriticalPath[idx + 1].id)}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     );
