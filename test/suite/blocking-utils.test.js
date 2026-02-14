@@ -2,7 +2,6 @@ const assert = require('assert');
 const {
   buildBlockingModel,
   topologicalSort,
-  findCriticalPath,
   findCriticalPaths,
   findReadyItems,
   findParallelGroups,
@@ -101,14 +100,14 @@ suite('blocking-utils', () => {
     });
   });
 
-  suite('findCriticalPath', () => {
+  suite('findCriticalPaths (single path)', () => {
     test('finds longest chain in linear graph', () => {
       const edges = [
         { from: 'a', to: 'b' },
         { from: 'b', to: 'c' }
       ];
-      const path = findCriticalPath(['a', 'b', 'c'], edges);
-      assert.deepStrictEqual(path, ['a', 'b', 'c']);
+      const paths = findCriticalPaths(['a', 'b', 'c'], edges, null, 1);
+      assert.deepStrictEqual(paths[0], ['a', 'b', 'c']);
     });
 
     test('finds correct path in diamond', () => {
@@ -118,7 +117,8 @@ suite('blocking-utils', () => {
         { from: 'b', to: 'd' },
         { from: 'c', to: 'd' }
       ];
-      const path = findCriticalPath(['a', 'b', 'c', 'd'], edges);
+      const paths = findCriticalPaths(['a', 'b', 'c', 'd'], edges, null, 1);
+      const path = paths[0];
       // Path should be length 3 (a -> b/c -> d)
       assert.strictEqual(path.length, 3);
       assert.strictEqual(path[0], 'a');
@@ -126,13 +126,13 @@ suite('blocking-utils', () => {
     });
 
     test('returns single node for no edges', () => {
-      const path = findCriticalPath(['x'], []);
-      assert.strictEqual(path.length, 1);
+      const paths = findCriticalPaths(['x'], [], null, 1);
+      assert.strictEqual(paths[0].length, 1);
     });
 
     test('returns empty for empty input', () => {
-      const path = findCriticalPath([], []);
-      assert.deepStrictEqual(path, []);
+      const paths = findCriticalPaths([], [], null, 1);
+      assert.deepStrictEqual(paths, []);
     });
 
     test('prioritizes higher-priority shorter chain over longer lower-priority chain', () => {
@@ -152,13 +152,14 @@ suite('blocking-utils', () => {
         p2d: { id: 'p2d', priority: 2 }
       };
 
-      const path = findCriticalPath(
+      const paths = findCriticalPaths(
         ['p1a', 'p1b', 'p2a', 'p2b', 'p2c', 'p2d'],
         edges,
-        issueMap
+        issueMap,
+        1
       );
 
-      assert.deepStrictEqual(path, ['p1a', 'p1b']);
+      assert.deepStrictEqual(paths[0], ['p1a', 'p1b']);
     });
 
     test('uses estimated duration when available', () => {
@@ -178,9 +179,9 @@ suite('blocking-utils', () => {
         y: { id: 'y', estimate_minutes: 3 * 24 * 60 }
       };
 
-      const path = findCriticalPath(['a', 'b', 'c', 'd', 'x', 'y'], edges, issueMap);
+      const paths = findCriticalPaths(['a', 'b', 'c', 'd', 'x', 'y'], edges, issueMap, 1);
 
-      assert.deepStrictEqual(path, ['x', 'y']);
+      assert.deepStrictEqual(paths[0], ['x', 'y']);
     });
   });
 

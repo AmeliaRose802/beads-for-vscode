@@ -295,12 +295,6 @@ function findCriticalPaths(nodeIds, edges, issueMap, maxPaths = 3) {
   return paths;
 }
 
-/** Find single critical path (longest chain) - maintained for backward compatibility. */
-function findCriticalPath(nodeIds, edges, issueMap) {
-  const paths = findCriticalPaths(nodeIds, edges, issueMap, 1);
-  return paths.length > 0 ? paths[0] : [];
-}
-
 /** Compute priority weight (higher-priority/lower-number items get higher weight). */
 function getPriorityWeight(issue) {
   if (!issue || issue.priority === undefined || issue.priority === null) {
@@ -453,7 +447,6 @@ function applyFilters(ids, issueMap, filters) {
 module.exports = {
   buildBlockingModel,
   topologicalSort,
-  findCriticalPath,
   findCriticalPaths,
   findReadyItems,
   findParallelGroups,
