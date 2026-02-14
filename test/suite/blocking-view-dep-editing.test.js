@@ -6,6 +6,12 @@ suite('BlockingView inline dependency editing', () => {
   const blockingViewSrc = fs.readFileSync(
     path.join(__dirname, '../../webview/components/BlockingView.jsx'), 'utf8'
   );
+  const blockingGraphTabSrc = fs.readFileSync(
+    path.join(__dirname, '../../webview/components/BlockingGraphTab.jsx'), 'utf8'
+  );
+  const blockingParallelTabSrc = fs.readFileSync(
+    path.join(__dirname, '../../webview/components/BlockingParallelTab.jsx'), 'utf8'
+  );
   const criticalPathViewSrc = fs.readFileSync(
     path.join(__dirname, '../../webview/components/CriticalPathView.jsx'), 'utf8'
   );
@@ -89,7 +95,7 @@ suite('BlockingView inline dependency editing', () => {
 
     test('graph arrows are interactive', () => {
       assert.ok(
-        blockingViewSrc.includes('blocking-view__arrow-down--interactive'),
+        blockingGraphTabSrc.includes('blocking-view__arrow-down--interactive'),
         'Graph arrows should have interactive class'
       );
     });
@@ -112,6 +118,14 @@ suite('BlockingView inline dependency editing', () => {
       assert.ok(
         blockingViewSrc.includes('isClosedStatus'),
         'BlockingView should include isClosedStatus helper'
+      );
+    });
+
+    test('has phase expand toggle control', () => {
+      const phaseToggleSources = `${blockingGraphTabSrc}\n${blockingParallelTabSrc}`;
+      assert.ok(
+        phaseToggleSources.includes('blocking-view__phase-toggle'),
+        'BlockingView should include phase toggle control'
       );
     });
 
@@ -320,6 +334,13 @@ suite('BlockingView inline dependency editing', () => {
       assert.ok(
         stylesSrc.includes('z-index: 10'),
         'Edge menu should have z-index for overlay'
+      );
+    });
+
+    test('defines phase toggle styles', () => {
+      assert.ok(
+        stylesSrc.includes('.blocking-view__phase-toggle'),
+        'CSS should define phase toggle styles'
       );
     });
   });

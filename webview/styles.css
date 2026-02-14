@@ -1712,6 +1712,21 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   flex-direction: column;
   gap: 2px;
 }
+.blocking-view__phase-toggle {
+  margin: 4px 0 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  color: var(--vscode-textLink-foreground);
+  background: none;
+  border: 1px dashed var(--vscode-panel-border);
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0.8;
+}
+.blocking-view__phase-toggle:hover {
+  opacity: 1;
+  background-color: var(--vscode-list-hoverBackground);
+}
 .blocking-view__parallel-item {
   display: flex;
   align-items: center;

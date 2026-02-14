@@ -2,12 +2,13 @@ import React, { useState, useMemo, useEffect } from 'react';
 import BlockingPlanView from './BlockingPlanView';
 import BlockingOrderTab from './BlockingOrderTab';
 import BlockingParallelTab from './BlockingParallelTab';
+import BlockingGraphTab from './BlockingGraphTab';
 import CriticalPathView from './CriticalPathView';
 import LabelDropdown from './LabelDropdown';
-const { getStatusIcon } = require('../field-utils');
 const { formatIssuesForClipboard, buildPhasedClipboardText } = require('../clipboard-utils');
 
 const COPY_FEEDBACK_DURATION_MS = 2200;
+const PHASE_ITEM_PREVIEW_LIMIT = 5;
 
 async function copyTextToClipboard(text) {
   if (!text || !text.length) {
@@ -52,6 +53,7 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
   const [retargetState, setRetargetState] = useState(null);
   const [addLinkState, setAddLinkState] = useState(null);
   const [copyFeedback, setCopyFeedback] = useState(null);
+  const [expandedPhases, setExpandedPhases] = useState(() => new Set());
   useEffect(() => {
     if (!copyFeedback) return undefined;
     const timeout = setTimeout(() => setCopyFeedback(null), COPY_FEEDBACK_DURATION_MS);
@@ -174,6 +176,31 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
     return (
       <span className={className}>{copyFeedback.message}</span>
     );
+  };
+  const togglePhaseExpanded = (phaseIndex) => {
+    setExpandedPhases(prev => {
+      const next = new Set(prev);
+      if (next.has(phaseIndex)) {
+        next.delete(phaseIndex);
+      } else {
+        next.add(phaseIndex);
+      }
+      return next;
+    });
+  };
+  const getPhasePreview = (group, phaseIndex) => {
+    const isExpanded = expandedPhases.has(phaseIndex);
+    const shouldToggle = group.length > PHASE_ITEM_PREVIEW_LIMIT;
+    const hiddenCount = Math.max(0, group.length - PHASE_ITEM_PREVIEW_LIMIT);
+    const visibleItems = !shouldToggle || isExpanded
+      ? group
+      : group.slice(0, PHASE_ITEM_PREVIEW_LIMIT);
+    return {
+      isExpanded,
+      shouldToggle,
+      hiddenCount,
+      visibleItems
+    };
   };
   const isClosedStatus = (issue) => issue && (issue.status === 'closed' || issue.status === 'done');
   if (filteredIssues.length === 0) {
@@ -332,81 +359,6 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
       </div>
     </div>
   );
-  const renderGraphTab = () => {
-    const issueMap = {};
-    filteredIssues.forEach(i => { issueMap[i.id] = i; });
-    // Build adjacency for layout
-    const edgeTargets = {};
-    edges.forEach(({ from, to }) => {
-      if (!edgeTargets[from]) edgeTargets[from] = [];
-      edgeTargets[from].push(to);
-    });
-    return (
-      <div className="blocking-view__graph">
-        <div className="blocking-view__graph-legend">
-          <span className="blocking-view__legend-item">
-            <span className="blocking-view__legend-swatch blocking-view__legend-swatch--critical" /> Critical Path
-          </span>
-          <span className="blocking-view__legend-item">
-            <span className="blocking-view__legend-swatch blocking-view__legend-swatch--ready" /> Ready
-          </span>
-          <span className="blocking-view__legend-item">
-            <span className="blocking-view__legend-swatch blocking-view__legend-swatch--blocked" /> Blocked
-          </span>
-        </div>
-        <div className="blocking-view__graph-container">
-          {filteredParallelGroups.map((group, depth) => (
-            <div key={depth} className="blocking-view__graph-layer">
-              <div className="blocking-view__layer-label">Phase {depth + 1}</div>
-              <div className="blocking-view__layer-items">
-                {group.map(issue => {
-                  const isCritical = criticalPathIds.has(issue.id);
-                  const isReady = readyIds.has(issue.id);
-                  const isSelected = selectedNode === issue.id;
-                  const nodeClass = [
-                    'blocking-view__node',
-                    isCritical ? 'blocking-view__node--critical' : '',
-                    isReady ? 'blocking-view__node--ready' : '',
-                    isSelected ? 'blocking-view__node--selected' : '',
-                    `blocking-view__node--${issue.status || 'open'}`
-                  ].filter(Boolean).join(' ');
-                  return (
-                    <div key={issue.id} className={nodeClass} onClick={() => handleNodeClick(issue)} title={`${issue.id}: ${issue.title}`}>
-                      <div className="blocking-view__node-header">
-                        <span className="blocking-view__node-status">{getStatusIcon(issue.status)}</span>
-                        <span className="blocking-view__node-id">{issue.id}</span>
-                        <span className="blocking-view__node-priority">P{issue.priority}</span>
-                      </div>
-                      <div className="blocking-view__node-title">{issue.title}</div>
-                      {isCritical && <div className="blocking-view__node-badge">Critical</div>}
-                      {isReady && <div className="blocking-view__node-badge blocking-view__node-badge--ready">Ready</div>}
-                    </div>
-                  );
-                })}
-              </div>
-              {depth < filteredParallelGroups.length - 1 && (
-                <div className="blocking-view__arrow-down blocking-view__arrow-down--interactive"
-                  onClick={(e) => {
-                    const fromIds = group.map(i => i.id);
-                    const nextGroup = filteredParallelGroups[depth + 1];
-                    if (fromIds.length === 1 && nextGroup && nextGroup.length === 1) {
-                      handleEdgeClick(fromIds[0], nextGroup[0].id, e);
-                    }
-                  }}
-                  title="Click to edit dependency"
-                >
-                  ↓
-                  {group.length === 1 && filteredParallelGroups[depth + 1]?.length === 1 &&
-                    renderEdgeMenu(group[0].id, filteredParallelGroups[depth + 1][0].id)}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
   const renderCriticalTab = () => {
     return (
       <CriticalPathView
@@ -457,7 +409,19 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
       </div>
 
       <div className="blocking-view__content">
-        {activeTab === 'graph' && renderGraphTab()}
+        {activeTab === 'graph' && (
+          <BlockingGraphTab
+            parallelGroups={filteredParallelGroups}
+            criticalPathIds={criticalPathIds}
+            readyIds={readyIds}
+            selectedNode={selectedNode}
+            onNodeClick={handleNodeClick}
+            onEdgeClick={handleEdgeClick}
+            onTogglePhase={togglePhaseExpanded}
+            renderEdgeMenu={renderEdgeMenu}
+            getPhasePreview={getPhasePreview}
+          />
+        )}
         {activeTab === 'order' && (
           <BlockingOrderTab
             issues={filteredCompletionOrder}
@@ -477,6 +441,8 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
             onCopyGroup={copyParallelGroupToClipboard}
             onCopyAll={copyAllParallelGroups}
             renderCopyFeedback={renderCopyFeedback}
+            getPhasePreview={getPhasePreview}
+            onTogglePhase={togglePhaseExpanded}
           />
         )}
         {activeTab === 'plan' && (
