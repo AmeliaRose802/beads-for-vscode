@@ -1522,6 +1522,34 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 .blocking-view__critical-header {
   margin-bottom: 8px;
 }
+.blocking-view__critical-path-container {
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--vscode-editorWidget-border);
+}
+.blocking-view__critical-path-container:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+.blocking-view__critical-path-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 4px 8px;
+  background-color: var(--vscode-editorWidget-background);
+  border-radius: 4px;
+}
+.blocking-view__critical-path-number {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--vscode-textLink-foreground);
+}
+.blocking-view__critical-path-length {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+}
 .blocking-view__critical-label {
   font-size: 11px;
   color: var(--vscode-descriptionForeground);
