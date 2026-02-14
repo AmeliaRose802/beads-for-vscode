@@ -3,6 +3,7 @@ const { execFile } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const { getAISuggestions } = require('./ai-suggestions');
+const { PokePokeManager } = require('./pokepoke-manager');
 
 /**
  * Allowed bd subcommands. Commands from the webview must start with one of
@@ -87,9 +88,10 @@ function activate(context) {
 class BeadsViewProvider {
   constructor(extensionUri) {
     this._extensionUri = extensionUri;
-    this._issueCache = null; // Cache for issue list
-    this._cacheTimestamp = 0; // Last cache update time
-    this._cacheTTL = 5000; // Cache time-to-live in milliseconds (5 seconds)
+    this._issueCache = null;
+    this._cacheTimestamp = 0;
+    this._cacheTTL = 5000;
+    this._pokepokeManager = null;
   }
 
   resolveWebviewView(webviewView, _context, _token) {
@@ -188,114 +190,72 @@ class BeadsViewProvider {
           break;
         }
         case 'getCwd': {
-          const workspaceFolders = vscode.workspace.workspaceFolders;
-          const cwd = workspaceFolders ? workspaceFolders[0].uri.fsPath : process.cwd();
-          webviewView.webview.postMessage({
-            type: 'cwdResult',
-            cwd: cwd
-          });
+          const wsFolders = vscode.workspace.workspaceFolders;
+          webviewView.webview.postMessage({ type: 'cwdResult', cwd: wsFolders ? wsFolders[0].uri.fsPath : process.cwd() });
           break;
         }
         case 'getCurrentFile': {
-          const activeEditor = vscode.window.activeTextEditor;
-          let currentFile = '';
-          if (activeEditor) {
-            const workspaceFolders = vscode.workspace.workspaceFolders;
-            if (workspaceFolders) {
-              currentFile = vscode.workspace.asRelativePath(activeEditor.document.uri);
-            } else {
-              currentFile = activeEditor.document.fileName;
-            }
+          const editor = vscode.window.activeTextEditor;
+          let curFile = '';
+          if (editor) {
+            curFile = vscode.workspace.workspaceFolders
+              ? vscode.workspace.asRelativePath(editor.document.uri)
+              : editor.document.fileName;
           }
-          webviewView.webview.postMessage({
-            type: 'currentFileResult',
-            file: currentFile
-          });
+          webviewView.webview.postMessage({ type: 'currentFileResult', file: curFile });
           break;
         }
         case 'getAISuggestions': {
-          const suggestions = await getAISuggestions(
-            (cmd) => this._executeBdCommand(cmd), data.title, data.currentDescription
-          );
-          webviewView.webview.postMessage({
-            type: 'aiSuggestions',
-            suggestions: suggestions.suggestions,
-            error: suggestions.error
-          });
+          const suggestions = await getAISuggestions((cmd) => this._executeBdCommand(cmd), data.title, data.currentDescription);
+          webviewView.webview.postMessage({ type: 'aiSuggestions', suggestions: suggestions.suggestions, error: suggestions.error });
           break;
         }
         case 'getIssueDetails': {
           const details = await this._getIssueDetails(data.issueId);
-          webviewView.webview.postMessage({
-            type: 'inlineIssueDetails',
-            issueId: data.issueId,
-            details: details
-          });
+          webviewView.webview.postMessage({ type: 'inlineIssueDetails', issueId: data.issueId, details });
           break;
         }
         case 'getComments': {
-          const result = await this._executeBdCommand(`comments ${data.issueId}`);
-          webviewView.webview.postMessage({
-            type: 'commentsResult',
-            issueId: data.issueId,
-            output: result.output,
-            success: result.success
-          });
+          const cmtResult = await this._executeBdCommand(`comments ${data.issueId}`);
+          webviewView.webview.postMessage({ type: 'commentsResult', issueId: data.issueId, output: cmtResult.output, success: cmtResult.success });
           break;
         }
         case 'getGraphData': {
-          const result = await this._executeBdCommand('graph --all --json --allow-stale');
-          if (result.success) {
-            try {
-              const graphData = JSON.parse(result.output);
-              webviewView.webview.postMessage({
-                type: 'graphData',
-                data: graphData
-              });
-            } catch (e) {
-              webviewView.webview.postMessage({
-                type: 'graphData',
-                error: 'Failed to parse graph data: ' + e.message
-              });
-            }
+          const graphRes = await this._executeBdCommand('graph --all --json --allow-stale');
+          if (graphRes.success) {
+            try { webviewView.webview.postMessage({ type: 'graphData', data: JSON.parse(graphRes.output) }); }
+            catch (e) { webviewView.webview.postMessage({ type: 'graphData', error: 'Failed to parse graph data: ' + e.message }); }
           } else {
-            webviewView.webview.postMessage({
-              type: 'graphData',
-              error: result.output || 'Failed to get graph data'
-            });
+            webviewView.webview.postMessage({ type: 'graphData', error: graphRes.output || 'Failed to get graph data' });
           }
           break;
         }
         case 'getDependencies': {
-          // Fetch both dependencies and dependents for an issue
-          const depsResult = await this._executeBdCommand(`dep list ${data.issueId} --json`);
-          const dependentsResult = await this._executeBdCommand(`dep list ${data.issueId} --direction up --json`);
-          
-          let dependencies = [];
-          let dependents = [];
-          
-          if (depsResult.success) {
-            try {
-              dependencies = JSON.parse(depsResult.output) || [];
-            } catch (e) {
-              console.error('Failed to parse dependencies:', e);
-            }
-          }
-          
-          if (dependentsResult.success) {
-            try {
-              dependents = JSON.parse(dependentsResult.output) || [];
-            } catch (e) {
-              console.error('Failed to parse dependents:', e);
-            }
-          }
-          
+          const [depsRes, depsUpRes] = await Promise.all([
+            this._executeBdCommand(`dep list ${data.issueId} --json`),
+            this._executeBdCommand(`dep list ${data.issueId} --direction up --json`)
+          ]);
+          const parseSafe = (r) => { try { return r.success ? JSON.parse(r.output) || [] : []; } catch { return []; } };
           webviewView.webview.postMessage({
             type: 'dependenciesResult',
             issueId: data.issueId,
-            dependencies: dependencies,
-            dependents: dependents
+            dependencies: parseSafe(depsRes),
+            dependents: parseSafe(depsUpRes)
           });
+          break;
+        }
+        case 'pokepokeLaunch': {
+          const launchRes = this._launchPokePoke(data.itemId, data.title, data.isTree);
+          webviewView.webview.postMessage({ type: 'pokepokeLaunchResult', itemId: data.itemId, ...launchRes });
+          break;
+        }
+        case 'pokepokeStop': {
+          const stopRes = this._getPokePokeManager().stop(data.itemId);
+          webviewView.webview.postMessage({ type: 'pokepokeStopResult', itemId: data.itemId, ...stopRes });
+          break;
+        }
+        case 'pokepokeGetStatus': {
+          webviewView.webview.postMessage({ type: 'pokepokeStatus', instances: this._getPokePokeManager().getInstances() });
           break;
         }
       }
@@ -319,6 +279,43 @@ class BeadsViewProvider {
     if (this._view) {
       this._view.show(true);
     }
+  }
+
+  /**
+   * Get or create the PokePoke process manager.
+   * @returns {import('./pokepoke-manager').PokePokeManager}
+   */
+  _getPokePokeManager() {
+    if (!this._pokepokeManager) {
+      const cfg = vscode.workspace.getConfiguration('beads-ui.pokepoke');
+      const folders = vscode.workspace.workspaceFolders;
+      const wsPath = folders ? folders[0].uri.fsPath : process.cwd();
+      this._pokepokeManager = new PokePokeManager({
+        pythonPath: cfg.get('pythonPath', 'python'),
+        workspacePath: wsPath,
+        outputChannelFactory: (name) => vscode.window.createOutputChannel(name)
+      });
+      this._pokepokeManager.on('stateChange', (event) => {
+        if (this._view) {
+          this._view.webview.postMessage({ type: 'pokepokeStateChange', ...event });
+        }
+      });
+    }
+    return this._pokepokeManager;
+  }
+
+  /**
+   * Launch PokePoke for an item, optionally syncing first.
+   * @param {string} itemId - The beads item ID
+   * @param {string} title - The item title
+   * @param {boolean} isTree - Whether to process the full tree
+   * @returns {{ success: boolean, error?: string }}
+   */
+  _launchPokePoke(itemId, title, isTree) {
+    const cfg = vscode.workspace.getConfiguration('beads-ui.pokepoke');
+    if (cfg.get('autoSync', true)) { this._executeBdCommand('sync'); }
+    const mgr = this._getPokePokeManager();
+    return isTree ? mgr.launchForTree(itemId, title) : mgr.launchForItem(itemId, title);
   }
 
   _executeBdCommand(command) {
@@ -477,7 +474,11 @@ class BeadsViewProvider {
 }
 
 /** Deactivate the Beads UI extension. */
-function deactivate() {}
+function deactivate() {
+  if (global._pokepokeManager) {
+    global._pokepokeManager.dispose();
+  }
+}
 
 module.exports = {
   activate,

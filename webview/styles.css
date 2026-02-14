@@ -2007,6 +2007,79 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   color: var(--vscode-foreground);
 }
 
+/* ── PokePoke Integration ──────────────────────────────────────── */
+
+.pokepoke-status-section {
+  border-left: 3px solid var(--vscode-charts-purple);
+}
+
+.pokepoke-instance {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: var(--vscode-editor-background);
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.pokepoke-instance--running {
+  border-left: 3px solid var(--vscode-charts-green);
+}
+
+.pokepoke-instance--starting {
+  border-left: 3px solid var(--vscode-charts-yellow);
+}
+
+.pokepoke-instance--completed {
+  border-left: 3px solid var(--vscode-charts-blue);
+  opacity: 0.7;
+}
+
+.pokepoke-instance--failed {
+  border-left: 3px solid var(--vscode-errorForeground);
+}
+
+.pokepoke-instance--stopping {
+  border-left: 3px solid var(--vscode-charts-orange);
+}
+
+.pokepoke-instance__id {
+  font-family: var(--vscode-editor-font-family);
+  font-weight: bold;
+  min-width: 80px;
+}
+
+.pokepoke-instance__state {
+  color: var(--vscode-descriptionForeground);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.pokepoke-instance__stop-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  margin-left: auto;
+}
+
+.pokepoke-instance__stop-btn:hover {
+  background: var(--vscode-toolbar-hoverBackground);
+}
+
+.issue-card__action-btn--pokepoke-running {
+  animation: pokepoke-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pokepoke-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
 .hierarchy-view__tree {
   margin-top: 6px;
 }

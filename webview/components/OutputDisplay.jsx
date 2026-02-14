@@ -58,6 +58,8 @@ const IssueTreeNode = ({
   onPriorityChange,
   onAssigneeChange,
   onShowHierarchy,
+  onPokePoke,
+  pokepokeInstances,
   onDragStart,
   onDrop,
   draggedIssue,
@@ -90,6 +92,8 @@ const IssueTreeNode = ({
             onPriorityChange={onPriorityChange}
             onAssigneeChange={onAssigneeChange}
             onShowHierarchy={onShowHierarchy}
+            onPokePoke={onPokePoke}
+            pokepokeRunning={pokepokeInstances && pokepokeInstances.some(i => i.itemId === node.issue.id && (i.state === 'running' || i.state === 'starting'))}
             existingAssignees={existingAssignees}
             detailedData={issueDetails[node.issue.id]}
             isLoadingDetails={loadingDetails[node.issue.id]}
@@ -118,6 +122,8 @@ const IssueTreeNode = ({
               onPriorityChange={onPriorityChange}
               onAssigneeChange={onAssigneeChange}
               onShowHierarchy={onShowHierarchy}
+              onPokePoke={onPokePoke}
+              pokepokeInstances={pokepokeInstances}
               onDragStart={onDragStart}
               onDrop={onDrop}
               draggedIssue={draggedIssue}
@@ -130,7 +136,7 @@ const IssueTreeNode = ({
   );
 };
 
-const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, onReopenIssue, onEditIssue, onLinkParent, onTypeChange, onPriorityChange, onAssigneeChange, onShowHierarchy, issueDetails = {}, loadingDetails = {}, vscode }) => {
+const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, onReopenIssue, onEditIssue, onLinkParent, onTypeChange, onPriorityChange, onAssigneeChange, onShowHierarchy, onPokePoke, pokepokeInstances, issueDetails = {}, loadingDetails = {}, vscode }) => {
   const [draggedIssue, setDraggedIssue] = useState(null);
   const [pageSize, setPageSize] = useState(getStoredPageSize);
   const [currentPage, setCurrentPage] = useState(1);
@@ -210,6 +216,8 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
                 onPriorityChange={onPriorityChange}
                 onAssigneeChange={onAssigneeChange}
                 onShowHierarchy={onShowHierarchy}
+                onPokePoke={onPokePoke}
+                pokepokeInstances={pokepokeInstances}
                 onDragStart={handleDragStart}
                 onDrop={handleDrop}
                 draggedIssue={draggedIssue}

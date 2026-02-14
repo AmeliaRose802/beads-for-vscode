@@ -65,6 +65,9 @@ const App = () => {
   const [issueDetails, setIssueDetails] = useState({}); // Map of issueId -> details
   const [loadingDetails, setLoadingDetails] = useState({}); // Map of issueId -> boolean
 
+  // PokePoke state
+  const [pokepokeInstances, setPokepokeInstances] = useState([]);
+
   // Relationship form state
   const [sourceBead, setSourceBead] = useState('');
   const [targetBead, setTargetBead] = useState('');
@@ -144,6 +147,8 @@ const App = () => {
         setShowHierarchyView,
         setBlockingModel,
         setShowBlockingView,
+        setPokepokeInstances,
+        vscode,
         buildHierarchyModel,
         buildBlockingModel,
         updateGraphPurpose,
@@ -240,22 +245,9 @@ const App = () => {
   };
 
   const handleShowIssueInline = (issueId) => {
-    // Don't fetch if already loaded or loading
-    if (issueDetails[issueId] || loadingDetails[issueId]) {
-      return;
-    }
-
-    // Mark as loading
-    setLoadingDetails(prev => ({
-      ...prev,
-      [issueId]: true
-    }));
-
-    // Request details from extension
-    vscode.postMessage({
-      type: 'getIssueDetails',
-      issueId: issueId
-    });
+    if (issueDetails[issueId] || loadingDetails[issueId]) return;
+    setLoadingDetails(prev => ({ ...prev, [issueId]: true }));
+    vscode.postMessage({ type: 'getIssueDetails', issueId });
   };
 
   const handleShowHierarchy = (issueId) => {
@@ -277,19 +269,18 @@ const App = () => {
     }
   };
 
+  const handlePokePoke = (itemId, title, isTree) => {
+    vscode.postMessage({ type: 'pokepokeLaunch', itemId, title, isTree });
+  };
+
+  const handlePokePokeStop = (itemId) => {
+    vscode.postMessage({ type: 'pokepokeStop', itemId });
+  };
+
   const handleDepAction = (action) => {
-    if (!sourceBead.trim() || !targetBead.trim()) {
-      setOutput('Error: Please provide both source and target bead IDs');
-      setIsError(true);
-      return;
-    }
-    // Validate bead IDs match expected pattern (alphanumeric, hyphens, underscores)
+    if (!sourceBead.trim() || !targetBead.trim()) { setOutput('Error: Please provide both source and target bead IDs'); setIsError(true); return; }
     const beadIdPattern = /^[a-zA-Z0-9_-]+$/;
-    if (!beadIdPattern.test(sourceBead.trim()) || !beadIdPattern.test(targetBead.trim())) {
-      setOutput('Error: Bead IDs may only contain letters, numbers, hyphens, and underscores');
-      setIsError(true);
-      return;
-    }
+    if (!beadIdPattern.test(sourceBead.trim()) || !beadIdPattern.test(targetBead.trim())) { setOutput('Error: Bead IDs may only contain letters, numbers, hyphens, and underscores'); setIsError(true); return; }
     const verb = action === 'add' ? 'Linked' : 'Unlinked';
     const arrow = action === 'add' ? '→' : '⇸';
     runInlineAction(`dep ${action} ${sourceBead.trim()} --${relationType} ${targetBead.trim()}`, `${verb} ${sourceBead} ${arrow} ${targetBead}`);
@@ -352,6 +343,21 @@ const App = () => {
             <button className="action-btn" onClick={requestBlockingData} title="View blocking chains and completion order">🚧 Blocking</button>
           </div>
         </div>
+
+        {pokepokeInstances.length > 0 && (
+          <div className="section pokepoke-status-section">
+            <div className="section-title">🤖 PokePoke</div>
+            {pokepokeInstances.map((inst) => (
+              <div key={inst.itemId} className={`pokepoke-instance pokepoke-instance--${inst.state}`}>
+                <span className="pokepoke-instance__id">{inst.itemId}</span>
+                <span className="pokepoke-instance__state">{inst.state}</span>
+                {(inst.state === 'running' || inst.state === 'starting') && (
+                  <button className="pokepoke-instance__stop-btn" onClick={() => handlePokePokeStop(inst.itemId)} title="Stop">🛑</button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         {showCreatePanel && (
           <CreatePanel
@@ -472,6 +478,8 @@ const App = () => {
               onPriorityChange={handleQuickPriorityChange}
               onAssigneeChange={handleAssigneeChange}
               onShowHierarchy={handleShowHierarchy}
+              onPokePoke={handlePokePoke}
+              pokepokeInstances={pokepokeInstances}
               issueDetails={issueDetails}
               loadingDetails={loadingDetails}
               vscode={vscode}

@@ -134,6 +134,41 @@ function processMessage(message, ctx) {
       ctx.updateGraphPurpose(null);
       break;
     }
+    case 'pokepokeStateChange':
+      if (ctx.setPokepokeInstances) {
+        // Request updated status
+        if (ctx.vscode) {
+          ctx.vscode.postMessage({ type: 'pokepokeGetStatus' });
+        }
+      }
+      break;
+    case 'pokepokeStatus':
+      if (ctx.setPokepokeInstances) {
+        ctx.setPokepokeInstances(message.instances || []);
+      }
+      break;
+    case 'pokepokeLaunchResult':
+      if (!message.success && ctx.setOutput) {
+        ctx.setOutput(`❌ PokePoke: ${message.error || 'Failed to launch'}`);
+        ctx.setIsError(true);
+      } else if (message.success && ctx.setOutput) {
+        ctx.setOutput(`🤖 PokePoke launched for ${message.itemId}`);
+        ctx.setIsSuccess(true);
+        setTimeout(() => ctx.setIsSuccess(false), 3000);
+      }
+      break;
+    case 'pokepokeStopResult':
+      if (ctx.setOutput) {
+        if (message.success) {
+          ctx.setOutput(`🛑 PokePoke stopping for ${message.itemId}`);
+          ctx.setIsSuccess(true);
+          setTimeout(() => ctx.setIsSuccess(false), 3000);
+        } else {
+          ctx.setOutput(`❌ ${message.error || 'Failed to stop PokePoke'}`);
+          ctx.setIsError(true);
+        }
+      }
+      break;
     default:
       break;
   }
