@@ -1599,6 +1599,17 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   font-weight: 600;
   font-size: 11px;
 }
+.blocking-view__critical-fanout {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--vscode-charts-green);
+  background-color: var(--vscode-editorWidget-background);
+  border: 1px solid var(--vscode-charts-green);
+  border-radius: 3px;
+  padding: 2px 6px;
+  margin-left: 6px;
+  white-space: nowrap;
+}
 .blocking-view__critical-arrow {
   font-size: 11px;
   color: var(--vscode-errorForeground);

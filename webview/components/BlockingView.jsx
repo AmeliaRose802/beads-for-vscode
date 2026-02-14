@@ -59,7 +59,7 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
     return (issue) => {
       if (hasPriority && String(issue.priority) !== filterPriority) return false;
       if (hasAssignee && !(issue.assignee || '').toLowerCase().includes(filterAssignee.toLowerCase())) return false;
-      if (hasLabel && !Array.isArray(issue.labels)?.some(l => l.toLowerCase().includes(filterLabel.toLowerCase()))) return false;
+      if (hasLabel && (!Array.isArray(issue.labels) || !issue.labels.some(l => l.toLowerCase().includes(filterLabel.toLowerCase())))) return false;
       return true;
     };
   }, [filterPriority, filterAssignee, filterLabel]);
