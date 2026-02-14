@@ -81,6 +81,7 @@ const HierarchyView = ({ hierarchy, onSelectIssue, onClose }) => {
   const parentChain = hierarchy?.parentChain || [];
   const tree = hierarchy?.tree;
   const rootIssue = hierarchy?.issue;
+  const hasRelationships = Boolean(tree && Array.isArray(tree.children) && tree.children.length > 0);
 
   const ancestorLabels = useMemo(() => {
     if (!parentChain.length) return null;
@@ -122,12 +123,15 @@ const HierarchyView = ({ hierarchy, onSelectIssue, onClose }) => {
         )}
       </div>
 
-      {tree ? (
+      {tree && hasRelationships ? (
         <div className="hierarchy-view__tree">
           <HierarchyNode node={tree} onSelect={onSelectIssue} />
         </div>
       ) : (
-        <div className="hierarchy-view__empty">No hierarchy data available for this issue.</div>
+        <div className="hierarchy-view__empty" role="status">
+          <div>No relationships found for this item.</div>
+          <div>Link parents, children, blockers, or related issues to populate the hierarchy.</div>
+        </div>
       )}
     </div>
   );

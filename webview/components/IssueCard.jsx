@@ -328,12 +328,14 @@ const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, on
           )}
         </div>
         <div className="issue-card__actions">
-          <button
-            onClick={handleShowHierarchyClick}
-            className="issue-card__action-btn"
-            title="Show hierarchy view">
-            🌳
-          </button>
+          {totalRelationships > 0 && (
+            <button
+              onClick={handleShowHierarchyClick}
+              className="issue-card__action-btn"
+              title="Show hierarchy view">
+              🌳
+            </button>
+          )}
           {!isClosed && onTypeChange && onPriorityChange && (
             <button
               onClick={toggleQuickEdit}
