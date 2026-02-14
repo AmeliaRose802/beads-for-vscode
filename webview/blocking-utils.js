@@ -36,7 +36,7 @@ function buildBlockingModel(components, filters) {
   );
 
   const sortedIds = topologicalSort(filteredIds, filteredEdges);
-  const criticalPath = findCriticalPath(filteredIds, filteredEdges, issueMap);
+  const criticalPaths = findCriticalPaths(filteredIds, filteredEdges, issueMap);
   const readyItems = findReadyItems(filteredIds, filteredEdges, issueMap);
   const parallelGroups = findParallelGroups(filteredIds, filteredEdges, issueMap);
   const fanOutCounts = calculateFanOut(filteredIds, filteredEdges);
@@ -47,7 +47,8 @@ function buildBlockingModel(components, filters) {
     issues,
     edges: filteredEdges,
     completionOrder: sortedIds.map(id => issueMap[id]),
-    criticalPath: criticalPath.map(id => issueMap[id]),
+    criticalPath: criticalPaths.length > 0 ? criticalPaths[0].map(id => issueMap[id]) : [],
+    criticalPaths: criticalPaths.map(path => path.map(id => issueMap[id])),
     readyItems: readyItems.map(id => issueMap[id]),
     parallelGroups: parallelGroups.map(group => group.map(id => issueMap[id])),
     fanOutCounts
@@ -61,6 +62,7 @@ function emptyModel() {
     edges: [],
     completionOrder: [],
     criticalPath: [],
+    criticalPaths: [],
     readyItems: [],
     parallelGroups: [],
     fanOutCounts: {}
@@ -200,8 +202,8 @@ function calculateFanOut(nodeIds, edges) {
   return fanOutCounts;
 }
 
-/** Find critical path (longest chain of blocking dependencies) using DP. */
-function findCriticalPath(nodeIds, edges, issueMap) {
+/** Find top critical paths (longest chains of blocking dependencies) using DP. */
+function findCriticalPaths(nodeIds, edges, issueMap, maxPaths = 3) {
   if (nodeIds.length === 0) return [];
 
   const outEdges = {};
@@ -259,25 +261,44 @@ function findCriticalPath(nodeIds, edges, issueMap) {
     });
   });
 
-  // Find the node with the maximum distance
-  let maxDist = 0;
-  let endNode = sorted[0];
-  nodeIds.forEach(id => {
-    if (dist[id] > maxDist) {
-      maxDist = dist[id];
-      endNode = id;
-    }
-  });
+  // Find top nodes by distance, ensuring they represent distinct paths
+  const nodesByDist = nodeIds
+    .map(id => ({ id, dist: dist[id] }))
+    .sort((a, b) => b.dist - a.dist);
 
-  // Trace back to reconstruct path
-  const path = [];
-  let current = endNode;
-  while (current !== null) {
-    path.unshift(current);
-    current = predecessor[current];
+  const paths = [];
+  const usedNodes = new Set();
+  
+  for (const { id: endNode, dist: endDist } of nodesByDist) {
+    if (paths.length >= maxPaths) break;
+    
+    // Skip if this node is already part of an existing path
+    if (usedNodes.has(endNode)) continue;
+    
+    // Trace back to reconstruct path
+    const path = [];
+    let current = endNode;
+    while (current !== null) {
+      path.unshift(current);
+      current = predecessor[current];
+    }
+    
+    // Only include paths that are reasonably significant
+    // (at least 70% of the longest path's distance)
+    if (paths.length === 0 || endDist >= nodesByDist[0].dist * 0.7) {
+      paths.push(path);
+      // Mark all nodes in this path as used to avoid subpaths
+      path.forEach(nodeId => usedNodes.add(nodeId));
+    }
   }
 
-  return path;
+  return paths;
+}
+
+/** Find single critical path (longest chain) - maintained for backward compatibility. */
+function findCriticalPath(nodeIds, edges, issueMap) {
+  const paths = findCriticalPaths(nodeIds, edges, issueMap, 1);
+  return paths.length > 0 ? paths[0] : [];
 }
 
 /** Compute priority weight (higher-priority/lower-number items get higher weight). */
@@ -433,6 +454,7 @@ module.exports = {
   buildBlockingModel,
   topologicalSort,
   findCriticalPath,
+  findCriticalPaths,
   findReadyItems,
   findParallelGroups,
   applyFilters,

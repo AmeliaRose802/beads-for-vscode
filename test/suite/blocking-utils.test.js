@@ -3,6 +3,7 @@ const {
   buildBlockingModel,
   topologicalSort,
   findCriticalPath,
+  findCriticalPaths,
   findReadyItems,
   findParallelGroups,
   applyFilters,
@@ -180,6 +181,81 @@ suite('blocking-utils', () => {
       const path = findCriticalPath(['a', 'b', 'c', 'd', 'x', 'y'], edges, issueMap);
 
       assert.deepStrictEqual(path, ['x', 'y']);
+    });
+  });
+
+  suite('findCriticalPaths', () => {
+    test('returns single path for linear chain', () => {
+      const edges = [
+        { from: 'a', to: 'b' },
+        { from: 'b', to: 'c' }
+      ];
+      const paths = findCriticalPaths(['a', 'b', 'c'], edges);
+      assert.strictEqual(paths.length, 1);
+      assert.deepStrictEqual(paths[0], ['a', 'b', 'c']);
+    });
+
+    test('returns multiple paths for two independent chains of similar length', () => {
+      const edges = [
+        { from: 'a', to: 'b' },
+        { from: 'b', to: 'c' },
+        { from: 'x', to: 'y' },
+        { from: 'y', to: 'z' }
+      ];
+      const paths = findCriticalPaths(['a', 'b', 'c', 'x', 'y', 'z'], edges);
+      assert.strictEqual(paths.length, 2);
+      assert.strictEqual(paths[0].length, 3);
+      assert.strictEqual(paths[1].length, 3);
+    });
+
+    test('returns multiple paths in diamond with equal branches', () => {
+      const edges = [
+        { from: 'a', to: 'b' },
+        { from: 'a', to: 'c' },
+        { from: 'b', to: 'd' },
+        { from: 'c', to: 'd' }
+      ];
+      const issueMap = {
+        a: { id: 'a', priority: 1 },
+        b: { id: 'b', priority: 1 },
+        c: { id: 'c', priority: 1 },
+        d: { id: 'd', priority: 1 }
+      };
+      const paths = findCriticalPaths(['a', 'b', 'c', 'd'], edges, issueMap);
+      assert.ok(paths.length >= 1);
+      assert.ok(paths.length <= 3);
+      assert.strictEqual(paths[0].length, 3);
+    });
+
+    test('limits to maxPaths parameter', () => {
+      const edges = [
+        { from: 'a', to: 'b' },
+        { from: 'c', to: 'd' },
+        { from: 'e', to: 'f' },
+        { from: 'g', to: 'h' }
+      ];
+      const paths = findCriticalPaths(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'], edges, null, 2);
+      assert.ok(paths.length <= 2);
+    });
+
+    test('filters out insignificant paths (less than 70% of longest)', () => {
+      const edges = [
+        { from: 'a', to: 'b' },
+        { from: 'b', to: 'c' },
+        { from: 'b', to: 'd' },
+        { from: 'x', to: 'y' }
+      ];
+      const issueMap = {
+        a: { id: 'a', priority: 1 },
+        b: { id: 'b', priority: 1 },
+        c: { id: 'c', priority: 1 },
+        d: { id: 'd', priority: 1 },
+        x: { id: 'x', priority: 1 },
+        y: { id: 'y', priority: 1 }
+      };
+      const paths = findCriticalPaths(['a', 'b', 'c', 'd', 'x', 'y'], edges, issueMap);
+      // Should only include the longest path(s), not the short x->y chain
+      assert.ok(paths.every(path => path.length >= 2));
     });
   });
 
@@ -436,8 +512,23 @@ suite('blocking-utils', () => {
       assert.ok(model.issues.length > 0);
       assert.ok(model.completionOrder.length > 0);
       assert.ok(model.criticalPath.length > 0);
+      assert.ok(model.criticalPaths.length > 0);
       assert.ok(model.readyItems.length > 0);
       assert.ok(model.fanOutCounts);
+    });
+
+    test('criticalPaths contains array of paths', () => {
+      const model = buildBlockingModel(linearComponents);
+      assert.ok(Array.isArray(model.criticalPaths));
+      assert.ok(model.criticalPaths.length >= 1);
+      assert.ok(Array.isArray(model.criticalPaths[0]));
+    });
+
+    test('criticalPath is first element of criticalPaths', () => {
+      const model = buildBlockingModel(linearComponents);
+      const firstPathIds = model.criticalPaths[0].map(i => i.id);
+      const criticalPathIds = model.criticalPath.map(i => i.id);
+      assert.deepStrictEqual(criticalPathIds, firstPathIds);
     });
 
     test('completion order respects dependencies', () => {

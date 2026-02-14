@@ -6,6 +6,9 @@ suite('BlockingView inline dependency editing', () => {
   const blockingViewSrc = fs.readFileSync(
     path.join(__dirname, '../../webview/components/BlockingView.jsx'), 'utf8'
   );
+  const criticalPathViewSrc = fs.readFileSync(
+    path.join(__dirname, '../../webview/components/CriticalPathView.jsx'), 'utf8'
+  );
   const stylesSrc = fs.readFileSync(
     path.join(__dirname, '../../webview/styles.css'), 'utf8'
   );
@@ -79,8 +82,8 @@ suite('BlockingView inline dependency editing', () => {
 
     test('critical path arrows are interactive', () => {
       assert.ok(
-        blockingViewSrc.includes('blocking-view__critical-arrow--interactive'),
-        'Critical path arrows should have interactive class'
+        criticalPathViewSrc.includes('blocking-view__critical-arrow--interactive'),
+        'CriticalPathView should have interactive class for arrows'
       );
     });
 
@@ -93,15 +96,15 @@ suite('BlockingView inline dependency editing', () => {
 
     test('critical callout exists in component', () => {
       assert.ok(
-        blockingViewSrc.includes('blocking-view__critical-callout'),
-        'BlockingView should include critical callout class'
+        criticalPathViewSrc.includes('blocking-view__critical-callout'),
+        'CriticalPathView should include critical callout class'
       );
     });
 
     test('critical actionable node class exists in component', () => {
       assert.ok(
-        blockingViewSrc.includes('blocking-view__critical-node--actionable'),
-        'BlockingView should include actionable critical node class'
+        criticalPathViewSrc.includes('blocking-view__critical-node--actionable'),
+        'CriticalPathView should include actionable critical node class'
       );
     });
 
@@ -114,8 +117,8 @@ suite('BlockingView inline dependency editing', () => {
 
     test('critical callout includes unblock text', () => {
       assert.ok(
-        blockingViewSrc.includes('Unblock'),
-        'BlockingView should include unblock callout text'
+        criticalPathViewSrc.includes('Unblock'),
+        'CriticalPathView should include unblock callout text'
       );
     });
 
