@@ -36,12 +36,12 @@ const CreatePanel = ({
               onChange={(e) => onTitleChange(e.target.value)}
             />
             <button 
-              className="action-btn ai-suggest-btn" 
+              className="ai-suggest-btn" 
               onClick={onAISuggest}
               disabled={!title.trim() || isAILoading}
               title="Use AI to suggest type, priority, and related issues"
             >
-              {isAILoading ? '⏳ Analyzing...' : '✨ AI Suggest'}
+              {isAILoading ? '⏳' : '✨'}
             </button>
           </div>
         </div>
