@@ -83,6 +83,15 @@ function activate(context) {
   });
 
   context.subscriptions.push(disposable);
+
+  // Ensure PokePoke processes are cleaned up when the extension deactivates
+  context.subscriptions.push({
+    dispose() {
+      if (provider._pokepokeManager) {
+        provider._pokepokeManager.dispose();
+      }
+    }
+  });
 }
 
 class BeadsViewProvider {
@@ -475,9 +484,7 @@ class BeadsViewProvider {
 
 /** Deactivate the Beads UI extension. */
 function deactivate() {
-  if (global._pokepokeManager) {
-    global._pokepokeManager.dispose();
-  }
+  // PokePoke cleanup is handled via context.subscriptions in activate()
 }
 
 module.exports = {
