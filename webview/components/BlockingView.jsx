@@ -1,8 +1,45 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import BlockingPlanView from './BlockingPlanView';
+import BlockingOrderTab from './BlockingOrderTab';
+import BlockingParallelTab from './BlockingParallelTab';
 import CriticalPathView from './CriticalPathView';
 import LabelDropdown from './LabelDropdown';
 const { getStatusIcon } = require('../field-utils');
+const { formatIssuesForClipboard, buildPhasedClipboardText } = require('../clipboard-utils');
+
+const COPY_FEEDBACK_DURATION_MS = 2200;
+
+async function copyTextToClipboard(text) {
+  if (!text || !text.length) {
+    throw new Error('No text to copy');
+  }
+
+  if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  if (typeof document === 'undefined') {
+    throw new Error('Clipboard API unavailable');
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'absolute';
+  textarea.style.left = '-9999px';
+  document.body.appendChild(textarea);
+  textarea.select();
+
+  try {
+    const succeeded = document.execCommand && document.execCommand('copy');
+    if (!succeeded) {
+      throw new Error('Copy command rejected');
+    }
+  } finally {
+    document.body.removeChild(textarea);
+  }
+}
 
 /** BlockingView - Visualizes blocking relationships and suggests completion order. */
 const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => {
@@ -14,6 +51,15 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
   const [activeEdgeMenu, setActiveEdgeMenu] = useState(null);
   const [retargetState, setRetargetState] = useState(null);
   const [addLinkState, setAddLinkState] = useState(null);
+  const [copyFeedback, setCopyFeedback] = useState(null);
+  useEffect(() => {
+    if (!copyFeedback) return undefined;
+    const timeout = setTimeout(() => setCopyFeedback(null), COPY_FEEDBACK_DURATION_MS);
+    return () => clearTimeout(timeout);
+  }, [copyFeedback]);
+  const showCopyFeedback = (target, message, isError = false) => {
+    setCopyFeedback({ target, message, isError });
+  };
   
   const criticalPathIds = useMemo(() => {
     if (!blockingModel?.criticalPaths || !Array.isArray(blockingModel.criticalPaths)) return new Set();
@@ -74,7 +120,6 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
   const filteredIds = useMemo(() => {
     return matchesFilters ? new Set(issues.filter(matchesFilters).map(i => i.id)) : null;
   }, [issues, matchesFilters]);
-  
   const filterList = (list) => filteredIds ? list.filter(i => filteredIds.has(i.id)) : list;
   const filteredIssues = filterList(issues);
   const filteredCompletionOrder = filterList(completionOrder);
@@ -83,10 +128,53 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
     ? criticalPaths.map(path => path.filter(i => filteredIds.has(i.id))).filter(path => path.length > 0)
     : (criticalPaths || []);
   const filteredReadyItems = filterList(readyItems);
+  const normalizedParallelGroups = Array.isArray(parallelGroups) ? parallelGroups : [];
   const filteredParallelGroups = (filteredIds
-    ? parallelGroups.map(g => g.filter(i => filteredIds.has(i.id))).filter(g => g.length > 0)
-    : parallelGroups
+    ? normalizedParallelGroups.map(g => g.filter(i => filteredIds.has(i.id))).filter(g => g.length > 0)
+    : normalizedParallelGroups
   );
+  const copyIssuesToClipboard = async (issueList, target, header) => {
+    const formatted = formatIssuesForClipboard(issueList || [], { header });
+    if (!formatted.trim()) {
+      showCopyFeedback(target, 'Nothing to copy', true);
+      return;
+    }
+    try {
+      await copyTextToClipboard(formatted);
+      showCopyFeedback(target, 'Copied!');
+    } catch (error) {
+      console.error('BlockingView clipboard copy failed', error);
+      showCopyFeedback(target, 'Copy failed', true);
+    }
+  };
+  const copyOrderToClipboard = () => copyIssuesToClipboard(filteredCompletionOrder, 'order');
+  const copyParallelGroupToClipboard = (group, index) => copyIssuesToClipboard(group, `phase-${index}`, `Phase ${index + 1}`);
+  const copyAllParallelGroups = async () => {
+    const text = buildPhasedClipboardText(filteredParallelGroups);
+    if (!text.trim()) {
+      showCopyFeedback('parallel-all', 'Nothing to copy', true);
+      return;
+    }
+    try {
+      await copyTextToClipboard(text);
+      showCopyFeedback('parallel-all', 'Copied!');
+    } catch (error) {
+      console.error('BlockingView clipboard copy failed', error);
+      showCopyFeedback('parallel-all', 'Copy failed', true);
+    }
+  };
+  const renderCopyFeedback = (target) => {
+    if (!copyFeedback || copyFeedback.target !== target) {
+      return null;
+    }
+    const className = [
+      'blocking-view__copy-feedback',
+      copyFeedback.isError ? 'blocking-view__copy-feedback--error' : ''
+    ].filter(Boolean).join(' ');
+    return (
+      <span className={className}>{copyFeedback.message}</span>
+    );
+  };
   const isClosedStatus = (issue) => issue && (issue.status === 'closed' || issue.status === 'done');
   if (filteredIssues.length === 0) {
     return (
@@ -244,7 +332,6 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
       </div>
     </div>
   );
-  
   const renderGraphTab = () => {
     const issueMap = {};
     filteredIssues.forEach(i => { issueMap[i.id] = i; });
@@ -320,41 +407,6 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
     );
   };
 
-  const renderOrderTab = () => (
-    <div className="blocking-view__order">
-      <div className="blocking-view__order-header">
-        <span className="blocking-view__order-label">Suggested completion order (dependencies first):</span>
-      </div>
-      <ol className="blocking-view__order-list">
-        {filteredCompletionOrder.map((issue, idx) => {
-          const isCritical = criticalPathIds.has(issue.id);
-          const isReady = readyIds.has(issue.id);
-          const itemClass = [
-            'blocking-view__order-item',
-            isCritical ? 'blocking-view__order-item--critical' : '',
-            isReady ? 'blocking-view__order-item--ready' : '',
-            issue.status === 'closed' ? 'blocking-view__order-item--done' : ''
-          ].filter(Boolean).join(' ');
-
-          return (
-            <li
-              key={issue.id}
-              className={itemClass}
-              onClick={() => handleNodeClick(issue)}
-            >
-              <span className="blocking-view__order-step">{idx + 1}</span>
-              <span className="blocking-view__order-status">{getStatusIcon(issue.status)}</span>
-              <span className="blocking-view__order-id">{issue.id}</span>
-              <span className="blocking-view__order-title">{issue.title}</span>
-              {isCritical && <span className="blocking-view__tag blocking-view__tag--critical">Critical</span>}
-              {isReady && <span className="blocking-view__tag blocking-view__tag--ready">Ready</span>}
-            </li>
-          );
-        })}
-      </ol>
-    </div>
-  );
-
   const renderCriticalTab = () => {
     return (
       <CriticalPathView
@@ -367,37 +419,6 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
       />
     );
   };
-
-  const renderParallelTab = () => (
-    <div className="blocking-view__parallel">
-      <div className="blocking-view__parallel-header">
-        <span className="blocking-view__parallel-label">
-          Work can be parallelized into {filteredParallelGroups.length} phases:
-        </span>
-      </div>
-      {filteredParallelGroups.map((group, idx) => (
-        <div key={idx} className="blocking-view__parallel-group">
-          <div className="blocking-view__parallel-phase">
-            Phase {idx + 1} ({group.length} item{group.length !== 1 ? 's' : ''})
-          </div>
-          <div className="blocking-view__parallel-items">
-            {group.map(issue => (
-              <div
-                key={issue.id}
-                className={`blocking-view__parallel-item ${readyIds.has(issue.id) ? 'blocking-view__parallel-item--ready' : ''}`}
-                onClick={() => handleNodeClick(issue)}
-              >
-                <span className="blocking-view__parallel-status">{getStatusIcon(issue.status)}</span>
-                <span className="blocking-view__parallel-id">{issue.id}</span>
-                <span className="blocking-view__parallel-title">{issue.title}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-
   return (
     <div className="blocking-view">
       <div className="blocking-view__header">
@@ -437,9 +458,27 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
 
       <div className="blocking-view__content">
         {activeTab === 'graph' && renderGraphTab()}
-        {activeTab === 'order' && renderOrderTab()}
+        {activeTab === 'order' && (
+          <BlockingOrderTab
+            issues={filteredCompletionOrder}
+            criticalPathIds={criticalPathIds}
+            readyIds={readyIds}
+            onIssueClick={handleNodeClick}
+            onCopy={copyOrderToClipboard}
+            renderCopyFeedback={renderCopyFeedback}
+          />
+        )}
         {activeTab === 'critical' && renderCriticalTab()}
-        {activeTab === 'parallel' && renderParallelTab()}
+        {activeTab === 'parallel' && (
+          <BlockingParallelTab
+            parallelGroups={filteredParallelGroups}
+            readyIds={readyIds}
+            onIssueClick={handleNodeClick}
+            onCopyGroup={copyParallelGroupToClipboard}
+            onCopyAll={copyAllParallelGroups}
+            renderCopyFeedback={renderCopyFeedback}
+          />
+        )}
         {activeTab === 'plan' && (
           <BlockingPlanView
             issues={filteredIssues}

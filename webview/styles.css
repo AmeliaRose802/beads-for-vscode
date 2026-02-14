@@ -1456,6 +1456,37 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 .blocking-view__order-header {
   margin-bottom: 8px;
 }
+.blocking-view__copy-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.blocking-view__copy-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.blocking-view__copy-button {
+  background-color: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  border: 1px solid var(--vscode-button-border);
+  border-radius: 3px;
+  font-size: 10px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+.blocking-view__copy-button:hover {
+  background-color: var(--vscode-button-secondaryHoverBackground);
+}
+.blocking-view__copy-feedback {
+  font-size: 10px;
+  color: var(--vscode-testing-iconPassed, #73c991);
+}
+.blocking-view__copy-feedback--error {
+  color: var(--vscode-errorForeground);
+}
 .blocking-view__order-label {
   font-size: 11px;
   color: var(--vscode-descriptionForeground);
@@ -1662,6 +1693,19 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   font-weight: 600;
   color: var(--vscode-textLink-foreground);
   margin-bottom: 4px;
+}
+.blocking-view__parallel-phase-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.blocking-view__parallel-phase-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
 }
 .blocking-view__parallel-items {
   display: flex;
