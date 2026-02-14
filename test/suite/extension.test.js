@@ -4,14 +4,15 @@ const sinon = require('sinon');
 const path = require('path');
 const childProcess = require('child_process');
 const extension = require('../../extension');
+const { isAllowedCommand } = extension;
 
 suite('Beads UI Extension Test Suite', () => {
-  let globalExecStub;
+  let globalExecFileStub;
 
   setup(() => {
-    // Create global stub for exec to prevent real command execution
-    globalExecStub = sinon.stub(childProcess, 'exec');
-    globalExecStub.callsFake((cmd, opts, callback) => {
+    // Create global stub for execFile to prevent real command execution
+    globalExecFileStub = sinon.stub(childProcess, 'execFile');
+    globalExecFileStub.callsFake((file, args, opts, callback) => {
       // Default mock behavior
       callback(null, 'Mocked output', '');
     });
@@ -105,33 +106,33 @@ suite('Beads UI Extension Test Suite', () => {
     setup(() => {
       const BeadsViewProvider = getBeadsViewProviderClass();
       provider = new BeadsViewProvider(vscode.Uri.file(__dirname));
-      globalExecStub.reset();
+      globalExecFileStub.reset();
     });
 
     test('Should execute bd command successfully', async () => {
-      globalExecStub.callsFake((cmd, opts, cb) => cb(null, 'Command output', ''));
+      globalExecFileStub.callsFake((file, args, opts, cb) => cb(null, 'Command output', ''));
       const result = await provider._executeBdCommand('list');
       assert.strictEqual(result.success, true);
       assert.strictEqual(result.output, 'Command output');
-      assert.ok(globalExecStub.calledOnce);
-      assert.ok(globalExecStub.firstCall.args[0].includes('bd list'));
+      assert.ok(globalExecFileStub.calledOnce);
+      assert.strictEqual(globalExecFileStub.firstCall.args[0], 'bd');
+      assert.deepStrictEqual(globalExecFileStub.firstCall.args[1], ['list']);
     });
     test('Should handle command with error but with stdout', async () => {
       const error = new Error('Command warning'); error.code = 1;
-      globalExecStub.callsFake((cmd, opts, cb) => cb(error, 'Warning output', ''));
+      globalExecFileStub.callsFake((file, args, opts, cb) => cb(error, 'Warning output', ''));
       const result = await provider._executeBdCommand('list');
       assert.strictEqual(result.success, true);
       assert.strictEqual(result.output, 'Warning output');
     });
     test('Should handle command with stderr', async () => {
-      globalExecStub.callsFake((cmd, opts, cb) => cb(null, '', 'Error message'));
-      const result = await provider._executeBdCommand('invalid');
-      assert.strictEqual(result.success, true);
+      globalExecFileStub.callsFake((file, args, opts, cb) => cb(null, '', 'Error message'));
+      const result = await provider._executeBdCommand('list');
       assert.strictEqual(result.output, 'Error message');
     });
     test('Should handle command with pure error', async () => {
-      globalExecStub.callsFake((cmd, opts, cb) => cb(new Error('Command failed'), '', ''));
-      const result = await provider._executeBdCommand('invalid');
+      globalExecFileStub.callsFake((file, args, opts, cb) => cb(new Error('Command failed'), '', ''));
+      const result = await provider._executeBdCommand('list');
       assert.strictEqual(result.success, false);
       assert.ok(result.output.includes('Command failed'));
     });
@@ -139,26 +140,26 @@ suite('Beads UI Extension Test Suite', () => {
     test('Should use workspace directory', async () => {
       sinon.stub(vscode.workspace, 'workspaceFolders').value(
         [{ uri: vscode.Uri.file(path.join('test', 'workspace')) }]);
-      globalExecStub.callsFake((cmd, opts, cb) => cb(null, 'output', ''));
+      globalExecFileStub.callsFake((file, args, opts, cb) => cb(null, 'output', ''));
       await provider._executeBdCommand('list');
-      assert.ok(globalExecStub.firstCall.args[1].cwd);
+      assert.ok(globalExecFileStub.firstCall.args[2].cwd);
     });
     test('Should set BEADS_DB environment variable', async () => {
-      globalExecStub.callsFake((cmd, opts, cb) => cb(null, 'output', ''));
+      globalExecFileStub.callsFake((file, args, opts, cb) => cb(null, 'output', ''));
       await provider._executeBdCommand('list');
-      const opts = globalExecStub.firstCall.args[1];
+      const opts = globalExecFileStub.firstCall.args[2];
       assert.ok(opts.env.BEADS_DB);
       assert.ok(opts.env.BEADS_DB.includes('beads.db'));
     });
     test('Should respect maxBuffer and timeout settings', async () => {
-      globalExecStub.callsFake((cmd, opts, cb) => cb(null, 'output', ''));
+      globalExecFileStub.callsFake((file, args, opts, cb) => cb(null, 'output', ''));
       await provider._executeBdCommand('list');
-      const opts = globalExecStub.firstCall.args[1];
+      const opts = globalExecFileStub.firstCall.args[2];
       assert.strictEqual(opts.maxBuffer, 10 * 1024 * 1024);
       assert.strictEqual(opts.timeout, 30000);
     });
     test('Should trim output whitespace', async () => {
-      globalExecStub.callsFake((cmd, opts, cb) => cb(null, '  output with spaces  \n', ''));
+      globalExecFileStub.callsFake((file, args, opts, cb) => cb(null, '  output with spaces  \n', ''));
       const result = await provider._executeBdCommand('list');
       assert.strictEqual(result.output, 'output with spaces');
     });
@@ -182,11 +183,11 @@ suite('Beads UI Extension Test Suite', () => {
       const fsStub = sinon.stub(require('fs'), 'readFileSync').returns('<html></html>');
       provider.resolveWebviewView(mockWebviewView, {}, null);
       fsStub.restore();
-      globalExecStub.reset();
+      globalExecFileStub.reset();
     });
 
     test('Should handle executeCommand message', async () => {
-      globalExecStub.callsFake((cmd, opts, cb) => cb(null, 'test output', ''));
+      globalExecFileStub.callsFake((file, args, opts, cb) => cb(null, 'test output', ''));
       await messageHandler({ type: 'executeCommand', command: 'stats' });
       assert.ok(mockWebviewView.webview.postMessage.called);
       const msg = mockWebviewView.webview.postMessage.firstCall.args[0];
@@ -200,9 +201,9 @@ suite('Beads UI Extension Test Suite', () => {
       const jsonOutput = JSON.stringify([{ id: 'test-1', title: 'Test' }]);
       const graphOutput = JSON.stringify([]);
       let callCount = 0;
-      globalExecStub.callsFake((cmd, opts, callback) => {
+      globalExecFileStub.callsFake((file, args, opts, callback) => {
         callCount++;
-        if (cmd.includes('graph')) {
+        if (args.includes('graph')) {
           callback(null, graphOutput, '');
         } else {
           callback(null, jsonOutput, '');
@@ -217,10 +218,10 @@ suite('Beads UI Extension Test Suite', () => {
 
       // Should NOT run `bd list` in text mode first — only JSON calls
       for (let i = 0; i < callCount; i++) {
-        const executedCmd = globalExecStub.getCall(i).args[0];
+        const executedArgs = globalExecFileStub.getCall(i).args[1];
         assert.ok(
-          executedCmd.includes('--json'),
-          `Call ${i} should use --json flag, got: ${executedCmd}`
+          executedArgs.includes('--json'),
+          `Call ${i} should use --json flag, got: ${executedArgs.join(' ')}`
         );
       }
       const message = mockWebviewView.webview.postMessage.firstCall.args[0];
@@ -230,8 +231,8 @@ suite('Beads UI Extension Test Suite', () => {
     test('Should use --allow-stale for graph commands to prevent hanging', async () => {
       const jsonOutput = JSON.stringify([{ id: 'test-1', title: 'Test' }]);
       const graphOutput = JSON.stringify([]);
-      globalExecStub.callsFake((cmd, opts, callback) => {
-        if (cmd.includes('graph')) {
+      globalExecFileStub.callsFake((file, args, opts, callback) => {
+        if (args.includes('graph')) {
           callback(null, graphOutput, '');
         } else {
           callback(null, jsonOutput, '');
@@ -244,16 +245,16 @@ suite('Beads UI Extension Test Suite', () => {
         useJSON: true
       });
 
-      const graphCall = globalExecStub.getCalls().find(c => c.args[0].includes('graph'));
+      const graphCall = globalExecFileStub.getCalls().find(c => c.args[1].includes('graph'));
       assert.ok(graphCall, 'Should execute a graph command');
       assert.ok(
-        graphCall.args[0].includes('--allow-stale'),
-        `Graph command should include --allow-stale, got: ${graphCall.args[0]}`
+        graphCall.args[1].includes('--allow-stale'),
+        `Graph command should include --allow-stale, got: ${graphCall.args[1].join(' ')}`
       );
     });
 
     test('Should handle isInlineAction response type', async () => {
-      globalExecStub.callsFake((cmd, opts, callback) => {
+      globalExecFileStub.callsFake((file, args, opts, callback) => {
         callback(null, 'created', '');
       });
 
@@ -308,25 +309,25 @@ suite('Beads UI Extension Test Suite', () => {
     setup(() => {
       const BeadsViewProvider = getBeadsViewProviderClass();
       provider = new BeadsViewProvider(vscode.Uri.file(__dirname));
-      globalExecStub.reset();
+      globalExecFileStub.reset();
     });
 
     test('Should handle exec timeout', async () => {
       const error = new Error('Command timed out'); error.killed = true;
-      globalExecStub.callsFake((cmd, opts, cb) => cb(error, '', ''));
+      globalExecFileStub.callsFake((file, args, opts, cb) => cb(error, '', ''));
       const result = await provider._executeBdCommand('list');
       assert.strictEqual(result.success, false);
       assert.ok(result.output.includes('timed out'));
     });
     test('Should handle ENOENT error (command not found)', async () => {
       const error = new Error('Command not found'); error.code = 'ENOENT';
-      globalExecStub.callsFake((cmd, opts, cb) => cb(error, '', ''));
+      globalExecFileStub.callsFake((file, args, opts, cb) => cb(error, '', ''));
       const result = await provider._executeBdCommand('list');
       assert.strictEqual(result.success, false);
       assert.ok(result.output.includes('Command not found'));
     });
     test('Should handle buffer overflow', async () => {
-      globalExecStub.callsFake((cmd, opts, cb) => cb(new Error('maxBuffer exceeded'), '', ''));
+      globalExecFileStub.callsFake((file, args, opts, cb) => cb(new Error('maxBuffer exceeded'), '', ''));
       const result = await provider._executeBdCommand('list');
       assert.strictEqual(result.success, false);
       assert.ok(result.output.includes('maxBuffer'));
@@ -338,18 +339,42 @@ suite('Beads UI Extension Test Suite', () => {
     setup(() => {
       const BeadsViewProvider = getBeadsViewProviderClass();
       provider = new BeadsViewProvider(vscode.Uri.file(__dirname));
-      globalExecStub.reset();
+      globalExecFileStub.reset();
     });
 
-    test('Should execute command with bd prefix', async () => {
-      globalExecStub.callsFake((cmd, opts, cb) => cb(null, 'output', ''));
+    test('Should use execFile with bd as the executable', async () => {
+      globalExecFileStub.callsFake((file, args, opts, cb) => cb(null, 'output', ''));
       await provider._executeBdCommand('list');
-      assert.ok(globalExecStub.firstCall.args[0].startsWith('bd '));
+      assert.strictEqual(globalExecFileStub.firstCall.args[0], 'bd');
     });
-    test('Should pass user command as-is', async () => {
-      globalExecStub.callsFake((cmd, opts, cb) => cb(null, 'output', ''));
+    test('Should pass command as argument array', async () => {
+      globalExecFileStub.callsFake((file, args, opts, cb) => cb(null, 'output', ''));
       await provider._executeBdCommand('list --state open');
-      assert.strictEqual(globalExecStub.firstCall.args[0], 'bd list --state open');
+      assert.deepStrictEqual(globalExecFileStub.firstCall.args[1], ['list', '--state', 'open']);
+    });
+    test('Should reject unrecognized subcommands', async () => {
+      const result = await provider._executeBdCommand('rm -rf /');
+      assert.strictEqual(result.success, false);
+      assert.ok(result.output.includes('rejected'));
+      assert.ok(globalExecFileStub.notCalled);
+    });
+    test('Should reject commands with shell metacharacters in subcommand', async () => {
+      const result = await provider._executeBdCommand('; echo pwned');
+      assert.strictEqual(result.success, false);
+      assert.ok(globalExecFileStub.notCalled);
+    });
+    test('Should allow all known bd subcommands', async () => {
+      const allowed = [
+        'create', 'update', 'close', 'reopen', 'list', 'show', 'ready',
+        'blocked', 'stats', 'dep', 'graph', 'sync', 'comments', 'label',
+        'init', 'info'
+      ];
+      globalExecFileStub.callsFake((file, args, opts, cb) => cb(null, 'output', ''));
+      for (const cmd of allowed) {
+        globalExecFileStub.reset();
+        const result = await provider._executeBdCommand(cmd);
+        assert.strictEqual(result.success, true, `${cmd} should be allowed`);
+      }
     });
   });
 
@@ -421,10 +446,15 @@ function getBeadsViewProviderClass() {
     show() { if (this._view) { this._view.show(true); } }
     _executeBdCommand(command) {
       return new Promise((resolve) => {
+        if (!isAllowedCommand(command)) {
+          resolve({ success: false, output: 'Error: Command rejected — unrecognized bd subcommand' });
+          return;
+        }
         const folders = vscode.workspace.workspaceFolders;
         const cwd = folders ? folders[0].uri.fsPath : process.cwd();
         const env = { ...process.env, BEADS_DB: path.join(cwd, '.beads', 'beads.db') };
-        childProcess.exec(`bd ${command}`, {
+        const args = command.trim().split(/\s+/);
+        childProcess.execFile('bd', args, {
           maxBuffer: 10 * 1024 * 1024, cwd, env, timeout: 30000
         }, (error, stdout, stderr) => {
           if (error && !stdout && !stderr) {

@@ -1,5 +1,5 @@
 const vscode = require('vscode');
-const { exec } = require('child_process');
+const { execFile } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const { getAISuggestions } = require('./ai-suggestions');
@@ -39,7 +39,7 @@ function activate(context) {
 
     if (!fs.existsSync(beadsDbPath)) {
       // Initialize bd quietly
-      exec('bd init --quiet', { cwd: workspacePath }, (error, _stdout, _stderr) => {
+      execFile('bd', ['init', '--quiet'], { cwd: workspacePath }, (error, _stdout, _stderr) => {
         if (error) {
           console.error('Failed to auto-initialize bd:', error);
         }
@@ -318,7 +318,8 @@ class BeadsViewProvider {
       const bundledBdPath = this._getBundledBdPath(platform);
       const bdCommand = bundledBdPath || 'bd';
       
-      const fullCommand = `${bdCommand} ${command}`;
+      // Split command into arguments array to avoid shell injection
+      const args = command.trim().split(/\s+/);
       
       // Use the current workspace's beads database
       const beadsDbPath = path.join(cwd, '.beads', 'beads.db');
@@ -327,7 +328,7 @@ class BeadsViewProvider {
         BEADS_DB: beadsDbPath
       };
       
-      exec(fullCommand, {
+      execFile(bdCommand, args, {
         maxBuffer: 10 * 1024 * 1024,
         cwd: cwd,
         env: env,
@@ -458,5 +459,7 @@ function deactivate() {}
 
 module.exports = {
   activate,
-  deactivate
+  deactivate,
+  isAllowedCommand,
+  ALLOWED_BD_SUBCOMMANDS
 };

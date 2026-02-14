@@ -4,13 +4,13 @@ const sinon = require('sinon');
 const childProcess = require('child_process');
 
 suite('Issue Details Test Suite', () => {
-  let globalExecStub;
+  let globalExecFileStub;
   let provider;
   let BeadsViewProvider;
 
   setup(() => {
-    // Create global stub for exec to prevent real command execution
-    globalExecStub = sinon.stub(childProcess, 'exec');
+    // Create global stub for execFile to prevent real command execution
+    globalExecFileStub = sinon.stub(childProcess, 'execFile');
     
     // Get BeadsViewProvider class
     BeadsViewProvider = getBeadsViewProviderClass();
@@ -48,7 +48,7 @@ suite('Issue Details Test Suite', () => {
         }
       ];
 
-      globalExecStub.callsFake((cmd, opts, callback) => {
+      globalExecFileStub.callsFake((file, args, opts, callback) => {
         callback(null, JSON.stringify(mockIssues), '');
       });
 
@@ -72,7 +72,7 @@ suite('Issue Details Test Suite', () => {
         }
       ];
 
-      globalExecStub.callsFake((cmd, opts, callback) => {
+      globalExecFileStub.callsFake((file, args, opts, callback) => {
         callback(null, JSON.stringify(mockIssues), '');
       });
 
@@ -82,7 +82,7 @@ suite('Issue Details Test Suite', () => {
     });
 
     test('Should return null when bd list command fails', async () => {
-      globalExecStub.callsFake((cmd, opts, callback) => {
+      globalExecFileStub.callsFake((file, args, opts, callback) => {
         callback(new Error('Command failed'), '', '');
       });
 
@@ -92,7 +92,7 @@ suite('Issue Details Test Suite', () => {
     });
 
     test('Should return null when JSON parsing fails', async () => {
-      globalExecStub.callsFake((cmd, opts, callback) => {
+      globalExecFileStub.callsFake((file, args, opts, callback) => {
         callback(null, 'invalid json', '');
       });
 
@@ -102,7 +102,7 @@ suite('Issue Details Test Suite', () => {
     });
 
     test('Should handle empty issue list', async () => {
-      globalExecStub.callsFake((cmd, opts, callback) => {
+      globalExecFileStub.callsFake((file, args, opts, callback) => {
         callback(null, '[]', '');
       });
 
@@ -112,15 +112,15 @@ suite('Issue Details Test Suite', () => {
     });
 
     test('Should use bd list --json command', async () => {
-      globalExecStub.callsFake((cmd, opts, callback) => {
+      globalExecFileStub.callsFake((file, args, opts, callback) => {
         callback(null, '[]', '');
       });
 
       await provider._getIssueDetails('beads_ui-61');
 
-      assert.ok(globalExecStub.calledOnce);
-      const command = globalExecStub.firstCall.args[0];
-      assert.ok(command.includes('bd list --json'));
+      assert.ok(globalExecFileStub.calledOnce);
+      assert.strictEqual(globalExecFileStub.firstCall.args[0], 'bd');
+      assert.deepStrictEqual(globalExecFileStub.firstCall.args[1], ['list', '--json']);
     });
 
     test('Should handle issues with minimal fields', async () => {
@@ -132,7 +132,7 @@ suite('Issue Details Test Suite', () => {
         }
       ];
 
-      globalExecStub.callsFake((cmd, opts, callback) => {
+      globalExecFileStub.callsFake((file, args, opts, callback) => {
         callback(null, JSON.stringify(mockIssues), '');
       });
 
@@ -160,7 +160,7 @@ suite('Issue Details Test Suite', () => {
         }
       ];
 
-      globalExecStub.callsFake((cmd, opts, callback) => {
+      globalExecFileStub.callsFake((file, args, opts, callback) => {
         callback(null, JSON.stringify(mockIssues), '');
       });
 
@@ -200,7 +200,7 @@ suite('Issue Details Test Suite', () => {
       provider.resolveWebviewView(mockWebviewView, {}, null);
       fsStub.restore();
 
-      globalExecStub.reset();
+      globalExecFileStub.reset();
     });
 
     test('Should handle getIssueDetails message and send response', async () => {
@@ -213,7 +213,7 @@ suite('Issue Details Test Suite', () => {
         }
       ];
 
-      globalExecStub.callsFake((cmd, opts, callback) => {
+      globalExecFileStub.callsFake((file, args, opts, callback) => {
         callback(null, JSON.stringify(mockIssues), '');
       });
 
@@ -232,7 +232,7 @@ suite('Issue Details Test Suite', () => {
     });
 
     test('Should send null details when issue not found', async () => {
-      globalExecStub.callsFake((cmd, opts, callback) => {
+      globalExecFileStub.callsFake((file, args, opts, callback) => {
         callback(null, '[]', '');
       });
 
@@ -249,7 +249,7 @@ suite('Issue Details Test Suite', () => {
     });
 
     test('Should handle command failure gracefully', async () => {
-      globalExecStub.callsFake((cmd, opts, callback) => {
+      globalExecFileStub.callsFake((file, args, opts, callback) => {
         callback(new Error('Command failed'), '', '');
       });
 
@@ -363,13 +363,13 @@ function getBeadsViewProviderClass() {
         const workspaceFolders = vscode.workspace.workspaceFolders;
         const cwd = workspaceFolders ? workspaceFolders[0].uri.fsPath : process.cwd();
         
-        const fullCommand = `bd ${command}`;
+        const args = command.trim().split(/\s+/);
         const env = { 
           ...process.env,
           BEADS_DB: path.join('C:', 'Users', 'ameliapayne', 'icm_queue_tool', '.beads', 'beads.db')
         };
         
-        childProcess.exec(fullCommand, {
+        childProcess.execFile('bd', args, {
           maxBuffer: 10 * 1024 * 1024,
           cwd: cwd,
           env: env
