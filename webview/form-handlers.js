@@ -21,21 +21,12 @@ function escapeShellArg(str) {
 }
 
 /**
- * Wraps an escaped string in double quotes (cross-platform safe).
- * @param {string} str - The string to quote (should already be escaped)
- * @returns {string} The quoted string
- */
-function quoteShellArg(str) {
-  return `"${str}"`;
-}
-
-/**
  * Safely escapes and quotes a string for shell command usage.
  * @param {string} str - The string to make safe
  * @returns {string} The escaped and quoted string
  */
 function safeShellArg(str) {
-  return quoteShellArg(escapeShellArg(str));
+  return `"${escapeShellArg(str)}"`;
 }
 
 /**
