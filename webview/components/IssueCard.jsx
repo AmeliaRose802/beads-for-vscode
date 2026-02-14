@@ -15,6 +15,7 @@ const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, on
   const [assigneeSaveState, setAssigneeSaveState] = useState('idle'); // idle, saving, saved, error
   const [shouldLoadDeps, setShouldLoadDeps] = useState(false);
   const [shouldLoadComments, setShouldLoadComments] = useState(false);
+  const [copyState, setCopyState] = useState('idle'); // idle, copying, copied
   const isClosed = issue.status === 'closed';
 
   // Calculate total relationship count
@@ -114,10 +115,11 @@ const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, on
   }, [shouldLoadComments, vscode, issue.id, loadingComments]);
 
   const handleCardClick = (e) => {
-    // Don't trigger card click if clicking on action buttons, quick edit, or assignee editor
+    // Don't trigger card click if clicking on action buttons, quick edit, assignee editor, or copy button
     if (e.target.closest('.issue-card__actions') || 
         e.target.closest('.issue-card__quick-edit') ||
-        e.target.closest('.issue-card__assignee-editor')) {
+        e.target.closest('.issue-card__assignee-editor') ||
+        e.target.closest('.issue-card__copy-btn')) {
       return;
     }
     
@@ -255,6 +257,24 @@ const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, on
     }
   };
 
+  const handleCopyId = async (e) => {
+    e.stopPropagation();
+    
+    try {
+      setCopyState('copying');
+      await navigator.clipboard.writeText(issue.id);
+      setCopyState('copied');
+      
+      // Reset to idle after showing copied state
+      setTimeout(() => {
+        setCopyState('idle');
+      }, 1500);
+    } catch (error) {
+      console.error('Failed to copy ID:', error);
+      setCopyState('idle');
+    }
+  };
+
   const priorityClass = `issue-card--priority-${issue.priority.toLowerCase()}`;
   const clickableClass = onClick ? '' : 'issue-card--not-clickable';
   const draggingClass = isDragging ? 'issue-card--dragging' : '';
@@ -280,6 +300,13 @@ const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, on
           <span className="issue-card__id">
             {issue.id}
           </span>
+          <button 
+            className="issue-card__copy-btn"
+            onClick={handleCopyId}
+            title="Copy ID to clipboard"
+            aria-label="Copy ID">
+            {copyState === 'copied' ? '✓' : '📋'}
+          </button>
           <span className={`issue-card__badge issue-card__badge--priority issue-card__badge--priority-${issue.priority.toLowerCase()}`}>
             {issue.priority}
           </span>
