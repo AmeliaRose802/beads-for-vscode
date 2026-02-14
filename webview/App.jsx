@@ -318,6 +318,9 @@ const App = () => {
   };
 
   const handleEditIssue = (id) => {
+    closeAllPanels();
+    setShowDependencyGraph(false);
+
     // Request issue details from extension using list command with --json
     vscode.postMessage({
       type: 'executeCommand',
@@ -326,8 +329,6 @@ const App = () => {
     
     setEditIssueId(id);
     setShowEditPanel(true);
-    setShowCreatePanel(false);
-    setShowRelationshipPanel(false);
   };
 
   return (
@@ -345,8 +346,8 @@ const App = () => {
             <button className="action-btn" onClick={() => runCommand('ready')} title="Show unblocked issues ready to work on">✅ Ready</button>
             <button className="action-btn" onClick={() => runCommand('blocked')} title="Show issues blocked by dependencies">🚫 Blocked</button>
             <button className="action-btn" onClick={() => runCommand('stats')} title="Show project statistics">📊 Stats</button>
-            <button className="action-btn" onClick={() => { clearOutput(); setShowCreatePanel(!showCreatePanel); setShowRelationshipPanel(false); setShowDependencyGraph(false); }} title="Create a new issue">➕ Create</button>
-            <button className="action-btn" onClick={() => { clearOutput(); setShowRelationshipPanel(!showRelationshipPanel); setShowCreatePanel(false); setShowDependencyGraph(false); }} title="Manage dependencies between issues">🔗 Links</button>
+            <button className="action-btn" onClick={() => { clearOutput(); closeAllPanels(); setShowDependencyGraph(false); setShowCreatePanel(!showCreatePanel); }} title="Create a new issue">➕ Create</button>
+            <button className="action-btn" onClick={() => { clearOutput(); closeAllPanels(); setShowDependencyGraph(false); setShowRelationshipPanel(!showRelationshipPanel); }} title="Manage dependencies between issues">🔗 Links</button>
             <button className="action-btn" onClick={requestGraphData} title="Visualize dependency relationships as a graph">🔀 Graph</button>
             <button className="action-btn" onClick={requestBlockingData} title="View blocking chains and completion order">🚧 Blocking</button>
           </div>
