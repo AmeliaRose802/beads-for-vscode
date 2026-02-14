@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { buildHierarchyModel, filterHierarchyTree } = require('../../webview/hierarchy-utils');
+const { buildHierarchyModel, filterHierarchyTree, countDescendants } = require('../../webview/hierarchy-utils');
 
 suite('hierarchy-utils', () => {
   const components = [
@@ -195,6 +195,56 @@ suite('hierarchy-utils', () => {
       const filtered = filterHierarchyTree(model.tree, new Set());
       assert.strictEqual(filtered.id, model.tree.id);
       assert.strictEqual(filtered.title, model.tree.title);
+    });
+  });
+
+  suite('countDescendants', () => {
+    test('returns 0 for null or undefined node', () => {
+      assert.strictEqual(countDescendants(null), 0);
+      assert.strictEqual(countDescendants(undefined), 0);
+    });
+
+    test('returns 0 for node with no children', () => {
+      assert.strictEqual(countDescendants({ id: 'a', children: [] }), 0);
+    });
+
+    test('returns 0 for node with missing children array', () => {
+      assert.strictEqual(countDescendants({ id: 'a' }), 0);
+    });
+
+    test('counts direct children', () => {
+      const node = {
+        id: 'root',
+        children: [
+          { id: 'c1', children: [] },
+          { id: 'c2', children: [] }
+        ]
+      };
+      assert.strictEqual(countDescendants(node), 2);
+    });
+
+    test('counts nested descendants recursively', () => {
+      const node = {
+        id: 'root',
+        children: [
+          {
+            id: 'c1',
+            children: [
+              { id: 'gc1', children: [] },
+              { id: 'gc2', children: [] }
+            ]
+          },
+          { id: 'c2', children: [] }
+        ]
+      };
+      // c1 + gc1 + gc2 + c2 = 4
+      assert.strictEqual(countDescendants(node), 4);
+    });
+
+    test('counts descendants in real hierarchy tree', () => {
+      const model = buildHierarchyModel('root', components);
+      const count = countDescendants(model.tree);
+      assert.ok(count > 0, 'Root node should have descendants');
     });
   });
 });

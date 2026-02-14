@@ -192,4 +192,14 @@ function filterHierarchyTree(tree, enabledTypes) {
   return { ...tree, children: filteredChildren };
 }
 
-module.exports = { buildHierarchyModel, filterHierarchyTree };
+/**
+ * Count total descendant nodes in a subtree.
+ * @param {object} node - Tree node with children array.
+ * @returns {number} Total descendant count.
+ */
+function countDescendants(node) {
+  if (!node || !node.children || node.children.length === 0) return 0;
+  return node.children.reduce((sum, child) => sum + 1 + countDescendants(child), 0);
+}
+
+module.exports = { buildHierarchyModel, filterHierarchyTree, countDescendants };

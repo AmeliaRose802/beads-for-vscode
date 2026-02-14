@@ -1987,6 +1987,23 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   padding-left: 8px;
 }
 
+.hierarchy-node__expand-more {
+  margin-left: 24px;
+  padding: 2px 8px;
+  font-size: 0.8em;
+  color: var(--vscode-textLink-foreground);
+  background: none;
+  border: 1px dashed var(--vscode-panel-border);
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+.hierarchy-node__expand-more:hover {
+  opacity: 1;
+  background-color: var(--vscode-list-hoverBackground);
+}
+
 /* Markdown rendered content */
 .md-rendered { line-height: 1.5; }
 .md-rendered p.md-paragraph { margin: 4px 0; }

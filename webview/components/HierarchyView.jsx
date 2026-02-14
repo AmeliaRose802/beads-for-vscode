@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-const { filterHierarchyTree } = require('../hierarchy-utils');
+const { filterHierarchyTree, countDescendants } = require('../hierarchy-utils');
 
 const FILTER_TYPES = [
   { key: 'parent-child', label: 'Parent', icon: '🪜' },
@@ -24,12 +24,14 @@ const relationIcons = {
   'relates-to': '🔗'
 };
 
+const DEFAULT_MAX_DEPTH = 2;
+
 /**
  * Render a single hierarchy tree node.
- * @param {{node: any, onSelect: Function}} props - Tree node data and selection handler.
+ * @param {{node: any, onSelect: Function, depth: number}} props - Tree node data, selection handler, and depth.
  */
-function HierarchyNode({ node, onSelect }) {
-  const [expanded, setExpanded] = useState(true);
+function HierarchyNode({ node, onSelect, depth = 0 }) {
+  const [expanded, setExpanded] = useState(depth < DEFAULT_MAX_DEPTH);
   const hasChildren = node.children && node.children.length > 0;
   const label = relationLabels[node.relationType] || (node.direction === 'incoming' ? 'Dependent' : 'Dependency');
   const icon = relationIcons[node.relationType] || (node.direction === 'incoming' ? '⬆️' : '⬇️');
@@ -74,10 +76,18 @@ function HierarchyNode({ node, onSelect }) {
           {node.isBackReference && <span className="hierarchy-node__visited">↩</span>}
         </div>
       </div>
+      {hasChildren && !expanded && (
+        <button
+          className="hierarchy-node__expand-more"
+          onClick={(e) => { e.stopPropagation(); setExpanded(true); }}
+          aria-label={`Expand ${countDescendants(node)} more items`}>
+          … +{countDescendants(node)} more
+        </button>
+      )}
       {expanded && hasChildren && (
         <div className="hierarchy-node__children">
           {node.children.map((child) => (
-            <HierarchyNode key={`${node.id}-${child.id}-${child.direction}-${child.relationType}`} node={child} onSelect={onSelect} />
+            <HierarchyNode key={`${node.id}-${child.id}-${child.direction}-${child.relationType}`} node={child} onSelect={onSelect} depth={depth + 1} />
           ))}
         </div>
       )}
