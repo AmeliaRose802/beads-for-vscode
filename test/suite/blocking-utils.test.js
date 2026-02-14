@@ -7,6 +7,7 @@ const {
   findParallelGroups,
   applyFilters
 } = require('../../webview/blocking-utils');
+const { buildPlanSchedule } = require('../../webview/plan-utils');
 
 suite('blocking-utils', () => {
   // Shared fixture: linear chain where B depends on A and C depends on B.
@@ -238,6 +239,49 @@ suite('blocking-utils', () => {
     test('returns empty for empty input', () => {
       const groups = findParallelGroups([], []);
       assert.deepStrictEqual(groups, []);
+    });
+  });
+
+  suite('buildPlanSchedule', () => {
+    test('builds waves that respect parallel limit', () => {
+      const model = buildBlockingModel(diamondComponents);
+      const plan = buildPlanSchedule(model.issues, model.edges, model.completionOrder, 2);
+      assert.strictEqual(plan.totalWaves, 3);
+      assert.deepStrictEqual(plan.waves[0].map(i => i.id), ['a']);
+      assert.strictEqual(plan.waves[1].length, 2);
+      assert.ok(plan.waves[1].some(i => i.id === 'b'));
+      assert.ok(plan.waves[1].some(i => i.id === 'c'));
+      assert.deepStrictEqual(plan.waves[2].map(i => i.id), ['d']);
+    });
+
+    test('respects single-item capacity', () => {
+      const model = buildBlockingModel(diamondComponents);
+      const plan = buildPlanSchedule(model.issues, model.edges, model.completionOrder, 1);
+      const waveIds = plan.waves.map(wave => wave[0].id);
+      assert.deepStrictEqual(waveIds, ['a', 'b', 'c', 'd']);
+    });
+
+    test('treats closed blockers as complete', () => {
+      const components = [
+        {
+          Issues: [
+            { id: 'a', title: 'A', status: 'closed', priority: 1, issue_type: 'task' },
+            { id: 'b', title: 'B', status: 'open', priority: 1, issue_type: 'task' },
+            { id: 'c', title: 'C', status: 'open', priority: 1, issue_type: 'task' }
+          ],
+          Dependencies: [
+            { issue_id: 'b', depends_on_id: 'a', type: 'blocks' },
+            { issue_id: 'c', depends_on_id: 'b', type: 'blocks' }
+          ]
+        }
+      ];
+
+      const model = buildBlockingModel(components);
+      const plan = buildPlanSchedule(model.issues, model.edges, model.completionOrder, 2);
+      assert.strictEqual(plan.totalItems, 2);
+      assert.strictEqual(plan.totalWaves, 2);
+      assert.deepStrictEqual(plan.waves[0].map(i => i.id), ['b']);
+      assert.deepStrictEqual(plan.waves[1].map(i => i.id), ['c']);
     });
   });
 

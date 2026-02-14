@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import BlockingPlanView from './BlockingPlanView';
 import LabelDropdown from './LabelDropdown';
 const { getStatusIcon } = require('../field-utils');
 /**
@@ -15,7 +16,6 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
   const [activeEdgeMenu, setActiveEdgeMenu] = useState(null);
   const [retargetState, setRetargetState] = useState(null);
   const [addLinkState, setAddLinkState] = useState(null);
-
   const criticalPathIds = useMemo(() => {
     if (!blockingModel?.criticalPath) return new Set();
     return new Set(blockingModel.criticalPath.map(i => i.id));
@@ -470,6 +470,10 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
           className={`blocking-view__tab ${activeTab === 'parallel' ? 'blocking-view__tab--active' : ''}`}
           onClick={() => setActiveTab('parallel')}
         >⚡ Parallel</button>
+        <button
+          className={`blocking-view__tab ${activeTab === 'plan' ? 'blocking-view__tab--active' : ''}`}
+          onClick={() => setActiveTab('plan')}
+        >Plan</button>
       </div>
 
       <div className="blocking-view__content">
@@ -477,6 +481,15 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
         {activeTab === 'order' && renderOrderTab()}
         {activeTab === 'critical' && renderCriticalTab()}
         {activeTab === 'parallel' && renderParallelTab()}
+        {activeTab === 'plan' && (
+          <BlockingPlanView
+            issues={filteredIssues}
+            edges={edges}
+            completionOrder={filteredCompletionOrder}
+            readyIds={readyIds}
+            onIssueClick={handleNodeClick}
+          />
+        )}
       </div>
     </div>
   );
