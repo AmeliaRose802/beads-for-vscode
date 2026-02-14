@@ -371,7 +371,7 @@ suite('Beads UI Extension Test Suite', () => {
       ];
       globalExecFileStub.callsFake((file, args, opts, cb) => cb(null, 'output', ''));
       for (const cmd of allowed) {
-        globalExecFileStub.reset();
+        globalExecFileStub.resetHistory();
         const result = await provider._executeBdCommand(cmd);
         assert.strictEqual(result.success, true, `${cmd} should be allowed`);
       }
