@@ -7,7 +7,9 @@ const BlockingParallelTab = ({
   onIssueClick,
   onCopyGroup,
   onCopyAll,
-  renderCopyFeedback
+  renderCopyFeedback,
+  getPhasePreview,
+  onTogglePhase
 }) => (
   <div className="blocking-view__parallel">
     <div className="blocking-view__parallel-header blocking-view__copy-actions">
@@ -26,39 +28,58 @@ const BlockingParallelTab = ({
         {renderCopyFeedback?.('parallel-all')}
       </div>
     </div>
-    {parallelGroups.map((group, idx) => (
-      <div key={idx} className="blocking-view__parallel-group">
-        <div className="blocking-view__parallel-phase-row">
-          <div className="blocking-view__parallel-phase">
-            Phase {idx + 1} ({group.length} item{group.length !== 1 ? 's' : ''})
+    {parallelGroups.map((group, idx) => {
+      const {
+        isExpanded,
+        shouldToggle,
+        hiddenCount,
+        visibleItems
+      } = getPhasePreview(group, idx);
+      return (
+        <div key={idx} className="blocking-view__parallel-group">
+          <div className="blocking-view__parallel-phase-row">
+            <div className="blocking-view__parallel-phase">
+              Phase {idx + 1} ({group.length} item{group.length !== 1 ? 's' : ''})
+            </div>
+            <div className="blocking-view__parallel-phase-actions">
+              <button
+                type="button"
+                className="blocking-view__copy-button"
+                onClick={() => onCopyGroup(group, idx)}
+                aria-label={`Copy phase ${idx + 1}`}
+              >
+                Copy phase
+              </button>
+              {renderCopyFeedback?.(`phase-${idx}`)}
+            </div>
           </div>
-          <div className="blocking-view__parallel-phase-actions">
+          <div className="blocking-view__parallel-items">
+            {visibleItems.map(issue => (
+              <div
+                key={issue.id}
+                className={`blocking-view__parallel-item ${readyIds.has(issue.id) ? 'blocking-view__parallel-item--ready' : ''}`}
+                onClick={() => onIssueClick(issue)}
+              >
+                <span className="blocking-view__parallel-status">{getStatusIcon(issue.status)}</span>
+                <span className="blocking-view__parallel-id">{issue.id}</span>
+                <span className="blocking-view__parallel-title">{issue.title}</span>
+              </div>
+            ))}
+          </div>
+          {shouldToggle && (
             <button
               type="button"
-              className="blocking-view__copy-button"
-              onClick={() => onCopyGroup(group, idx)}
-              aria-label={`Copy phase ${idx + 1}`}
+              className="blocking-view__phase-toggle"
+              onClick={() => onTogglePhase(idx)}
+              aria-expanded={isExpanded}
+              aria-label={`${isExpanded ? 'Collapse' : 'Expand'} phase ${idx + 1}`}
             >
-              Copy phase
+              {isExpanded ? 'Show fewer' : `Show ${hiddenCount} more`}
             </button>
-            {renderCopyFeedback?.(`phase-${idx}`)}
-          </div>
+          )}
         </div>
-        <div className="blocking-view__parallel-items">
-          {group.map(issue => (
-            <div
-              key={issue.id}
-              className={`blocking-view__parallel-item ${readyIds.has(issue.id) ? 'blocking-view__parallel-item--ready' : ''}`}
-              onClick={() => onIssueClick(issue)}
-            >
-              <span className="blocking-view__parallel-status">{getStatusIcon(issue.status)}</span>
-              <span className="blocking-view__parallel-id">{issue.id}</span>
-              <span className="blocking-view__parallel-title">{issue.title}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    ))}
+      );
+    })}
   </div>
 );
 
