@@ -30,6 +30,28 @@ function safeShellArg(str) {
 }
 
 /**
+ * Validate and normalize a beads issue ID, ensuring it contains only
+ * alphanumeric characters, underscores, or hyphens.
+ * @param {string} raw - The untrusted raw ID value
+ * @param {string} fieldName - Field name for error messages
+ * @returns {string|null} Trimmed ID or null when empty
+ * @throws {Error} If the ID contains invalid characters
+ */
+function validateBeadId(raw, fieldName) {
+  if (typeof raw !== 'string') return null;
+
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  const beadIdPattern = /^[A-Za-z0-9][\w-]*$/;
+  if (!beadIdPattern.test(trimmed)) {
+    throw new Error(`${fieldName} may only contain letters, numbers, hyphens, and underscores`);
+  }
+
+  return trimmed;
+}
+
+/**
  * Build a bd create command string from form state.
  * @param {{ title: string, type: string, priority: string, description: string, parentId: string, blocksId: string, relatedId: string, currentFile: string }} state
  * @returns {string|null} The command string, or null if title is empty
@@ -39,6 +61,10 @@ function buildCreateCommand(state) {
 
   if (!title.trim()) return null;
 
+  const parent = validateBeadId(parentId, 'Parent ID');
+  const blocks = validateBeadId(blocksId, 'Blocks ID');
+  const related = validateBeadId(relatedId, 'Related ID');
+
   let command = `create --title ${safeShellArg(title)} -t ${type} -p ${priority}`;
   if (description.trim()) {
     command += ` -d ${safeShellArg(description)}`;
@@ -46,14 +72,14 @@ function buildCreateCommand(state) {
   if (currentFile) {
     command += ` --notes ${safeShellArg(`File: ${currentFile}`)}`;
   }
-  if (parentId.trim()) {
-    command += ` --deps parent:${parentId.trim()}`;
+  if (parent) {
+    command += ` --deps parent:${parent}`;
   }
-  if (blocksId.trim()) {
-    command += ` --deps blocks:${blocksId.trim()}`;
+  if (blocks) {
+    command += ` --deps blocks:${blocks}`;
   }
-  if (relatedId.trim()) {
-    command += ` --deps related:${relatedId.trim()}`;
+  if (related) {
+    command += ` --deps related:${related}`;
   }
 
   return command;
@@ -69,7 +95,12 @@ function buildUpdateCommand(state) {
 
   if (!title.trim()) return null;
 
-  let command = `update ${issueId}`;
+  const normalizedIssueId = validateBeadId(issueId, 'Issue ID');
+  if (!normalizedIssueId) {
+    throw new Error('Issue ID is required');
+  }
+
+  let command = `update ${normalizedIssueId}`;
   command += ` --title ${safeShellArg(title)}`;
   command += ` --type ${type}`;
   command += ` --priority ${priority}`;
@@ -82,4 +113,4 @@ function buildUpdateCommand(state) {
   return command;
 }
 
-module.exports = { buildCreateCommand, buildUpdateCommand, escapeShellArg, safeShellArg };
+module.exports = { buildCreateCommand, buildUpdateCommand, escapeShellArg, safeShellArg, validateBeadId };
