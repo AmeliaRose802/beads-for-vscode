@@ -3,6 +3,7 @@ const vscode = require('vscode');
 const sinon = require('sinon');
 const path = require('path');
 const childProcess = require('child_process');
+const fs = require('fs');
 const extension = require('../../extension');
 const { isAllowedCommand, parseCommandArgs } = extension;
 
@@ -144,12 +145,24 @@ suite('Beads UI Extension Test Suite', () => {
       await provider._executeBdCommand('list');
       assert.ok(globalExecFileStub.firstCall.args[2].cwd);
     });
-    test('Should set BEADS_DB environment variable', async () => {
+    test('Should set BEADS_DIR environment variable', async () => {
       globalExecFileStub.callsFake((file, args, opts, cb) => cb(null, 'output', ''));
       await provider._executeBdCommand('list');
       const opts = globalExecFileStub.firstCall.args[2];
-      assert.ok(opts.env.BEADS_DB);
-      assert.ok(opts.env.BEADS_DB.includes('beads.db'));
+      assert.ok(opts.env.BEADS_DIR);
+      assert.ok(opts.env.BEADS_DIR.includes('.beads'));
+    });
+
+    test('Should not set BEADS_DB when backend is dolt', async () => {
+      sinon.stub(fs, 'existsSync').callsFake((p) => String(p).endsWith('metadata.json'));
+      sinon.stub(fs, 'readFileSync').returns(JSON.stringify({ backend: 'dolt' }));
+
+      globalExecFileStub.callsFake((file, args, opts, cb) => cb(null, 'output', ''));
+      await provider._executeBdCommand('list');
+      const opts = globalExecFileStub.firstCall.args[2];
+
+      assert.ok(opts.env.BEADS_DIR);
+      assert.ok(!Object.prototype.hasOwnProperty.call(opts.env, 'BEADS_DB'));
     });
     test('Should respect maxBuffer and timeout settings', async () => {
       globalExecFileStub.callsFake((file, args, opts, cb) => cb(null, 'output', ''));
@@ -487,7 +500,12 @@ function getBeadsViewProviderClass() {
         }
         const folders = vscode.workspace.workspaceFolders;
         const cwd = folders ? folders[0].uri.fsPath : process.cwd();
-        const env = { ...process.env, BEADS_DB: path.join(cwd, '.beads', 'beads.db') };
+        
+        // Use the new backend detection logic
+        const { getBeadsEnv } = require('../../beads-backend');
+        const beadsEnv = getBeadsEnv(cwd);
+        const env = { ...process.env, ...beadsEnv.env };
+        
         const args = parseCommandArgs(command);
         childProcess.execFile('bd', args, {
           maxBuffer: 10 * 1024 * 1024, cwd, env, timeout: 30000

@@ -2,6 +2,7 @@ const assert = require('assert');
 const sinon = require('sinon');
 const EventEmitter = require('events');
 const child_process = require('child_process');
+const fs = require('fs');
 const { PokePokeManager } = require('../../pokepoke-manager');
 
 suite('PokePokeManager', () => {
@@ -72,6 +73,35 @@ suite('PokePokeManager', () => {
       assert.strictEqual(instances[0].title, 'Test task');
       assert.strictEqual(instances[0].state, 'running');
       assert.strictEqual(instances[0].isTree, false);
+    });
+
+    test('sets BEADS_DB only for sqlite backend', () => {
+      const mockProc = createMockProcess();
+      spawnStub.returns(mockProc);
+
+      sinon.stub(fs, 'existsSync').callsFake((p) => String(p).endsWith('metadata.json'));
+      sinon.stub(fs, 'readFileSync').returns(JSON.stringify({ backend: 'sqlite', database: 'beads.db' }));
+
+      manager.launchForItem('bd-1', 'Test task');
+
+      const opts = spawnStub.firstCall.args[2];
+      assert.ok(opts.env.BEADS_DIR);
+      assert.ok(opts.env.BEADS_DB);
+      assert.ok(String(opts.env.BEADS_DB).includes('.beads'));
+    });
+
+    test('does not set BEADS_DB for dolt backend', () => {
+      const mockProc = createMockProcess();
+      spawnStub.returns(mockProc);
+
+      sinon.stub(fs, 'existsSync').callsFake((p) => String(p).endsWith('metadata.json'));
+      sinon.stub(fs, 'readFileSync').returns(JSON.stringify({ backend: 'dolt' }));
+
+      manager.launchForItem('bd-1', 'Test task');
+
+      const opts = spawnStub.firstCall.args[2];
+      assert.ok(opts.env.BEADS_DIR);
+      assert.ok(!Object.prototype.hasOwnProperty.call(opts.env, 'BEADS_DB'));
     });
 
     test('rejects duplicate launch for same item', () => {
