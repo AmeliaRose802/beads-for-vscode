@@ -45,6 +45,34 @@ function createAppActions(ctx) {
 
   /** @type {Map<string, {output: any, isError: boolean}>} */
   const pageCache = new Map();
+  /** @type {Map<string, {sequence: number, refreshCommand: string|null, trackProgress: boolean}>} */
+  const pendingSyncs = new Map();
+  let actionSequence = 0;
+  let syncRequestCounter = 0;
+
+  const markUserAction = () => {
+    actionSequence += 1;
+    return actionSequence;
+  };
+
+  const queueBackgroundSync = ({ refreshCommand = null, trackProgress = false } = {}) => {
+    syncRequestCounter += 1;
+    const requestId = `sync-${syncRequestCounter}`;
+    pendingSyncs.set(requestId, {
+      sequence: actionSequence,
+      refreshCommand,
+      trackProgress
+    });
+    if (trackProgress) {
+      beginCommandProgress('sync', 'background');
+    }
+    vscode.postMessage({
+      type: 'executeCommand',
+      command: 'sync',
+      requestId,
+      isBackgroundSync: true
+    });
+  };
 
   const closeAllPanels = () => {
     setShowRelationshipPanel(false);
@@ -54,7 +82,33 @@ function createAppActions(ctx) {
     setShowBlockingView(false);
   };
 
-  const displayResult = (command, resultOutput, success) => {
+  const displayResult = (command, resultOutput, success, meta = {}) => {
+    if (meta.isBackgroundSync && command === 'sync') {
+      const pending = meta.requestId ? pendingSyncs.get(meta.requestId) : null;
+      if (pending) {
+        pendingSyncs.delete(meta.requestId);
+        if (pending.trackProgress) {
+          completeCommandProgress('sync');
+        }
+        if (!success) {
+          const errorMessage = resultOutput || 'Command failed';
+          if (pending.sequence === actionSequence) {
+            setOutput(`❌ Error: ${errorMessage}`);
+            setIsError(true);
+            setIsSuccess(false);
+          } else {
+            console.error('Background sync failed:', errorMessage);
+          }
+          return;
+        }
+        if (pending.refreshCommand && pending.sequence === actionSequence) {
+          runCommand(pending.refreshCommand, true, { suppressSequence: true });
+        }
+        return;
+      }
+      console.error('Background sync response missing request ID:', meta.requestId);
+      return;
+    }
     let parsed;
     if (command.includes('list') || command.includes('ready') || command.includes('blocked')) {
       parsed = parseListJSON(resultOutput, command);
@@ -76,9 +130,14 @@ function createAppActions(ctx) {
     if (cacheKey && success) {
       pageCache.set(cacheKey, { output: parsed, isError: false });
     }
+
+    if (success && MODIFYING_COMMANDS.some(cmd => command.includes(cmd))) {
+      queueBackgroundSync({ trackProgress: true });
+    }
   };
 
   const runInlineAction = (command, successMessage) => {
+    markUserAction();
     beginCommandProgress(command, 'inline');
     vscode.postMessage({
       type: 'executeCommand',
@@ -88,7 +147,10 @@ function createAppActions(ctx) {
     });
   };
 
-  const runCommand = (command, forceRefresh = false) => {
+  const runCommand = (command, forceRefresh = false, options = {}) => {
+    if (!options.suppressSequence) {
+      markUserAction();
+    }
     closeAllPanels();
 
     // Serve from cache if available and not forcing refresh
@@ -114,17 +176,6 @@ function createAppActions(ctx) {
       useJSON
     });
 
-    const isModifying = MODIFYING_COMMANDS.some(cmd => command.includes(cmd));
-
-    if (isModifying) {
-      setTimeout(() => {
-        beginCommandProgress('sync', 'background');
-        vscode.postMessage({
-          type: 'executeCommand',
-          command: 'sync'
-        });
-      }, 1000);
-    }
   };
 
   /**
@@ -167,27 +218,32 @@ function createAppActions(ctx) {
     const { command, output: cmdOutput, success, successMessage } = message;
     completeCommandProgress(command);
     if (success) {
+      const currentOutput = outputRef.current;
       if (command.includes('create')) {
         setCreateTitle(''); setCreateDescription('');
         setCreateParentId(''); setCreateBlocksId(''); setCreateRelatedId('');
         setCreateType('task'); setCreatePriority('2');
       }
       if (successMessage) {
-        const tempOutput = outputRef.current;
+        const tempOutput = currentOutput;
+        const restoreSequence = actionSequence;
         setOutput(`✓ ${successMessage}`);
         setIsSuccess(true); setIsError(false);
-        setTimeout(() => { setOutput(tempOutput); setIsSuccess(false); }, 2000);
+        setTimeout(() => {
+          if (actionSequence === restoreSequence) {
+            setOutput(tempOutput);
+            setIsSuccess(false);
+          }
+        }, 2000);
       }
       if (MODIFYING_COMMANDS.some(cmd => command.includes(cmd))) {
         // Invalidate all cached pages since data changed
         pageCache.clear();
-        setTimeout(() => {
-          vscode.postMessage({ type: 'executeCommand', command: 'sync' });
-          setTimeout(() => {
-            const currentOutput = outputRef.current;
-            if (typeof currentOutput === 'object' && currentOutput.command) runCommand(currentOutput.command, true);
-          }, 500);
-        }, 1000);
+        const refreshCommand =
+          typeof currentOutput === 'object' && currentOutput.command
+            ? currentOutput.command
+            : null;
+        queueBackgroundSync({ refreshCommand });
       }
     } else {
       setOutput(`❌ Error: ${cmdOutput || 'Command failed'}`);

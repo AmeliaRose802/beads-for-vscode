@@ -103,6 +103,51 @@ suite('app-actions', () => {
     });
   });
 
+  suite('background sync sequencing', () => {
+    test('queues background sync after modifying command results', () => {
+      const { ctx, stubs } = buildCtx();
+      const actions = createAppActions(ctx);
+
+      actions.displayResult('update bd-1 --title "new"', 'Updated', true);
+
+      assert.strictEqual(
+        stubs.beginCommandProgress.calledWith('sync', 'background'),
+        true,
+        'modifying commands should trigger background sync progress'
+      );
+      assert.strictEqual(stubs.vscode.postMessage.calledOnce, true);
+      const msg = stubs.vscode.postMessage.firstCall.args[0];
+      assert.strictEqual(msg.type, 'executeCommand');
+      assert.strictEqual(msg.command, 'sync');
+      assert.strictEqual(msg.isBackgroundSync, true);
+      assert.ok(msg.requestId, 'sync message should include requestId');
+    });
+
+    test('refreshes current list after background sync for inline actions', () => {
+      const { ctx, stubs } = buildCtx();
+      ctx.outputRef.current = { type: 'list', command: 'list', openIssues: [], closedIssues: [] };
+      const actions = createAppActions(ctx);
+
+      actions.handleInlineActionResult({
+        command: 'update bd-1 --title "new"',
+        output: 'Updated',
+        success: true
+      });
+
+      const syncMsg = stubs.vscode.postMessage.firstCall.args[0];
+      const requestId = syncMsg.requestId;
+      stubs.vscode.postMessage.resetHistory();
+
+      actions.displayResult('sync', 'Synced', true, { requestId, isBackgroundSync: true });
+
+      assert.strictEqual(stubs.vscode.postMessage.calledOnce, true);
+      const refreshMsg = stubs.vscode.postMessage.firstCall.args[0];
+      assert.strictEqual(refreshMsg.type, 'executeCommand');
+      assert.strictEqual(refreshMsg.command, 'list');
+      assert.strictEqual(refreshMsg.useJSON, true);
+    });
+  });
+
   suite('progress tracking', () => {
     test('runCommand starts progress when executing remotely', () => {
       const { ctx, stubs } = buildCtx();

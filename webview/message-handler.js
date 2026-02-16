@@ -33,7 +33,10 @@ function processMessage(message, ctx) {
       break;
     }
     case 'commandResult':
-      ctx.displayResult(message.command, message.output, message.success);
+      ctx.displayResult(message.command, message.output, message.success, {
+        requestId: message.requestId,
+        isBackgroundSync: message.isBackgroundSync
+      });
       break;
     case 'inlineActionResult':
       ctx.handleInlineActionResult(message);
