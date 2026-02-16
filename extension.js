@@ -349,11 +349,10 @@ class BeadsViewProvider {
       // Parse command into arguments array, respecting quoted strings
       const args = parseCommandArgs(command);
       
-      // Use the current workspace's beads database
-      const beadsDbPath = path.join(cwd, '.beads', 'beads.db');
+      // Let beads auto-detect database location (SQLite or Dolt)
+      // BEADS_DB override removed as of beads v0.50+ to support Dolt
       const env = { 
-        ...process.env,
-        BEADS_DB: beadsDbPath
+        ...process.env
       };
       
       execFile(bdCommand, args, {
