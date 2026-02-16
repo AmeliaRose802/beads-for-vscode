@@ -18,7 +18,7 @@ async function getAISuggestions(executeBdCommand, title, currentDescription) {
 
     try {
       existingIssues = JSON.parse(listResult.output);
-    } catch (_e) {
+    } catch {
       console.error('Could not parse existing issues');
     }
 
@@ -65,7 +65,7 @@ async function getWorkspaceContext() {
       .slice(0, 5);
 
     return tabs.map(tab => vscode.workspace.asRelativePath(tab.input.uri)).join(', ');
-  } catch (_error) {
+  } catch {
     return '';
   }
 }

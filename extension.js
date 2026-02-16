@@ -278,7 +278,7 @@ class BeadsViewProvider {
             output: `Internal error: ${err.message}`,
             success: false
           });
-        } catch (_postErr) {
+        } catch {
           // Webview may be disposed; nothing we can do
         }
       }
