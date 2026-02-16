@@ -6,6 +6,8 @@ import EditPanel from './components/EditPanel';
 import DependencyGraph from './components/DependencyGraph';
 import HierarchyView from './components/HierarchyView';
 import BlockingView from './components/BlockingView';
+import CommandProgress from './components/CommandProgress';
+import { useCommandProgress } from './hooks/useCommandProgress';
 const { parseListJSON, parseStatsOutput } = require('./parse-utils');
 const { buildCreateCommand, buildUpdateCommand, safeShellArg } = require('./form-handlers');
 const { buildHierarchyModel } = require('./hierarchy-utils');
@@ -60,18 +62,23 @@ const App = () => {
   const [createRelatedId, setCreateRelatedId] = useState('');
   const [isAILoading, setIsAILoading] = useState(false);
   const [currentFile, setCurrentFile] = useState('');
-  
+
   // Issue details state (for inline expansion)
   const [issueDetails, setIssueDetails] = useState({}); // Map of issueId -> details
   const [loadingDetails, setLoadingDetails] = useState({}); // Map of issueId -> boolean
 
   // PokePoke state
   const [pokepokeInstances, setPokepokeInstances] = useState([]);
-
   // Relationship form state
   const [sourceBead, setSourceBead] = useState('');
   const [targetBead, setTargetBead] = useState('');
   const [relationType, setRelationType] = useState('parent');
+
+  const {
+    pendingOperations,
+    beginCommandProgress,
+    completeCommandProgress
+  } = useCommandProgress();
 
   const {
     displayResult,
@@ -107,7 +114,9 @@ const App = () => {
     setCreatePriority,
     updateGraphPurpose,
     vscode,
-    outputRef
+    outputRef,
+    beginCommandProgress,
+    completeCommandProgress
   });
 
   useEffect(() => {
@@ -150,6 +159,7 @@ const App = () => {
         setShowBlockingView,
         setPokepokeInstances,
         vscode,
+        completeCommandProgress,
         buildHierarchyModel,
         buildBlockingModel,
         updateGraphPurpose,
@@ -162,55 +172,51 @@ const App = () => {
     return () => window.removeEventListener('message', messageHandler);
   }, []);
 
-  const handleQuickTypeChange = (issueId, newType) => {
+  const handleQuickTypeChange = (issueId, newType) =>
     runInlineAction(`update ${issueId} --type ${newType}`, `Updated ${issueId} type to ${newType}`);
-  };
 
-  const handleQuickPriorityChange = (issueId, newPriority) => {
+  const handleQuickPriorityChange = (issueId, newPriority) =>
     runInlineAction(`update ${issueId} --priority ${newPriority}`, `Updated ${issueId} priority to P${newPriority}`);
-  };
+  const handleAssigneeChange = (issueId, newAssignee) => new Promise((resolve, reject) => {
+    const trimmedAssignee = newAssignee.trim();
+    const assigneeArg = trimmedAssignee ? `--assignee ${safeShellArg(newAssignee)}` : '--assignee ""';
+    const command = `update ${issueId} ${assigneeArg}`;
+    const successMsg = trimmedAssignee
+      ? `Assigned ${issueId} to ${newAssignee}`
+      : `Cleared assignee for ${issueId}`;
 
-  const handleAssigneeChange = (issueId, newAssignee) => {
-    return new Promise((resolve, reject) => {
-      const assigneeArg = newAssignee.trim() ? `--assignee ${safeShellArg(newAssignee)}` : '--assignee ""';
-      const command = `update ${issueId} ${assigneeArg}`;
-      const successMsg = newAssignee.trim() 
-        ? `Assigned ${issueId} to ${newAssignee}`
-        : `Cleared assignee for ${issueId}`;
-      
-      vscode.postMessage({
-        type: 'executeCommand',
-        command: command,
-        isInlineAction: true,
-        successMessage: successMsg
-      });
-
-      const handler = (event) => {
-        const message = event.data;
-        if (message.type === 'inlineActionResult' && message.command === command) {
-          window.removeEventListener('message', handler);
-          if (message.success) {
-            resolve();
-            setTimeout(() => {
-              if (typeof output === 'object' && output.command) {
-                runCommand(output.command);
-              }
-            }, 500);
-          } else {
-            reject(new Error(message.output || 'Failed to update assignee'));
-          }
+    beginCommandProgress(command, 'inline');
+    const messageHandler = (event) => {
+      const message = event.data;
+      if (message.type === 'inlineActionResult' && message.command === command) {
+        window.removeEventListener('message', messageHandler);
+        if (message.success) {
+          resolve();
+          setTimeout(() => {
+            if (typeof output === 'object' && output.command) {
+              runCommand(output.command);
+            }
+          }, 500);
+        } else {
+          reject(new Error(message.output || 'Failed to update assignee'));
         }
-      };
+      }
+    };
 
-      window.addEventListener('message', handler);
-
-      setTimeout(() => {
-        window.removeEventListener('message', handler);
-        reject(new Error('Timeout updating assignee'));
-      }, 5000);
+    window.addEventListener('message', messageHandler);
+    vscode.postMessage({
+      type: 'executeCommand',
+      command,
+      isInlineAction: true,
+      successMessage: successMsg
     });
-  };
 
+    setTimeout(() => {
+      window.removeEventListener('message', messageHandler);
+      completeCommandProgress(command);
+      reject(new Error('Timeout updating assignee'));
+    }, 5000);
+  });
   const handleCreateIssue = () => {
     const command = buildCreateCommand({
       title: createTitle, type: createType, priority: createPriority,
@@ -269,13 +275,11 @@ const App = () => {
     }
   };
 
-  const handlePokePoke = (itemId, title, isTree) => {
+  const handlePokePoke = (itemId, title, isTree) =>
     vscode.postMessage({ type: 'pokepokeLaunch', itemId, title, isTree });
-  };
 
-  const handlePokePokeStop = (itemId) => {
+  const handlePokePokeStop = (itemId) =>
     vscode.postMessage({ type: 'pokepokeStop', itemId });
-  };
 
   const handleDepAction = (action) => {
     if (!sourceBead.trim() || !targetBead.trim()) { setOutput('Error: Please provide both source and target bead IDs'); setIsError(true); return; }
@@ -326,6 +330,7 @@ const App = () => {
       <div className="header">
         <h1>🔮 Beads</h1>
         <div className="cwd">{cwd}</div>
+        <CommandProgress entries={pendingOperations} />
       </div>
 
       <div className="main-content">
