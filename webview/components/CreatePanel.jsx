@@ -1,6 +1,4 @@
-import React from 'react';
-
-const CreatePanel = ({ 
+const CreatePanel= ({ 
   title, 
   type, 
   priority, 

@@ -1,6 +1,4 @@
-import React from 'react';
-
-const StatItem = ({ label, value, percentage, colorClass }) => (
+const StatItem= ({ label, value, percentage, colorClass }) => (
   <div className="stat-item stat-item--compact">
     <div className="stat-item__header">
       <span className="stat-item__label">{label}</span>

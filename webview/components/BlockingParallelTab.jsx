@@ -1,7 +1,6 @@
-import React from 'react';
 const { getStatusIcon } = require('../field-utils');
 
-const BlockingParallelTab = ({
+const BlockingParallelTab= ({
   parallelGroups,
   readyIds,
   onIssueClick,

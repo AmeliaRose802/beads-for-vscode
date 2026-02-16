@@ -1,6 +1,4 @@
-import React from 'react';
-
-const EditPanel = ({ 
+const EditPanel= ({ 
   issueId,
   title, 
   type, 
