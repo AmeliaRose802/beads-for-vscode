@@ -4,7 +4,15 @@ const { getStatusIcon } = require('../field-utils');
 
 const DEFAULT_MAX_PARALLEL = 4;
 
-const BlockingPlanView = ({ issues, edges, completionOrder, readyIds, onIssueClick }) => {
+const BlockingPlanView = ({ 
+  issues, 
+  edges, 
+  completionOrder, 
+  readyIds, 
+  onIssueClick, 
+  onCopy, 
+  renderCopyFeedback 
+}) => {
   const [maxParallel, setMaxParallel] = useState(DEFAULT_MAX_PARALLEL);
   const [inputValue, setInputValue] = useState(String(DEFAULT_MAX_PARALLEL));
 
@@ -39,24 +47,37 @@ const BlockingPlanView = ({ issues, edges, completionOrder, readyIds, onIssueCli
   return (
     <div className="blocking-view__plan">
       <div className="blocking-view__plan-controls">
-        <label className="blocking-view__plan-label">
-          Max parallel items
-          <input
-            className="blocking-view__plan-input"
-            type="number"
-            min="1"
-            value={inputValue}
-            onChange={handleLimitChange}
-            onBlur={handleLimitBlur}
-            aria-label="Max parallel items"
-          />
-        </label>
-        <div className="blocking-view__plan-summary">
-          <span className="blocking-view__plan-stat">Total waves: {plan.totalWaves}</span>
-          <span className="blocking-view__plan-stat">
-            Estimated throughput: {throughputLabel} items/wave
-          </span>
-          <span className="blocking-view__plan-stat">{plan.totalItems} scheduled</span>
+        <div className="blocking-view__plan-config">
+          <label className="blocking-view__plan-label">
+            Max parallel items
+            <input
+              className="blocking-view__plan-input"
+              type="number"
+              min="1"
+              value={inputValue}
+              onChange={handleLimitChange}
+              onBlur={handleLimitBlur}
+              aria-label="Max parallel items"
+            />
+          </label>
+          <div className="blocking-view__plan-summary">
+            <span className="blocking-view__plan-stat">Total waves: {plan.totalWaves}</span>
+            <span className="blocking-view__plan-stat">
+              Estimated throughput: {throughputLabel} items/wave
+            </span>
+            <span className="blocking-view__plan-stat">{plan.totalItems} scheduled</span>
+          </div>
+        </div>
+        <div className="blocking-view__copy-controls">
+          <button
+            type="button"
+            className="blocking-view__copy-button"
+            onClick={() => onCopy?.(plan)}
+            aria-label="Copy execution plan"
+          >
+            Copy plan
+          </button>
+          {renderCopyFeedback?.('plan')}
         </div>
       </div>
 

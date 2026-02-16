@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import BlockingOrderTab from './BlockingOrderTab';
 import BlockingGraphTab from './BlockingGraphTab';
+import BlockingPlanView from './BlockingPlanView';
 import DependencyGraph from './DependencyGraph';
 import LabelDropdown from './LabelDropdown';
-const { formatIssuesForClipboard, buildPhasedClipboardText } = require('../clipboard-utils');
+const { formatIssuesForClipboard, buildPhasedClipboardText, buildPlanClipboardText } = require('../clipboard-utils');
 const { isClosedStatus } = require('../field-utils');
 
 const COPY_FEEDBACK_DURATION_MS = 2200;
@@ -166,6 +167,21 @@ const BlockingView = ({
     }
   };
   const copyOrderToClipboard = () => copyIssuesToClipboard(filteredCompletionOrder, 'order');
+  
+  const copyPlanToClipboard = async (plan) => {
+    const formatted = buildPlanClipboardText(plan);
+    if (!formatted.trim()) {
+      showCopyFeedback('plan', 'Nothing to copy', true);
+      return;
+    }
+    try {
+      await copyTextToClipboard(formatted);
+      showCopyFeedback('plan', 'Copied!');
+    } catch (error) {
+      console.error('BlockingView plan clipboard copy failed', error);
+      showCopyFeedback('plan', 'Copy failed', true);
+    }
+  };
   const renderCopyFeedback = (target) => {
     if (!copyFeedback || copyFeedback.target !== target) {
       return null;
@@ -399,6 +415,10 @@ const BlockingView = ({
           className={`blocking-view__tab ${activeTab === 'graph' ? 'blocking-view__tab--active' : ''}`}
           onClick={() => handleTabChange('graph')}
         >🔀 Graph</button>
+        <button
+          className={`blocking-view__tab ${activeTab === 'plan' ? 'blocking-view__tab--active' : ''}`}
+          onClick={() => handleTabChange('plan')}
+        >📅 Plan</button>
       </div>
 
       <div className="blocking-view__content">
@@ -432,6 +452,17 @@ const BlockingView = ({
             graphData={graphData}
             onIssueClick={onIssueClick}
             showCloseButton={false}
+          />
+        )}
+        {activeTab === 'plan' && (
+          <BlockingPlanView
+            issues={filteredIssues}
+            edges={edges}
+            completionOrder={filteredCompletionOrder}
+            readyIds={readyIds}
+            onIssueClick={handleNodeClick}
+            onCopy={copyPlanToClipboard}
+            renderCopyFeedback={renderCopyFeedback}
           />
         )}
       </div>

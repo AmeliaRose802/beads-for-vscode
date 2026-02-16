@@ -68,7 +68,51 @@ function buildPhasedClipboardText(groups) {
   return sections.join('\n\n');
 }
 
+/**
+ * Formats a plan schedule into clipboard text with wave information and stats.
+ * @param {object} plan - Plan object with waves, totalWaves, totalItems, averageThroughput, capacity
+ * @returns {string}
+ */
+function buildPlanClipboardText(plan) {
+  if (!plan || !Array.isArray(plan.waves) || plan.waves.length === 0) {
+    return 'No execution plan available - no open items to schedule.';
+  }
+
+  const { waves, totalWaves, totalItems, averageThroughput, capacity } = plan;
+  
+  // Header with summary stats
+  const throughputLabel = totalWaves === 0 ? '0' : averageThroughput.toFixed(1);
+  const lines = [
+    `Execution Plan (${totalWaves} wave${totalWaves !== 1 ? 's' : ''}, ${throughputLabel} items/wave average)`,
+    ''
+  ];
+
+  // Format each wave
+  waves.forEach((wave, index) => {
+    if (wave.length > 0) {
+      lines.push(`Wave ${index + 1} (${wave.length}/${capacity} capacity)`);
+      
+      wave.forEach((issue, itemIndex) => {
+        const title = sanitizeTitle(issue.title);
+        lines.push(`${itemIndex + 1}. ${issue.id} - ${title}`);
+      });
+      
+      // Add blank line between waves (except after the last wave)
+      if (index < waves.length - 1) {
+        lines.push('');
+      }
+    }
+  });
+
+  // Footer with total count
+  lines.push('');
+  lines.push(`Total: ${totalItems} item${totalItems !== 1 ? 's' : ''} scheduled`);
+
+  return lines.join('\n');
+}
+
 module.exports = {
   formatIssuesForClipboard,
-  buildPhasedClipboardText
+  buildPhasedClipboardText,
+  buildPlanClipboardText
 };
