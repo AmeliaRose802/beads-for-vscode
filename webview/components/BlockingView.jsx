@@ -270,6 +270,7 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
           </span>
           <button
             className="blocking-view__edge-menu-close"
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               closeEdgeMenu();
@@ -279,6 +280,7 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
         <div className="blocking-view__edge-menu-actions">
           <button
             className="blocking-view__edge-menu-btn blocking-view__edge-menu-btn--remove"
+            type="button"
             onClick={() => handleRemoveLink(fromId, toId)}
           >🗑 Remove link</button>
           {retargetState ? (
@@ -296,12 +298,14 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
               />
               <button
                 className="blocking-view__edge-menu-btn"
+                type="button"
                 onClick={() => handleRetarget(fromId, toId, retargetState.newTarget)}
               >✓</button>
             </div>
           ) : (
             <button
               className="blocking-view__edge-menu-btn"
+              type="button"
               onClick={() => setRetargetState({ newTarget: '' })}
             >🔄 Re-target</button>
           )}
@@ -320,12 +324,14 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
               />
               <button
                 className="blocking-view__edge-menu-btn"
+                type="button"
                 onClick={() => handleAddLink(fromId, addLinkState.targetId)}
               >✓</button>
             </div>
           ) : (
             <button
               className="blocking-view__edge-menu-btn"
+              type="button"
               onClick={() => setAddLinkState({ targetId: '' })}
             >➕ Add link from {fromId}</button>
           )}
