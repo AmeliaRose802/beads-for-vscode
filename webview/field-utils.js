@@ -56,6 +56,15 @@ function buildIssueMap(components) {
 }
 
 /**
+ * Check whether a status string represents a completed state.
+ * @param {string} status - Issue status value.
+ * @returns {boolean}
+ */
+function isClosedStatus(status) {
+  return status === 'closed' || status === 'done';
+}
+
+/**
  * Map an issue status string to a single-character icon.
  * @param {string} status - Issue status value.
  * @returns {string} Status icon character.
@@ -74,6 +83,7 @@ function getStatusIcon(status) {
 module.exports = {
   getField,
   getStatusIcon,
+  isClosedStatus,
   buildIssueMap,
   DEP_ISSUE_KEYS,
   DEP_TARGET_KEYS,

@@ -2,7 +2,7 @@
  * Blocking view utilities: topological sort, critical path, and completion order.
  */
 
-const { getField, buildIssueMap, DEP_FROM_KEYS, DEP_TO_KEYS, DEP_TYPE_KEYS } = require('./field-utils');
+const { getField, buildIssueMap, isClosedStatus, DEP_FROM_KEYS, DEP_TO_KEYS, DEP_TYPE_KEYS } = require('./field-utils');
 
 const PRIORITY_WEIGHT_BASE = 3;
 const MAX_PRIORITY_LEVEL = 4;
@@ -356,13 +356,13 @@ function findReadyItems(nodeIds, edges, issueMap) {
 
   return nodeIds.filter(id => {
     const issue = issueMap[id];
-    if (issue && (issue.status === 'closed' || issue.status === 'done')) {
+    if (issue && isClosedStatus(issue.status)) {
       return false;
     }
     // Ready if all blockers are closed/done
     return blockedBy[id].every(blockerId => {
       const blocker = issueMap[blockerId];
-      return blocker && (blocker.status === 'closed' || blocker.status === 'done');
+      return blocker && isClosedStatus(blocker.status);
     });
   });
 }
@@ -370,11 +370,6 @@ function findReadyItems(nodeIds, edges, issueMap) {
 /** Identify groups of items that can be worked on in parallel. */
 function findParallelGroups(nodeIds, edges, issueMap) {
   if (nodeIds.length === 0) return [];
-
-  const isClosed = (id) => {
-    const status = issueMap?.[id]?.status;
-    return status === 'closed' || status === 'done';
-  };
 
   const inDegree = {};
   const outEdges = {};
@@ -385,7 +380,7 @@ function findParallelGroups(nodeIds, edges, issueMap) {
 
   edges.forEach(({ from, to }) => {
     // Completed blockers should not push work into later phases.
-    if (issueMap && isClosed(from)) return;
+    if (issueMap && isClosedStatus(issueMap[from]?.status)) return;
 
     if (inDegree[to] !== undefined && outEdges[from] !== undefined) {
       inDegree[to]++;

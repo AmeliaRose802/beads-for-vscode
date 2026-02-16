@@ -3,6 +3,8 @@
  * @module webview/plan-utils
  */
 
+const { isClosedStatus } = require('./field-utils');
+
 /**
  * Build a wave-based execution plan with a configurable parallel limit.
  * Closed items are treated as already complete and omitted from the schedule.
@@ -53,12 +55,7 @@ function buildPlanSchedule(issues, edges, completionOrder, maxParallel) {
     }
   });
 
-  const isClosed = (id) => {
-    const status = issueMap[id]?.status;
-    return status === 'closed' || status === 'done';
-  };
-
-  const completed = new Set(nodeIds.filter(isClosed));
+  const completed = new Set(nodeIds.filter(id => isClosedStatus(issueMap[id]?.status)));
   const remaining = new Set(nodeIds.filter(id => !completed.has(id)));
   const waves = [];
 
