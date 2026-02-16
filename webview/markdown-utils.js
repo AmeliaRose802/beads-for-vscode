@@ -132,7 +132,8 @@ function escapeHtml(str) {
  * @returns {boolean} true if the URL is safe to use in an href
  */
 function isSafeUrl(url) {
-  const trimmed = url.replace(/\s/g, '').toLowerCase();
+  // eslint-disable-next-line no-control-regex -- Intentionally stripping control chars to prevent null byte bypass
+  const trimmed = url.replace(/[\s\x00-\x1f]/g, '').toLowerCase();
   if (/^[a-z][a-z0-9+\-.]*:/i.test(trimmed)) {
     return /^https?:|^mailto:/i.test(trimmed);
   }
