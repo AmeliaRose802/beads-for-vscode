@@ -6,6 +6,7 @@ const DEFAULT_MAX_PARALLEL = 4;
 
 const BlockingPlanView = ({ issues, edges, completionOrder, readyIds, onIssueClick }) => {
   const [maxParallel, setMaxParallel] = useState(DEFAULT_MAX_PARALLEL);
+  const [inputValue, setInputValue] = useState(String(DEFAULT_MAX_PARALLEL));
 
   const plan = useMemo(
     () => buildPlanSchedule(issues, edges, completionOrder, maxParallel),
@@ -13,8 +14,22 @@ const BlockingPlanView = ({ issues, edges, completionOrder, readyIds, onIssueCli
   );
 
   const handleLimitChange = (event) => {
-    const nextValue = Math.max(1, Math.floor(Number(event.target.value) || 1));
-    setMaxParallel(nextValue);
+    const value = event.target.value;
+    setInputValue(value);
+    
+    const numValue = Number(value);
+    if (value !== '' && !isNaN(numValue) && numValue >= 1) {
+      setMaxParallel(Math.floor(numValue));
+    }
+  };
+
+  const handleLimitBlur = () => {
+    const numValue = Number(inputValue);
+    if (inputValue === '' || isNaN(numValue) || numValue < 1) {
+      const defaultValue = Math.max(1, maxParallel);
+      setMaxParallel(defaultValue);
+      setInputValue(String(defaultValue));
+    }
   };
 
   const throughputLabel = plan.totalWaves === 0
@@ -30,8 +45,9 @@ const BlockingPlanView = ({ issues, edges, completionOrder, readyIds, onIssueCli
             className="blocking-view__plan-input"
             type="number"
             min="1"
-            value={maxParallel}
+            value={inputValue}
             onChange={handleLimitChange}
+            onBlur={handleLimitBlur}
             aria-label="Max parallel items"
           />
         </label>
