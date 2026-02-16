@@ -151,14 +151,18 @@ class BeadsViewProvider {
                 output: jsonResult.output,
                 graphData: graphResult && graphResult.success ? graphResult.output : null,
                 graphError: graphResult && !graphResult.success ? graphResult.output : null,
-                success: true
+                success: true,
+                requestId: data.requestId,
+                isBackgroundSync: data.isBackgroundSync
               });
             } else {
               webviewView.webview.postMessage({
                 type: 'commandResult',
                 command: data.command,
                 output: jsonResult.output,
-                success: false
+                success: false,
+                requestId: data.requestId,
+                isBackgroundSync: data.isBackgroundSync
               });
             }
           } else {
@@ -170,13 +174,17 @@ class BeadsViewProvider {
                 command: data.command,
                 output: result.output,
                 success: result.success,
-                successMessage: data.successMessage
+                successMessage: data.successMessage,
+                requestId: data.requestId,
+                isBackgroundSync: data.isBackgroundSync
               });
             } else {
               webviewView.webview.postMessage({
                 type: 'commandResult',
                 command: data.command,
-                ...result
+                ...result,
+                requestId: data.requestId,
+                isBackgroundSync: data.isBackgroundSync
               });
             }
           }
@@ -255,7 +263,7 @@ class BeadsViewProvider {
           break;
         }
         case 'pokepokeLaunch': {
-          const launchRes = this._launchPokePoke(data.itemId, data.title, data.isTree);
+          const launchRes = await this._launchPokePoke(data.itemId, data.title, data.isTree);
           webviewView.webview.postMessage({ type: 'pokepokeLaunchResult', itemId: data.itemId, ...launchRes });
           break;
         }
@@ -319,11 +327,16 @@ class BeadsViewProvider {
    * @param {string} itemId - The beads item ID
    * @param {string} title - The item title
    * @param {boolean} isTree - Whether to process the full tree
-   * @returns {{ success: boolean, error?: string }}
+   * @returns {Promise<{ success: boolean, error?: string }>}
    */
-  _launchPokePoke(itemId, title, isTree) {
+  async _launchPokePoke(itemId, title, isTree) {
     const cfg = vscode.workspace.getConfiguration('beads-ui.pokepoke');
-    if (cfg.get('autoSync', true)) { this._executeBdCommand('sync'); }
+    if (cfg.get('autoSync', true)) {
+      const syncResult = await this._executeBdCommand('sync');
+      if (!syncResult.success) {
+        return { success: false, error: syncResult.output || 'Sync failed before PokePoke launch' };
+      }
+    }
     const mgr = this._getPokePokeManager();
     return isTree ? mgr.launchForTree(itemId, title) : mgr.launchForItem(itemId, title);
   }
@@ -338,18 +351,14 @@ class BeadsViewProvider {
         });
         return;
       }
-
       const workspaceFolders = vscode.workspace.workspaceFolders;
       const cwd = workspaceFolders ? workspaceFolders[0].uri.fsPath : process.cwd();
-      
       // Try to use bundled bd binary first, fall back to system bd
       const platform = process.platform;
       const bundledBdPath = this._getBundledBdPath(platform);
       const bdCommand = bundledBdPath || 'bd';
-      
       // Parse command into arguments array, respecting quoted strings
       const args = parseCommandArgs(command);
-      
       const beadsEnv = getBeadsEnv(cwd);
 
       // Prefer BEADS_DIR and only set BEADS_DB for legacy SQLite metadata.
@@ -357,7 +366,6 @@ class BeadsViewProvider {
         ...process.env,
         ...beadsEnv.env
       };
-      
       execFile(bdCommand, args, {
         maxBuffer: 10 * 1024 * 1024,
         cwd: cwd,
