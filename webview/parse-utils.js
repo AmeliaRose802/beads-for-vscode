@@ -191,6 +191,9 @@ function parseListJSON(jsonOutput, command, graphData) {
     const openIssues = [];
     const closedIssues = [];
     const blockedSet = buildBlockedSet(graphData);
+    const isBlockedCommand =
+      typeof command === 'string' &&
+      command.trim().split(/\s+/)[0] === 'blocked';
 
     issues.forEach(issue => {
       const normalizedIssue = normalizeIssue(issue);
@@ -199,7 +202,8 @@ function parseListJSON(jsonOutput, command, graphData) {
       if (normalizedIssue.status === 'closed') {
         closedIssues.push(normalizedIssue);
       } else {
-        normalizedIssue.isBlocked = blockedSet.has(normalizedIssue.id);
+        normalizedIssue.isBlocked =
+          isBlockedCommand || blockedSet.has(normalizedIssue.id);
         openIssues.push(normalizedIssue);
       }
     });

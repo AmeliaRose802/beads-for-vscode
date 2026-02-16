@@ -187,6 +187,20 @@ suite('Parse Utils Tests', () => {
       assert.strictEqual(result.openIssues[0].isBlocked, false, 'Item should not be blocked when blocker is missing from issueMap');
     });
 
+    test('Should mark every item as blocked when running the blocked command even without graph data', () => {
+      const json = JSON.stringify([
+        { id: 'blocked-a', title: 'Blocked A', issue_type: 'task', priority: 1, status: 'open' },
+        { id: 'blocked-b', title: 'Blocked B', issue_type: 'task', priority: 2, status: 'open' }
+      ]);
+
+      const result = parseListJSON(json, 'blocked');
+      assert.strictEqual(result.openIssues.length, 2);
+      result.openIssues.forEach(issue => {
+        assert.strictEqual(issue.isBlocked, true, `${issue.id} should be flagged as blocked`);
+      });
+      assert.strictEqual(result.header, 'Found 2 issues (2 blocked)');
+    });
+
     test('Should include blocked count in header', () => {
       const json = JSON.stringify([
         { id: 'a', title: 'A', issue_type: 'task', priority: 1, status: 'open' },
