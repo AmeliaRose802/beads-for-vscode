@@ -141,6 +141,51 @@ suite('renderMarkdown', () => {
     assert.ok(html.includes('&quot;'));
   });
 
+  test('blocks javascript: URLs in links', () => {
+    const html = renderMarkdown('[click me](javascript:alert(1))');
+    assert.ok(!html.includes('href="javascript:'), 'should not contain javascript: href');
+    assert.ok(!html.includes('<a '), 'should not render an anchor tag');
+    assert.ok(html.includes('click me'), 'should still show link text');
+  });
+
+  test('blocks javascript: URLs with mixed case', () => {
+    const html = renderMarkdown('[xss](JaVaScRiPt:alert(1))');
+    assert.ok(!html.includes('href='), 'should not contain any href');
+    assert.ok(html.includes('xss'));
+  });
+
+  test('blocks javascript: URLs with whitespace obfuscation', () => {
+    const html = renderMarkdown('[xss](java\tscript:alert(1))');
+    assert.ok(!html.includes('javascript:'), 'should strip whitespace and block');
+  });
+
+  test('blocks data: URLs in links', () => {
+    const html = renderMarkdown('[xss](data:text/html,<script>alert(1)</script>)');
+    assert.ok(!html.includes('href="data:'), 'should not contain data: href');
+  });
+
+  test('blocks vbscript: URLs in links', () => {
+    const html = renderMarkdown('[xss](vbscript:MsgBox("xss"))');
+    assert.ok(!html.includes('href="vbscript:'), 'should not contain vbscript: href');
+  });
+
+  test('allows http and https URLs in links', () => {
+    const html = renderMarkdown('[safe](https://example.com)');
+    assert.ok(html.includes('href="https://example.com"'));
+    const html2 = renderMarkdown('[safe](http://example.com)');
+    assert.ok(html2.includes('href="http://example.com"'));
+  });
+
+  test('allows mailto: URLs in links', () => {
+    const html = renderMarkdown('[email](mailto:test@example.com)');
+    assert.ok(html.includes('href="mailto:test@example.com"'));
+  });
+
+  test('allows relative URLs in links', () => {
+    const html = renderMarkdown('[page](./other-page)');
+    assert.ok(html.includes('href="./other-page"'));
+  });
+
   // ── Unclosed code block ─────────────────────────────────────────
   test('handles unclosed code block gracefully', () => {
     const md = '```\nconst x = 1;';

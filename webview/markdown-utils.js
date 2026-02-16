@@ -126,6 +126,21 @@ function escapeHtml(str) {
 }
 
 /**
+ * Check whether a URL uses a safe scheme (http, https, mailto, or relative).
+ * Rejects dangerous schemes like javascript:, data:, vbscript:, etc.
+ * @param {string} url - URL string to validate
+ * @returns {boolean} true if the URL is safe to use in an href
+ */
+function isSafeUrl(url) {
+  const trimmed = url.replace(/\s/g, '').toLowerCase();
+  if (/^[a-z][a-z0-9+\-.]*:/i.test(trimmed)) {
+    return /^https?:|^mailto:/i.test(trimmed);
+  }
+  // Relative URLs and fragment-only links are safe
+  return true;
+}
+
+/**
  * Apply inline Markdown formatting (bold, italic, code, links)
  * @param {string} text - Single line of text
  * @returns {string} HTML with inline formatting
@@ -145,10 +160,15 @@ function formatInline(text) {
   // Italic
   result = result.replace(/\*(.+?)\*/g, '<em>$1</em>');
 
-  // Links [text](url)
+  // Links [text](url) – only allow safe URL schemes
   result = result.replace(
     /\[([^\]]+?)\]\(([^)]+?)\)/g,
-    '<a class="md-link" href="$2" title="$2">$1</a>'
+    (_match, text, url) => {
+      if (isSafeUrl(url)) {
+        return `<a class="md-link" href="${url}" title="${url}">${text}</a>`;
+      }
+      return text;
+    }
   );
 
   return result;
