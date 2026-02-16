@@ -40,6 +40,7 @@ function buildBlockingModel(components, filters) {
   const readyItems = findReadyItems(filteredIds, filteredEdges, issueMap);
   const parallelGroups = findParallelGroups(filteredIds, filteredEdges, issueMap);
   const fanOutCounts = calculateFanOut(filteredIds, filteredEdges);
+  const { blocksCount, blockedByCount } = calculateBlockingCounts(filteredIds, filteredEdges);
 
   const issues = filteredIds.map(id => issueMap[id]);
 
@@ -51,7 +52,9 @@ function buildBlockingModel(components, filters) {
     criticalPaths: criticalPaths.map(path => path.map(id => issueMap[id])),
     readyItems: readyItems.map(id => issueMap[id]),
     parallelGroups: parallelGroups.map(group => group.map(id => issueMap[id])),
-    fanOutCounts
+    fanOutCounts,
+    blocksCount,
+    blockedByCount
   };
 }
 
@@ -65,7 +68,9 @@ function emptyModel() {
     criticalPaths: [],
     readyItems: [],
     parallelGroups: [],
-    fanOutCounts: {}
+    fanOutCounts: {},
+    blocksCount: {},
+    blockedByCount: {}
   };
 }
 
@@ -451,6 +456,30 @@ function applyFilters(ids, issueMap, filters) {
   });
 }
 
+/** Calculate blocking and blocked-by counts for each node. */
+function calculateBlockingCounts(nodeIds, edges) {
+  const blocksCount = {}; // How many items each node blocks (outgoing)
+  const blockedByCount = {}; // How many items each node is blocked by (incoming)
+  
+  // Initialize counts
+  nodeIds.forEach(id => {
+    blocksCount[id] = 0;
+    blockedByCount[id] = 0;
+  });
+  
+  // Count relationships from edges
+  edges.forEach(({ from, to }) => {
+    if (blocksCount[from] !== undefined) {
+      blocksCount[from]++;
+    }
+    if (blockedByCount[to] !== undefined) {
+      blockedByCount[to]++;
+    }
+  });
+  
+  return { blocksCount, blockedByCount };
+}
+
 module.exports = {
   buildBlockingModel,
   topologicalSort,
@@ -458,5 +487,6 @@ module.exports = {
   findReadyItems,
   findParallelGroups,
   applyFilters,
-  calculateFanOut
+  calculateFanOut,
+  calculateBlockingCounts
 };

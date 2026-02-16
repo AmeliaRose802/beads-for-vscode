@@ -1005,6 +1005,35 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   letter-spacing: 0.5px;
 }
 
+/* Count badges for dependency graph nodes */
+.dependency-graph__node-counts {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.dependency-graph__count-badge {
+  font-size: 8px;
+  font-weight: 600;
+  padding: 2px 4px;
+  border-radius: 3px;
+  white-space: nowrap;
+  cursor: help;
+}
+
+.dependency-graph__count-badge--blocked-by {
+  background-color: color-mix(in srgb, var(--vscode-errorForeground) 20%, var(--vscode-editor-background));
+  color: var(--vscode-errorForeground);
+  border: 1px solid color-mix(in srgb, var(--vscode-errorForeground) 30%, var(--vscode-editor-background));
+}
+
+.dependency-graph__count-badge--blocks {
+  background-color: color-mix(in srgb, var(--vscode-terminal-ansiBlue) 20%, var(--vscode-editor-background));
+  color: var(--vscode-terminal-ansiBlue);
+  border: 1px solid color-mix(in srgb, var(--vscode-terminal-ansiBlue) 30%, var(--vscode-editor-background));
+}
+
 .dependency-graph__details {
   position: absolute;
   bottom: 12px;
@@ -1536,6 +1565,35 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 }
 .blocking-view__node-badge--ready {
   color: var(--vscode-testing-iconPassed, #73c991);
+}
+
+/* Count badges for blocking view nodes */
+.blocking-view__node-counts {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.blocking-view__count-badge {
+  font-size: 8px;
+  font-weight: 600;
+  padding: 2px 4px;
+  border-radius: 3px;
+  white-space: nowrap;
+  cursor: help;
+}
+
+.blocking-view__count-badge--blocked-by {
+  background-color: color-mix(in srgb, var(--vscode-errorForeground) 20%, var(--vscode-editor-background));
+  color: var(--vscode-errorForeground);
+  border: 1px solid color-mix(in srgb, var(--vscode-errorForeground) 30%, var(--vscode-editor-background));
+}
+
+.blocking-view__count-badge--blocks {
+  background-color: color-mix(in srgb, var(--vscode-terminal-ansiBlue) 20%, var(--vscode-editor-background));
+  color: var(--vscode-terminal-ansiBlue);
+  border: 1px solid color-mix(in srgb, var(--vscode-terminal-ansiBlue) 30%, var(--vscode-editor-background));
 }
 .blocking-view__order-header {
   margin-bottom: 8px;
