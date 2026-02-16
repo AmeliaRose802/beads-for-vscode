@@ -454,7 +454,7 @@ const App = () => {
           </div>
         )}
 
-        {!showDependencyGraph && !showHierarchyView && !showBlockingView && (
+        {!showHierarchyView && !showBlockingView && (
           <div className="section output-section">
             <div className="output-header">
               <div className="section-title">Results</div>
