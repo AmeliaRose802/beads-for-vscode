@@ -1984,10 +1984,18 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 }
 .blocking-view__plan-controls {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
   padding-bottom: 6px;
   border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.blocking-view__plan-config {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
 }
 .blocking-view__plan-label {
   display: flex;
