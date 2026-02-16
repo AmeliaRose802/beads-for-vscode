@@ -1,5 +1,3 @@
-import React from 'react';
-
 /**
  * Page size options available for pagination.
  * @type {Array<{value: number|string, label: string}>}
