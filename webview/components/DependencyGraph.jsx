@@ -22,7 +22,6 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose }) => {
 
     // Defensive check: ensure data is an array
     if (!Array.isArray(data)) {
-      console.error('DependencyGraph: graphData is not an array:', data);
       return {};
     }
 
@@ -177,20 +176,7 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose }) => {
     setTransform(prev => ({ ...prev, scale: Math.max(prev.scale / 1.2, 0.2) }));
   };
 
-  // Debugging: log graph data when it changes
-  useEffect(() => {
-    if (graphData) {
-      console.log('DependencyGraph received data:', {
-        isArray: Array.isArray(graphData),
-        length: graphData.length,
-        sample: graphData[0]
-      });
-      console.log('Node positions calculated:', nodePositions);
-    }
-  }, [graphData, nodePositions]);
-
   if (!graphData) {
-    console.log('DependencyGraph: no data (null/undefined)');
     return (
       <div className="dependency-graph dependency-graph--empty">
         <div className="dependency-graph__header">
@@ -205,7 +191,6 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose }) => {
   }
 
   if (!Array.isArray(graphData)) {
-    console.error('DependencyGraph: graphData is not an array:', graphData);
     return (
       <div className="dependency-graph dependency-graph--empty">
         <div className="dependency-graph__header">
@@ -221,7 +206,6 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose }) => {
   }
 
   if (graphData.length === 0) {
-    console.log('DependencyGraph: empty array');
     return (
       <div className="dependency-graph dependency-graph--empty">
         <div className="dependency-graph__header">
@@ -251,10 +235,7 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose }) => {
     });
   });
 
-  console.log(`DependencyGraph: Rendering ${allIssues.length} issues, ${allDeps.length} dependencies`);
-
   if (allIssues.length === 0) {
-    console.log('DependencyGraph: no issues found in components');
     return (
       <div className="dependency-graph dependency-graph--empty">
         <div className="dependency-graph__header">
@@ -291,8 +272,6 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose }) => {
   const maxY = positionValues.length > 0 
     ? Math.max(...positionValues.map(p => p.y)) + 100 
     : 1000;
-
-  console.log(`DependencyGraph: Canvas dimensions ${maxX}x${maxY}, ${positionValues.length} positioned nodes`);
 
   return (
     <div className="dependency-graph">
