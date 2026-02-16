@@ -146,7 +146,7 @@ function createAppActions(ctx) {
 
   const requestBlockingData = () => {
     updateGraphPurpose('blocking');
-    setOutput('Loading blocking view...');
+    setOutput('Loading dependencies view...');
     setIsError(false);
     setIsSuccess(false);
     closeAllPanels();

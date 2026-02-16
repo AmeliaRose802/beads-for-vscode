@@ -99,9 +99,17 @@ function processMessage(message, ctx) {
       const purpose = ctx.graphPurposeRef.current;
       const targetId = ctx.hierarchyIssueRef.current;
 
+      console.log('Received graphData message:', {
+        purpose,
+        hasData: !!message.data,
+        dataLength: message.data ? message.data.length : 0,
+        hasError: !!message.error
+      });
+
       if (message.data) {
         ctx.setGraphData(message.data);
         if (purpose === 'graph') {
+          console.log('Setting showDependencyGraph to true');
           ctx.setShowDependencyGraph(true);
         }
         if (purpose === 'hierarchy' && targetId) {
@@ -121,7 +129,7 @@ function processMessage(message, ctx) {
             ctx.setBlockingModel(model);
             ctx.setShowBlockingView(true);
           } catch (error) {
-            ctx.setOutput(`Blocking View Error: ${error.message}`);
+            ctx.setOutput(`Dependencies View Error: ${error.message}`);
             ctx.setIsError(true);
             ctx.setShowBlockingView(false);
           }

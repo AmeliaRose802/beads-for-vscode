@@ -100,10 +100,10 @@ suite('BlockingView inline dependency editing', () => {
       );
     });
 
-    test('critical callout exists in component', () => {
+    test('critical tree structure exists in component', () => {
       assert.ok(
-        criticalPathViewSrc.includes('blocking-view__critical-callout'),
-        'CriticalPathView should include critical callout class'
+        criticalPathViewSrc.includes('blocking-view__critical-tree'),
+        'CriticalPathView should include critical tree class'
       );
     });
 
@@ -129,10 +129,10 @@ suite('BlockingView inline dependency editing', () => {
       );
     });
 
-    test('critical callout includes unblock text', () => {
+    test('critical tree node component exists', () => {
       assert.ok(
-        criticalPathViewSrc.includes('Unblock'),
-        'CriticalPathView should include unblock callout text'
+        criticalPathViewSrc.includes('CriticalTreeNode'),
+        'CriticalPathView should include CriticalTreeNode component'
       );
     });
 
@@ -259,10 +259,10 @@ suite('BlockingView inline dependency editing', () => {
       );
     });
 
-    test('defines critical callout styles', () => {
+    test('defines critical tree styles', () => {
       assert.ok(
-        stylesSrc.includes('.blocking-view__critical-callout'),
-        'CSS should define critical callout styles'
+        stylesSrc.includes('.blocking-view__critical-tree'),
+        'CSS should define critical tree styles'
       );
     });
 

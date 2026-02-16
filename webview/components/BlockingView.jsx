@@ -83,11 +83,11 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
     return (
       <div className="blocking-view blocking-view--empty">
         <div className="blocking-view__header">
-          <h3 className="blocking-view__title">🚧 Blocking View</h3>
+          <h3 className="blocking-view__title">� Dependencies</h3>
           <button className="blocking-view__close-btn" onClick={onClose}>✕</button>
         </div>
         <div className="blocking-view__empty-message">
-          <p>Loading blocking data...</p>
+          <p>Loading dependency data...</p>
         </div>
       </div>
     );
@@ -207,12 +207,12 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
     return (
       <div className="blocking-view blocking-view--empty">
         <div className="blocking-view__header">
-          <h3 className="blocking-view__title">🚧 Blocking View</h3>
+          <h3 className="blocking-view__title">� Dependencies</h3>
           <button className="blocking-view__close-btn" onClick={onClose}>✕</button>
         </div>
         <div className="blocking-view__empty-message">
-          <p>No blocking relationships found.</p>
-          <p>Link issues with blocking dependencies to see them here.</p>
+          <p>No dependency relationships found.</p>
+          <p>Link issues with dependencies to see them here.</p>
         </div>
       </div>
     );
@@ -374,7 +374,7 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
   return (
     <div className="blocking-view">
       <div className="blocking-view__header">
-        <h3 className="blocking-view__title">🚧 Blocking View</h3>
+        <h3 className="blocking-view__title">� Dependencies</h3>
         <div className="blocking-view__summary">
           <span className="blocking-view__stat">{filteredIssues.length} items</span>
           <span className="blocking-view__stat">{edges.length} blocking links</span>

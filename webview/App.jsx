@@ -339,8 +339,8 @@ const App = () => {
             <button className="action-btn" onClick={() => runCommand('stats')} title="Show project statistics">📊 Stats</button>
             <button className="action-btn" onClick={() => { clearOutput(); closeAllPanels(); setShowDependencyGraph(false); setShowCreatePanel(!showCreatePanel); }} title="Create a new issue">➕ Create</button>
             <button className="action-btn" onClick={() => { clearOutput(); closeAllPanels(); setShowDependencyGraph(false); setShowRelationshipPanel(!showRelationshipPanel); }} title="Manage dependencies between issues">🔗 Add Links</button>
-            <button className="action-btn" onClick={requestGraphData} title="Visualize dependency relationships as a graph">🔀 Graph</button>
-            <button className="action-btn" onClick={requestBlockingData} title="View blocking chains and completion order">🚧 Blocking</button>
+            <button className="action-btn" onClick={() => requestGraphData('graph')} title="Visualize dependency relationships as a graph">🔀 Graph</button>
+            <button className="action-btn" onClick={() => requestBlockingData()} title="View dependency chains and completion order">🔗 Dependencies</button>
           </div>
         </div>
 

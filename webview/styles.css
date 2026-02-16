@@ -1678,6 +1678,85 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   color: var(--vscode-errorForeground);
   padding: 4px 0;
 }
+
+/* Critical Path Tree Styles */
+.blocking-view__critical-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.blocking-view__critical-tree-node {
+  display: flex;
+  flex-direction: column;
+}
+
+.blocking-view__critical-tree-node--nested {
+  margin-left: 20px;
+  border-left: 2px solid var(--vscode-panel-border);
+  padding-left: 12px;
+}
+
+.blocking-view__critical-branch-indicator {
+  font-size: 10px;
+  color: var(--vscode-descriptionForeground);
+  margin: 4px 0;
+  padding: 2px 6px;
+  background-color: var(--vscode-editorWidget-background);
+  border-radius: 3px;
+  width: fit-content;
+  font-style: italic;
+}
+
+.blocking-view__critical-children {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.blocking-view__critical-children--branched {
+  position: relative;
+}
+
+.blocking-view__critical-children--branched > .blocking-view__critical-child-branch {
+  margin-left: 8px;
+  padding-left: 12px;
+  border-left: 2px solid var(--vscode-textLink-foreground);
+  opacity: 0.6;
+}
+
+.blocking-view__critical-children--branched > .blocking-view__critical-child-branch:first-child {
+  border-left-color: var(--vscode-charts-blue);
+}
+
+.blocking-view__critical-children--branched > .blocking-view__critical-child-branch:nth-child(2) {
+  border-left-color: var(--vscode-charts-green);
+}
+
+.blocking-view__critical-children--branched > .blocking-view__critical-child-branch:nth-child(3) {
+  border-left-color: var(--vscode-charts-orange);
+}
+
+.blocking-view__critical-child-branch {
+  display: flex;
+  flex-direction: column;
+}
+
+.blocking-view__critical-node--cycle {
+  opacity: 0.7;
+  border-style: dashed;
+}
+
+.blocking-view__critical-cycle-badge {
+  font-size: 10px;
+  padding: 2px 4px;
+  background-color: var(--vscode-editorWarning-background);
+  border: 1px solid var(--vscode-editorWarning-border);
+  border-radius: 3px;
+  margin-left: auto;
+}
+
 .blocking-view__parallel-header {
   margin-bottom: 8px;
 }

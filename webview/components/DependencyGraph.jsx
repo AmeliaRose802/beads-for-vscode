@@ -20,6 +20,12 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose }) => {
   const calculateLayout = useCallback((data) => {
     if (!data || data.length === 0) return {};
 
+    // Defensive check: ensure data is an array
+    if (!Array.isArray(data)) {
+      console.error('DependencyGraph: graphData is not an array:', data);
+      return {};
+    }
+
     const positions = {};
     const NODE_WIDTH = 200;
     const NODE_HEIGHT = 60;
@@ -171,7 +177,51 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose }) => {
     setTransform(prev => ({ ...prev, scale: Math.max(prev.scale / 1.2, 0.2) }));
   };
 
-  if (!graphData || graphData.length === 0) {
+  // Debugging: log graph data when it changes
+  useEffect(() => {
+    if (graphData) {
+      console.log('DependencyGraph received data:', {
+        isArray: Array.isArray(graphData),
+        length: graphData.length,
+        sample: graphData[0]
+      });
+      console.log('Node positions calculated:', nodePositions);
+    }
+  }, [graphData, nodePositions]);
+
+  if (!graphData) {
+    console.log('DependencyGraph: no data (null/undefined)');
+    return (
+      <div className="dependency-graph dependency-graph--empty">
+        <div className="dependency-graph__header">
+          <h3 className="dependency-graph__title">📊 Dependency Graph</h3>
+          <button className="dependency-graph__close-btn" onClick={onClose}>✕</button>
+        </div>
+        <div className="dependency-graph__empty-message">
+          <p>Loading graph data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!Array.isArray(graphData)) {
+    console.error('DependencyGraph: graphData is not an array:', graphData);
+    return (
+      <div className="dependency-graph dependency-graph--empty">
+        <div className="dependency-graph__header">
+          <h3 className="dependency-graph__title">📊 Dependency Graph</h3>
+          <button className="dependency-graph__close-btn" onClick={onClose}>✕</button>
+        </div>
+        <div className="dependency-graph__empty-message">
+          <p>Error: Invalid graph data format.</p>
+          <p>Expected an array but got: {typeof graphData}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (graphData.length === 0) {
+    console.log('DependencyGraph: empty array');
     return (
       <div className="dependency-graph dependency-graph--empty">
         <div className="dependency-graph__header">
@@ -201,6 +251,23 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose }) => {
     });
   });
 
+  console.log(`DependencyGraph: Rendering ${allIssues.length} issues, ${allDeps.length} dependencies`);
+
+  if (allIssues.length === 0) {
+    console.log('DependencyGraph: no issues found in components');
+    return (
+      <div className="dependency-graph dependency-graph--empty">
+        <div className="dependency-graph__header">
+          <h3 className="dependency-graph__title">📊 Dependency Graph</h3>
+          <button className="dependency-graph__close-btn" onClick={onClose}>✕</button>
+        </div>
+        <div className="dependency-graph__empty-message">
+          <p>No issues found in graph data.</p>
+        </div>
+      </div>
+    );
+  }
+
   const getPriorityClass = (priority) => {
     if (priority === 0) return 'priority-p0';
     if (priority === 1) return 'priority-p1';
@@ -217,8 +284,15 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose }) => {
   };
 
   // Calculate SVG dimensions based on node positions
-  const maxX = Math.max(...Object.values(nodePositions).map(p => p.x)) + 250;
-  const maxY = Math.max(...Object.values(nodePositions).map(p => p.y)) + 100;
+  const positionValues = Object.values(nodePositions);
+  const maxX = positionValues.length > 0 
+    ? Math.max(...positionValues.map(p => p.x)) + 250 
+    : 1000;
+  const maxY = positionValues.length > 0 
+    ? Math.max(...positionValues.map(p => p.y)) + 100 
+    : 1000;
+
+  console.log(`DependencyGraph: Canvas dimensions ${maxX}x${maxY}, ${positionValues.length} positioned nodes`);
 
   return (
     <div className="dependency-graph">

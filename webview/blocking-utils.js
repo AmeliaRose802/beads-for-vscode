@@ -203,7 +203,7 @@ function calculateFanOut(nodeIds, edges) {
 }
 
 /** Find top critical paths (longest chains of blocking dependencies) using DP. */
-function findCriticalPaths(nodeIds, edges, issueMap, maxPaths = 3) {
+function findCriticalPaths(nodeIds, edges, issueMap, maxPaths = Infinity) {
   if (nodeIds.length === 0) return [];
 
   const outEdges = {};
@@ -267,13 +267,13 @@ function findCriticalPaths(nodeIds, edges, issueMap, maxPaths = 3) {
     .sort((a, b) => b.dist - a.dist);
 
   const paths = [];
-  const usedNodes = new Set();
+  const usedEndpoints = new Set();
   
-  for (const { id: endNode, dist: endDist } of nodesByDist) {
+  for (const { id: endNode } of nodesByDist) {
     if (paths.length >= maxPaths) break;
     
-    // Skip if this node is already part of an existing path
-    if (usedNodes.has(endNode)) continue;
+    // Skip if this endpoint has already been used
+    if (usedEndpoints.has(endNode)) continue;
     
     // Trace back to reconstruct path
     const path = [];
@@ -283,13 +283,25 @@ function findCriticalPaths(nodeIds, edges, issueMap, maxPaths = 3) {
       current = predecessor[current];
     }
     
-    // Only include paths that are reasonably significant
-    // (at least 70% of the longest path's distance)
-    if (paths.length === 0 || endDist >= nodesByDist[0].dist * 0.7) {
-      paths.push(path);
-      // Mark all nodes in this path as used to avoid subpaths
-      path.forEach(nodeId => usedNodes.add(nodeId));
-    }
+    // Skip if this path is a subpath of an existing path
+    // A path is a subpath if all its nodes appear in order in another path
+    const isSubpath = paths.some(existingPath => {
+      let matchIdx = 0;
+      for (const nodeId of existingPath) {
+        if (path[matchIdx] === nodeId) {
+          matchIdx++;
+          if (matchIdx === path.length) return true;
+        }
+      }
+      return false;
+    });
+    
+    if (isSubpath) continue;
+    
+    // Include all paths (no significance threshold filtering)
+    paths.push(path);
+    // Mark only this endpoint as used, allowing paths with shared nodes
+    usedEndpoints.add(endNode);
   }
 
   return paths;
