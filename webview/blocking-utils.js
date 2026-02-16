@@ -207,21 +207,39 @@ function calculateFanOut(nodeIds, edges) {
   return fanOutCounts;
 }
 
+/** Trace back through predecessor map to reconstruct a path ending at endNode. */
+function reconstructPath(endNode, predecessor) {
+  const path = [];
+  let current = endNode;
+  while (current !== null) {
+    path.unshift(current);
+    current = predecessor[current];
+  }
+  return path;
+}
+
+/** Check if candidate is a subsequence of an existing path. */
+function isSubpathOf(candidate, existingPath) {
+  let matchIdx = 0;
+  for (const nodeId of existingPath) {
+    if (candidate[matchIdx] === nodeId) {
+      matchIdx++;
+      if (matchIdx === candidate.length) return true;
+    }
+  }
+  return false;
+}
+
 /** Find top critical paths (longest chains of blocking dependencies) using DP. */
 function findCriticalPaths(nodeIds, edges, issueMap, maxPaths = Infinity) {
   if (nodeIds.length === 0) return [];
 
   const outEdges = {};
-  const inEdges = {};
-  nodeIds.forEach(id => {
-    outEdges[id] = [];
-    inEdges[id] = [];
-  });
+  nodeIds.forEach(id => { outEdges[id] = []; });
 
   edges.forEach(({ from, to }) => {
-    if (outEdges[from] && inEdges[to]) {
+    if (outEdges[from] && outEdges[to] !== undefined) {
       outEdges[from].push(to);
-      inEdges[to].push(from);
     }
   });
 
@@ -239,12 +257,11 @@ function findCriticalPaths(nodeIds, edges, issueMap, maxPaths = Infinity) {
 
   const weights = {};
   nodeIds.forEach(id => {
-    const priorityWeight = getPriorityWeight(issueMap?.[id]);
     if (hasEstimates) {
       const estimateMinutes = estimateById[id];
       weights[id] = estimateMinutes === undefined ? 1 : estimateMinutes;
     } else {
-      weights[id] = priorityWeight;
+      weights[id] = getPriorityWeight(issueMap?.[id]);
     }
   });
 
@@ -276,36 +293,13 @@ function findCriticalPaths(nodeIds, edges, issueMap, maxPaths = Infinity) {
   
   for (const { id: endNode } of nodesByDist) {
     if (paths.length >= maxPaths) break;
-    
-    // Skip if this endpoint has already been used
     if (usedEndpoints.has(endNode)) continue;
     
-    // Trace back to reconstruct path
-    const path = [];
-    let current = endNode;
-    while (current !== null) {
-      path.unshift(current);
-      current = predecessor[current];
-    }
+    const path = reconstructPath(endNode, predecessor);
     
-    // Skip if this path is a subpath of an existing path
-    // A path is a subpath if all its nodes appear in order in another path
-    const isSubpath = paths.some(existingPath => {
-      let matchIdx = 0;
-      for (const nodeId of existingPath) {
-        if (path[matchIdx] === nodeId) {
-          matchIdx++;
-          if (matchIdx === path.length) return true;
-        }
-      }
-      return false;
-    });
+    if (paths.some(existing => isSubpathOf(path, existing))) continue;
     
-    if (isSubpath) continue;
-    
-    // Include all paths (no significance threshold filtering)
     paths.push(path);
-    // Mark only this endpoint as used, allowing paths with shared nodes
     usedEndpoints.add(endNode);
   }
 
