@@ -42,6 +42,12 @@ The extension executes bd commands through its sidebar panel. Use the Create pan
   - If not installed, you'll see an error message with installation instructions
 - A bd-initialized workspace (run `bd init` in your project directory)
 
+## Backend compatibility
+
+- **Minimum bd version:** Tested with bd 0.47.x and newer; bd 0.50+ is recommended because it defaults to Dolt.
+- **Backends:** The extension auto-detects Dolt (bd 0.50+ default) and legacy SQLite projects via `.beads/metadata.json`, setting `BEADS_DIR` for all runs and only setting `BEADS_DB` when metadata indicates SQLite.
+- **Upgrading from SQLite to Dolt:** Update bd to the latest release, run `bd migrate --inspect` in your workspace to review the plan, then `bd migrate --yes --cleanup` to move to the current backend. Remove any manual `BEADS_DB` overrides so bd can select the correct backend, ensure Dolt is installed, and reload VS Code so the extension picks up the new backend.
+
 ## Commands
 
 - **Beads: Open UI** - Opens the Beads sidebar panel
