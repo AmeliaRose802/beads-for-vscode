@@ -166,6 +166,27 @@ suite('Parse Utils Tests', () => {
       assert.strictEqual(result.openIssues[0].isBlocked, false);
     });
 
+    test('Should not mark issues as blocked when blocker does not exist in issueMap', () => {
+      const json = JSON.stringify([
+        { id: 'maybe-blocked', title: 'Maybe Blocked', issue_type: 'task', priority: 2, status: 'open' }
+      ]);
+
+      const graph = JSON.stringify([
+        {
+          IssueMap: {
+            'maybe-blocked': { id: 'maybe-blocked', status: 'open' }
+            // Note: 'missing-blocker' is NOT in the IssueMap (e.g., deleted or filtered out)
+          },
+          Dependencies: [
+            { from_id: 'missing-blocker', to_id: 'maybe-blocked', type: 'blocks' }
+          ]
+        }
+      ]);
+
+      const result = parseListJSON(json, 'list', graph);
+      assert.strictEqual(result.openIssues[0].isBlocked, false, 'Item should not be blocked when blocker is missing from issueMap');
+    });
+
     test('Should include blocked count in header', () => {
       const json = JSON.stringify([
         { id: 'a', title: 'A', issue_type: 'task', priority: 1, status: 'open' },

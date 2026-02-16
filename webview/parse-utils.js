@@ -81,7 +81,8 @@ function buildBlockedSet(graphData) {
   for (const [id, blockers] of Object.entries(blockedBy)) {
     const hasOpenBlocker = blockers.some(blockerId => {
       const blocker = issueMap[blockerId];
-      return !blocker || (blocker.status !== 'closed' && blocker.status !== 'done');
+      // Only consider an item blocked if the blocker EXISTS and is NOT closed/done
+      return blocker && (blocker.status !== 'closed' && blocker.status !== 'done');
     });
     if (hasOpenBlocker) {
       blockedSet.add(id);
