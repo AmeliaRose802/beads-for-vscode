@@ -278,7 +278,7 @@ class BeadsViewProvider {
             output: `Internal error: ${err.message}`,
             success: false
           });
-        } catch (_postErr) {
+        } catch {
           // Webview may be disposed; nothing we can do
         }
       }
@@ -451,19 +451,9 @@ class BeadsViewProvider {
   }
 
   _getBundledBdPath(platform) {
-    let binaryName = 'bd';
-    
-    if (platform === 'win32') {
-      binaryName = 'bd.exe';
-    }
-    
+    const binaryName = platform === 'win32' ? 'bd.exe' : 'bd';
     const bundledPath = path.join(this._extensionUri.fsPath, 'bin', platform, binaryName);
-    
-    if (fs.existsSync(bundledPath)) {
-      return bundledPath;
-    }
-    
-    return null; // Fall back to system bd
+    return fs.existsSync(bundledPath) ? bundledPath : null;
   }
 
   _getHtmlForWebview(webview) {

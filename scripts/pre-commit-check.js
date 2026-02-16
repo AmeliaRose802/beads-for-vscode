@@ -10,6 +10,7 @@
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const { globSync } = require('glob');
 
 const ROOT = path.resolve(__dirname, '..');
 const MAX_FILE_LINES = 500;
@@ -44,7 +45,6 @@ function checkLint() {
 
 // ── 2. Maximum file length ────────────────────────────────────────
 function checkFileLength() {
-  const { globSync } = require('glob');
   const violations = [];
 
   const patterns = [
@@ -78,7 +78,6 @@ function checkFileLength() {
 
 // ── 3. No skipped tests ──────────────────────────────────────────
 function checkNoSkippedTests() {
-  const { globSync } = require('glob');
   const violations = [];
   const skipPatterns = [
     /\.skip\s*\(/,
@@ -115,7 +114,6 @@ function checkNoSkippedTests() {
 
 // ── 4. Type annotations (JSDoc @param/@returns) on exports ───────
 function checkTypeAnnotations() {
-  const { globSync } = require('glob');
   const violations = [];
 
   const patterns = ['*.js', 'webview/**/*.js', 'webview/**/*.jsx'];

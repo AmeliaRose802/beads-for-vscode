@@ -1,16 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import AssigneeDropdown from './AssigneeDropdown';
 import IssueCardDetails from './IssueCardDetails';
 import { parseComments } from './utils';
+import { useAsyncData } from '../hooks/useAsyncData';
 
 const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, onPriorityChange, onAssigneeChange, onShowHierarchy, onPokePoke, pokepokeRunning, existingAssignees, detailedData, isLoadingDetails, onDragStart, onDrop, isDragging, isDropTarget, vscode }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [comments, setComments] = useState([]);
-  const [loadingComments, setLoadingComments] = useState(false);
   const [showQuickEdit, setShowQuickEdit] = useState(false);
   const [dependencies, setDependencies] = useState(null);
   const [dependents, setDependents] = useState(null);
-  const [loadingDeps, setLoadingDeps] = useState(false);
   const [isEditingAssignee, setIsEditingAssignee] = useState(false);
   const [assigneeSaveState, setAssigneeSaveState] = useState('idle'); // idle, saving, saved, error
   const [shouldLoadDeps, setShouldLoadDeps] = useState(false);
@@ -21,98 +20,32 @@ const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, on
   // Calculate total relationship count
   const totalRelationships = (issue.dependency_count || 0) + (issue.dependent_count || 0);
 
-  // useEffect to handle dependencies loading with cleanup
-  useEffect(() => {
-    if (!shouldLoadDeps || !vscode || totalRelationships === 0 || loadingDeps) {
-      return;
+  const { loading: loadingDeps } = useAsyncData({
+    shouldLoad: shouldLoadDeps && totalRelationships > 0,
+    vscode,
+    issueId: issue.id,
+    request: { type: 'getDependencies', issueId: issue.id },
+    responseType: 'dependenciesResult',
+    onResponse: (msg) => {
+      setDependencies(msg.dependencies || []);
+      setDependents(msg.dependents || []);
+      setShouldLoadDeps(false);
     }
+  });
 
-    setLoadingDeps(true);
-    let cleanedUp = false;
-    
-    vscode.postMessage({
-      type: 'getDependencies',
-      issueId: issue.id
-    });
-
-    const depsHandler = (event) => {
-      if (cleanedUp) return; // Ignore if already cleaned up
-      
-      const message = event.data;
-      if (message.type === 'dependenciesResult' && message.issueId === issue.id) {
-        setLoadingDeps(false);
-        setDependencies(message.dependencies || []);
-        setDependents(message.dependents || []);
-        setShouldLoadDeps(false); // Reset trigger
+  const { loading: loadingComments } = useAsyncData({
+    shouldLoad: shouldLoadComments,
+    vscode,
+    issueId: issue.id,
+    request: { type: 'getComments', issueId: issue.id },
+    responseType: 'commentsResult',
+    onResponse: (msg) => {
+      if (msg.success && msg.output) {
+        setComments(parseComments(msg.output));
       }
-    };
-
-    window.addEventListener('message', depsHandler);
-
-    // Timeout fallback like App.jsx
-    const timeoutId = setTimeout(() => {
-      if (!cleanedUp) {
-        setLoadingDeps(false);
-        setShouldLoadDeps(false);
-        console.warn(`Dependencies loading timeout for issue ${issue.id}`);
-      }
-    }, 5000);
-
-    // Cleanup function
-    return () => {
-      cleanedUp = true;
-      window.removeEventListener('message', depsHandler);
-      clearTimeout(timeoutId);
-    };
-  }, [shouldLoadDeps, vscode, issue.id, totalRelationships, loadingDeps]);
-
-  // useEffect to handle comments loading with cleanup
-  useEffect(() => {
-    if (!shouldLoadComments || !vscode || loadingComments) {
-      return;
+      setShouldLoadComments(false);
     }
-
-    setLoadingComments(true);
-    let cleanedUp = false;
-
-    vscode.postMessage({
-      type: 'getComments',
-      issueId: issue.id
-    });
-
-    const handler = (event) => {
-      if (cleanedUp) return; // Ignore if already cleaned up
-      
-      const message = event.data;
-      if (message.type === 'commentsResult' && message.issueId === issue.id) {
-        setLoadingComments(false);
-        if (message.success && message.output) {
-          // Parse comments from text output
-          const parsed = parseComments(message.output);
-          setComments(parsed);
-        }
-        setShouldLoadComments(false); // Reset trigger
-      }
-    };
-
-    window.addEventListener('message', handler);
-
-    // Timeout fallback like App.jsx
-    const timeoutId = setTimeout(() => {
-      if (!cleanedUp) {
-        setLoadingComments(false);
-        setShouldLoadComments(false);
-        console.warn(`Comments loading timeout for issue ${issue.id}`);
-      }
-    }, 5000);
-
-    // Cleanup function
-    return () => {
-      cleanedUp = true;
-      window.removeEventListener('message', handler);
-      clearTimeout(timeoutId);
-    };
-  }, [shouldLoadComments, vscode, issue.id, loadingComments]);
+  });
 
   const handleCardClick = (e) => {
     // Don't trigger card click if clicking on action buttons, quick edit, assignee editor, or copy button
