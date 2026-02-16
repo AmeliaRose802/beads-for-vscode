@@ -18,12 +18,7 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose }) => {
 
   // Calculate node positions using a layered layout algorithm
   const calculateLayout = useCallback((data) => {
-    if (!data || data.length === 0) return {};
-
-    // Defensive check: ensure data is an array
-    if (!Array.isArray(data)) {
-      return {};
-    }
+    if (!Array.isArray(data) || data.length === 0) return {};
 
     const positions = {};
     const NODE_WIDTH = 200;
