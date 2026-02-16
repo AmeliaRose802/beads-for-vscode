@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { buildCreateCommand, buildUpdateCommand, escapeShellArg, safeShellArg } = require('../../webview/form-handlers');
+const { buildCreateCommand, buildUpdateCommand, escapeShellArg, safeShellArg, validateBeadId } = require('../../webview/form-handlers');
 
 suite('Form Handlers Tests', () => {
   // Cross-platform: always double-quote
@@ -182,6 +182,27 @@ suite('Form Handlers Tests', () => {
       });
       assert.ok(cmd, 'Command should be generated');
     });
+
+    test('SECURITY: Should reject invalid parent ID', () => {
+      assert.throws(() => buildCreateCommand({
+        title: 'Test', type: 'task', priority: '2',
+        description: '', parentId: 'bad id --title hacked', blocksId: '', relatedId: '', currentFile: ''
+      }), /Parent ID/);
+    });
+
+    test('SECURITY: Should reject invalid blocks ID', () => {
+      assert.throws(() => buildCreateCommand({
+        title: 'Test', type: 'task', priority: '2',
+        description: '', parentId: '', blocksId: 'bad id', relatedId: '', currentFile: ''
+      }), /Blocks ID/);
+    });
+
+    test('SECURITY: Should reject invalid related ID', () => {
+      assert.throws(() => buildCreateCommand({
+        title: 'Test', type: 'task', priority: '2',
+        description: '', parentId: '', blocksId: '', relatedId: '--bad', currentFile: ''
+      }), /Related ID/);
+    });
   });
 
   suite('buildUpdateCommand', () => {
@@ -231,6 +252,30 @@ suite('Form Handlers Tests', () => {
       });
       assert.ok(cmd, 'Command should be generated');
       assert.ok(cmd.includes('\\$'), 'Dollar sign should be escaped');
+    });
+
+    test('SECURITY: Should reject invalid issue ID', () => {
+      assert.throws(() => buildUpdateCommand({
+        issueId: 'bad id --priority 0', title: 'Safe', type: 'task',
+        priority: '1', description: '', status: 'open'
+      }), /Issue ID/);
+    });
+  });
+
+  suite('validateBeadId', () => {
+    test('Should trim and return valid ID', () => {
+      const result = validateBeadId('  abc-123_def  ', 'Test ID');
+      assert.strictEqual(result, 'abc-123_def');
+    });
+
+    test('Should return null for empty input', () => {
+      assert.strictEqual(validateBeadId('   ', 'Test ID'), null);
+      assert.strictEqual(validateBeadId('', 'Test ID'), null);
+    });
+
+    test('Should throw for invalid characters', () => {
+      assert.throws(() => validateBeadId('bad id', 'Test ID'), /Test ID/);
+      assert.throws(() => validateBeadId('oops!', 'Test ID'), /Test ID/);
     });
   });
 });

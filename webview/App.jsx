@@ -216,11 +216,18 @@ const App = () => {
     }, 5000);
   });
   const handleCreateIssue = () => {
-    const command = buildCreateCommand({
-      title: createTitle, type: createType, priority: createPriority,
-      description: createDescription, parentId: createParentId,
-      blocksId: createBlocksId, relatedId: createRelatedId, currentFile
-    });
+    let command;
+    try {
+      command = buildCreateCommand({
+        title: createTitle, type: createType, priority: createPriority,
+        description: createDescription, parentId: createParentId,
+        blocksId: createBlocksId, relatedId: createRelatedId, currentFile
+      });
+    } catch (error) {
+      setOutput(`❌ Error: ${error.message}`);
+      setIsError(true);
+      return;
+    }
     if (!command) {
       setOutput('❌ Error: Title is required');
       setIsError(true);
@@ -296,10 +303,17 @@ const App = () => {
   };
 
   const handleUpdateIssue = () => {
-    const command = buildUpdateCommand({
-      issueId: editIssueId, title: editTitle, type: editType,
-      priority: editPriority, description: editDescription, status: editStatus
-    });
+    let command;
+    try {
+      command = buildUpdateCommand({
+        issueId: editIssueId, title: editTitle, type: editType,
+        priority: editPriority, description: editDescription, status: editStatus
+      });
+    } catch (error) {
+      setOutput(`Error: ${error.message}`);
+      setIsError(true);
+      return;
+    }
     if (!command) {
       setOutput('Error: Title is required');
       setIsError(true);
