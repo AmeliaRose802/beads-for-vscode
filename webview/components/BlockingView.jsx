@@ -6,6 +6,7 @@ import BlockingGraphTab from './BlockingGraphTab';
 import CriticalPathView from './CriticalPathView';
 import LabelDropdown from './LabelDropdown';
 const { formatIssuesForClipboard, buildPhasedClipboardText } = require('../clipboard-utils');
+const { isClosedStatus } = require('../field-utils');
 
 const COPY_FEEDBACK_DURATION_MS = 2200;
 const PHASE_ITEM_PREVIEW_LIMIT = 5;
@@ -202,7 +203,7 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
       visibleItems
     };
   };
-  const isClosedStatus = (issue) => issue && (issue.status === 'closed' || issue.status === 'done');
+  const isIssueClosed = (issue) => issue && isClosedStatus(issue.status);
   if (filteredIssues.length === 0) {
     return (
       <div className="blocking-view blocking-view--empty">
@@ -367,7 +368,7 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
         onNodeClick={handleNodeClick}
         onEdgeClick={handleEdgeClick}
         renderEdgeMenu={renderEdgeMenu}
-        isClosedStatus={isClosedStatus}
+        isClosedStatus={isIssueClosed}
       />
     );
   };
