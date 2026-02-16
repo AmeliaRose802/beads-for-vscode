@@ -7,7 +7,7 @@ const { getStatusIcon } = require('../field-utils');
  * Renders a graph showing issues as nodes and dependencies as edges.
  * Supports pan/zoom, node selection, and displays dependency flow.
  */
-const DependencyGraph = ({ graphData, onIssueClick, onClose }) => {
+const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = true }) => {
   const containerRef = useRef(null);
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
   const [isPanning, setIsPanning] = useState(false);
@@ -15,6 +15,15 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose }) => {
   const [selectedNode, setSelectedNode] = useState(null);
   const [hoveredNode, setHoveredNode] = useState(null);
   const [nodePositions, setNodePositions] = useState({});
+
+  const renderCloseButton = () => {
+    if (!showCloseButton || typeof onClose !== 'function') {
+      return null;
+    }
+    return (
+      <button className="dependency-graph__close-btn" onClick={onClose}>✕</button>
+    );
+  };
 
   // Calculate node positions using a layered layout algorithm
   const calculateLayout = useCallback((data) => {
@@ -176,7 +185,7 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose }) => {
       <div className="dependency-graph dependency-graph--empty">
         <div className="dependency-graph__header">
           <h3 className="dependency-graph__title">📊 Dependency Graph</h3>
-          <button className="dependency-graph__close-btn" onClick={onClose}>✕</button>
+          {renderCloseButton()}
         </div>
         <div className="dependency-graph__empty-message">
           <p>Loading graph data...</p>
@@ -190,7 +199,7 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose }) => {
       <div className="dependency-graph dependency-graph--empty">
         <div className="dependency-graph__header">
           <h3 className="dependency-graph__title">📊 Dependency Graph</h3>
-          <button className="dependency-graph__close-btn" onClick={onClose}>✕</button>
+          {renderCloseButton()}
         </div>
         <div className="dependency-graph__empty-message">
           <p>Error: Invalid graph data format.</p>
@@ -205,7 +214,7 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose }) => {
       <div className="dependency-graph dependency-graph--empty">
         <div className="dependency-graph__header">
           <h3 className="dependency-graph__title">📊 Dependency Graph</h3>
-          <button className="dependency-graph__close-btn" onClick={onClose}>✕</button>
+          {renderCloseButton()}
         </div>
         <div className="dependency-graph__empty-message">
           <p>No dependency data available.</p>
@@ -306,7 +315,7 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose }) => {
           <button className="dependency-graph__control-btn" onClick={resetView} title="Reset view">⟲</button>
           <span className="dependency-graph__zoom-level">{Math.round(transform.scale * 100)}%</span>
         </div>
-        <button className="dependency-graph__close-btn" onClick={onClose}>✕</button>
+        {renderCloseButton()}
       </div>
 
       <div className="dependency-graph__legend">

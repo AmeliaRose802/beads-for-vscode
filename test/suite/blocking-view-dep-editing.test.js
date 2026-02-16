@@ -9,11 +9,8 @@ suite('BlockingView inline dependency editing', () => {
   const blockingGraphTabSrc = fs.readFileSync(
     path.join(__dirname, '../../webview/components/BlockingGraphTab.jsx'), 'utf8'
   );
-  const blockingParallelTabSrc = fs.readFileSync(
-    path.join(__dirname, '../../webview/components/BlockingParallelTab.jsx'), 'utf8'
-  );
-  const criticalPathViewSrc = fs.readFileSync(
-    path.join(__dirname, '../../webview/components/CriticalPathView.jsx'), 'utf8'
+  const dependencyGraphSrc = fs.readFileSync(
+    path.join(__dirname, '../../webview/components/DependencyGraph.jsx'), 'utf8'
   );
   const stylesSrc = fs.readFileSync(
     path.join(__dirname, '../../webview/styles.css'), 'utf8'
@@ -86,13 +83,6 @@ suite('BlockingView inline dependency editing', () => {
       );
     });
 
-    test('critical path arrows are interactive', () => {
-      assert.ok(
-        criticalPathViewSrc.includes('blocking-view__critical-arrow--interactive'),
-        'CriticalPathView should have interactive class for arrows'
-      );
-    });
-
     test('graph arrows are interactive', () => {
       assert.ok(
         blockingGraphTabSrc.includes('blocking-view__arrow-down--interactive'),
@@ -100,17 +90,32 @@ suite('BlockingView inline dependency editing', () => {
       );
     });
 
-    test('critical tree structure exists in component', () => {
+    test('renders DependencyGraph tab content', () => {
       assert.ok(
-        criticalPathViewSrc.includes('blocking-view__critical-tree'),
-        'CriticalPathView should include critical tree class'
+        blockingViewSrc.includes('<DependencyGraph'),
+        'BlockingView should render DependencyGraph for the Graph tab'
       );
     });
 
-    test('critical actionable node class exists in component', () => {
+    test('DependencyGraph supports optional close button toggle', () => {
       assert.ok(
-        criticalPathViewSrc.includes('blocking-view__critical-node--actionable'),
-        'CriticalPathView should include actionable critical node class'
+        dependencyGraphSrc.includes('showCloseButton'),
+        'DependencyGraph should expose showCloseButton prop'
+      );
+    });
+
+    test('tabs include List, Hierarchy, and Graph labels', () => {
+      assert.ok(
+        blockingViewSrc.includes('>📋 List<'),
+        'BlockingView should label the list tab'
+      );
+      assert.ok(
+        blockingViewSrc.includes('>📐 Hierarchy<'),
+        'BlockingView should label the hierarchy tab'
+      );
+      assert.ok(
+        blockingViewSrc.includes('>🔀 Graph<'),
+        'BlockingView should label the graph tab'
       );
     });
 
@@ -122,17 +127,9 @@ suite('BlockingView inline dependency editing', () => {
     });
 
     test('has phase expand toggle control', () => {
-      const phaseToggleSources = `${blockingGraphTabSrc}\n${blockingParallelTabSrc}`;
       assert.ok(
-        phaseToggleSources.includes('blocking-view__phase-toggle'),
+        blockingGraphTabSrc.includes('blocking-view__phase-toggle'),
         'BlockingView should include phase toggle control'
-      );
-    });
-
-    test('critical tree node component exists', () => {
-      assert.ok(
-        criticalPathViewSrc.includes('CriticalTreeNode'),
-        'CriticalPathView should include CriticalTreeNode component'
       );
     });
 
@@ -254,22 +251,8 @@ suite('BlockingView inline dependency editing', () => {
         'CSS should define interactive arrow styles'
       );
       assert.ok(
-        stylesSrc.includes('.blocking-view__critical-arrow--interactive'),
-        'CSS should define interactive critical arrow styles'
-      );
-    });
-
-    test('defines critical tree styles', () => {
-      assert.ok(
-        stylesSrc.includes('.blocking-view__critical-tree'),
-        'CSS should define critical tree styles'
-      );
-    });
-
-    test('defines actionable critical node styles', () => {
-      assert.ok(
-        stylesSrc.includes('.blocking-view__critical-node--actionable'),
-        'CSS should define actionable critical node styles'
+        stylesSrc.includes('.dependency-graph__close-btn'),
+        'CSS should style the dependency graph close button'
       );
     });
 

@@ -17,10 +17,10 @@ const BlockingView = require('../../webview/components/BlockingView.jsx').defaul
 
 function createBlockingModel() {
   const issues = [
-    { id: 'A1', title: 'Root blocker', priority: 1, status: 'open' },
-    { id: 'B2', title: 'Mid blocker', priority: 1, status: 'open' },
-    { id: 'C3', title: 'Another blocker', priority: 1, status: 'open' },
-    { id: 'D4', title: 'Final item', priority: 1, status: 'open' }
+    { id: 'A1', title: 'Root blocker', priority: 1, status: 'open', issue_type: 'task' },
+    { id: 'B2', title: 'Mid blocker', priority: 1, status: 'open', issue_type: 'task' },
+    { id: 'C3', title: 'Another blocker', priority: 1, status: 'open', issue_type: 'task' },
+    { id: 'D4', title: 'Final item', priority: 1, status: 'open', issue_type: 'task' }
   ];
 
   return {
@@ -39,16 +39,26 @@ function createBlockingModel() {
   };
 }
 
-function switchToCriticalTab(container, window) {
-  const criticalTab = Array.from(container.querySelectorAll('.blocking-view__tab'))
-    .find((btn) => btn.textContent.includes('Critical'));
-  assert.ok(criticalTab, 'Critical tab button should exist');
+function createGraphData(model) {
+  return [{
+    Issues: model.issues.map((issue) => ({ ...issue })),
+    Dependencies: model.edges.map((edge) => ({
+      depends_on_id: edge.from,
+      issue_id: edge.to
+    }))
+  }];
+}
+
+function switchToGraphTab(container, window) {
+  const graphTab = Array.from(container.querySelectorAll('.blocking-view__tab'))
+    .find((btn) => btn.textContent.includes('Graph'));
+  assert.ok(graphTab, 'Graph tab button should exist');
   act(() => {
-    criticalTab.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    graphTab.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
   });
 }
 
-describe('BlockingView critical path edge menu', () => {
+describe('BlockingView dependency graph tab', () => {
   let dom;
   let container;
   let root;
@@ -82,63 +92,41 @@ describe('BlockingView critical path edge menu', () => {
 
   function renderBlockingView(overrides = {}) {
     const blockingModel = createBlockingModel();
+    const graphData = createGraphData(blockingModel);
     act(() => {
       root.render(
         React.createElement(BlockingView, {
           blockingModel,
-          onIssueClick: () => {},
+          graphData,
+          onIssueClick: overrides.onIssueClick || (() => {}),
           onClose: () => {},
           onDepAction: overrides.onDepAction || (() => {})
         })
       );
     });
-    switchToCriticalTab(container, window);
+    switchToGraphTab(container, window);
     return blockingModel;
   }
 
-  it('renders an arrow for every dependency in a single critical path', () => {
+  it('renders a dependency graph node for each issue', () => {
     const model = renderBlockingView();
-    const expectedEdges = model.criticalPaths[0].length - 1;
-    const arrows = container.querySelectorAll('.blocking-view__critical-arrow--interactive');
-    assert.strictEqual(arrows.length, expectedEdges, 'should show an arrow per dependency edge');
+    const nodes = container.querySelectorAll('.dependency-graph__node');
+    assert.strictEqual(nodes.length, model.issues.length, 'should show a node per issue');
   });
 
-  it('allows edge menu interactions within the critical path view', () => {
-    const onDepAction = sinon.spy();
-    renderBlockingView({ onDepAction });
-    const arrows = container.querySelectorAll('.blocking-view__critical-arrow--interactive');
-    assert.ok(arrows.length >= 1, 'should render at least one arrow');
-
-    const targetArrow = arrows[arrows.length - 1];
-    act(() => {
-      targetArrow.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-    });
-
-    let menu = container.querySelector('.blocking-view__edge-menu');
-    assert.ok(menu, 'edge menu should open after clicking an arrow');
-
-    const closeBtn = menu.querySelector('.blocking-view__edge-menu-close');
-    assert.ok(closeBtn, 'edge menu close button should exist');
-    act(() => {
-      closeBtn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-    });
-
-    menu = container.querySelector('.blocking-view__edge-menu');
-    assert.ok(!menu, 'edge menu should close after clicking the close button');
+  it('invokes onIssueClick when selecting a graph node', () => {
+    const onIssueClick = sinon.spy();
+    renderBlockingView({ onIssueClick });
+    const nodes = container.querySelectorAll('.dependency-graph__node');
+    assert.ok(nodes.length > 0, 'graph should render nodes');
 
     act(() => {
-      targetArrow.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-    });
-    const removeBtn = container.querySelector('.blocking-view__edge-menu-btn--remove');
-    assert.ok(removeBtn, 'remove link button should render inside the menu');
-    act(() => {
-      removeBtn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+      nodes[0].dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
     });
 
-    assert.strictEqual(onDepAction.callCount, 1, 'remove handler should trigger onDepAction');
-    const [action, fromId, toId] = onDepAction.firstCall.args;
-    assert.strictEqual(action, 'remove');
-    assert.ok(fromId);
-    assert.ok(toId);
+    assert.strictEqual(onIssueClick.callCount, 1, 'node clicks should trigger callback');
+    const [issue] = onIssueClick.firstCall.args;
+    assert.ok(issue);
+    assert.strictEqual(issue.id, 'A1');
   });
 });
