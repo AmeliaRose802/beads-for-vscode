@@ -86,25 +86,30 @@ function buildParentChain(issueId, edges, issueMap) {
  * @param {string} issueId - Current issue id.
  * @param {Array} edges - Normalized dependency edges.
  * @param {Record<string, object>} issueMap - Issue lookup table.
- * @param {{visited: Set<string>, relationType: string | null, direction: string | null}} context - Traversal context.
+ * @param {{visited: Set<string>, ancestors: Set<string>, relationType: string | null, direction: string | null, sourceId: string | null}} context - Traversal context.
  * @returns {object} Tree node representing this issue and its relations.
  */
-function buildDependencyTree(issueId, edges, issueMap, context = { visited: new Set(), relationType: null, direction: null }) {
+function buildDependencyTree(issueId, edges, issueMap, context = { visited: new Set(), ancestors: new Set(), relationType: null, direction: null, sourceId: null }) {
   const issue = issueMap[issueId] || createFallbackIssue(issueId);
   const alreadyVisited = context.visited.has(issueId);
+  const onAncestorPath = context.ancestors.has(issueId);
 
   // Categorize relationship types
   const nonBlockingRelationTypes = new Set(['parent-child', 'related']);
   const blockingRelationTypes = new Set(['blocks', 'blocked-by']);
 
-  // A back-reference is when we revisit a node via a non-blocking relationship.
-  // This is expected and normal for structural (parent-child) and informational (related) links.
-  const isBackReference = alreadyVisited && nonBlockingRelationTypes.has(context.relationType);
-  
-  // A cycle is when we revisit a node via a blocking relationship (blocks/blocked-by).
-  // This indicates a true dependency cycle that prevents work from progressing.
-  // Important: Only blocking relationships can form true cycles.
-  const isCycle = alreadyVisited && blockingRelationTypes.has(context.relationType);
+  // A back-reference is when we revisit a node via a non-blocking relationship,
+  // OR revisit a node via a blocking relationship that is NOT on the current ancestor
+  // path (DAG diamond pattern — same node reachable via multiple paths, no deadlock).
+  const isBackReference = alreadyVisited && (
+    nonBlockingRelationTypes.has(context.relationType) ||
+    (blockingRelationTypes.has(context.relationType) && !onAncestorPath)
+  );
+
+  // A true cycle is when we revisit a node that is on the current ancestor path
+  // via a blocking relationship. This creates a circular dependency (deadlock).
+  // DAG diamonds (node visited in a different branch) are NOT cycles.
+  const isCycle = onAncestorPath && blockingRelationTypes.has(context.relationType);
 
   const node = {
     id: issue.id,
@@ -125,6 +130,8 @@ function buildDependencyTree(issueId, edges, issueMap, context = { visited: new 
 
   const nextVisited = new Set(context.visited);
   nextVisited.add(issueId);
+  const nextAncestors = new Set(context.ancestors);
+  nextAncestors.add(issueId);
 
   const outgoing = edges.filter(edge => edge.issueId === issueId);
   const incoming = edges.filter(edge => edge.dependsOnId === issueId);
@@ -136,19 +143,25 @@ function buildDependencyTree(issueId, edges, issueMap, context = { visited: new 
     children.push(
       buildDependencyTree(edge.dependsOnId, edges, issueMap, {
         visited: nextVisited,
+        ancestors: nextAncestors,
         relationType: edge.type,
-        direction
+        direction,
+        sourceId: issueId
       })
     );
   });
 
   incoming.forEach(edge => {
+    // Skip reverse traversal of edges already followed in the outgoing direction
+    if (edge.issueId === context.sourceId) return;
     const direction = edge.type === 'parent-child' ? 'incoming' : 'outgoing';
     children.push(
       buildDependencyTree(edge.issueId, edges, issueMap, {
         visited: nextVisited,
+        ancestors: nextAncestors,
         relationType: edge.type,
-        direction
+        direction,
+        sourceId: issueId
       })
     );
   });

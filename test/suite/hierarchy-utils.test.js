@@ -134,6 +134,73 @@ suite('hierarchy-utils', () => {
     assert.strictEqual(loopNode.children[0].isCycle, false, 'Relates-to back-reference should NOT be cycle');
   });
 
+  test('DAG diamond pattern via blocking deps is NOT marked as cycle', () => {
+    // Scenario from bug: djckh is child of zs93k AND blocks awfmi
+    // When viewing zs93k's hierarchy: zs93k → djckh (parent-child) → awfmi (blocks)
+    // awfmi should NOT show djckh as a cycle when traversing incoming edges
+    const diamondComponents = [
+      {
+        Issues: [
+          { id: 'zs93k', title: 'Parent', status: 'open', priority: 1, issue_type: 'epic' },
+          { id: 'djckh', title: 'Shared', status: 'open', priority: 1, issue_type: 'task' },
+          { id: 'awfmi', title: 'Blocked', status: 'open', priority: 1, issue_type: 'task' }
+        ],
+        Dependencies: [
+          { issue_id: 'djckh', depends_on_id: 'zs93k', type: 'parent-child' },
+          { issue_id: 'djckh', depends_on_id: 'awfmi', type: 'blocks' }
+        ]
+      }
+    ];
+
+    const model = buildHierarchyModel('zs93k', diamondComponents);
+    // zs93k's tree should have djckh as child
+    const djckhNode = model.tree.children.find(n => n.id === 'djckh');
+    assert.ok(djckhNode, 'djckh should appear as child of zs93k');
+
+    // djckh should have awfmi as a child (blocks edge)
+    const awfmiNode = djckhNode.children.find(n => n.id === 'awfmi');
+    assert.ok(awfmiNode, 'awfmi should appear under djckh');
+
+    // awfmi should NOT show djckh as a cycle (it's the same blocks edge traversed back)
+    const djckhBackRef = awfmiNode.children.find(n => n.id === 'djckh');
+    if (djckhBackRef) {
+      assert.strictEqual(djckhBackRef.isCycle, false,
+        'djckh revisited from awfmi should NOT be a cycle (same edge, not circular dependency)');
+    }
+    // The key assertion: no children of awfmi should be marked as a cycle
+    (awfmiNode.children || []).forEach(child => {
+      assert.strictEqual(child.isCycle, false,
+        `${child.id} under awfmi should not be marked as cycle`);
+    });
+  });
+
+  test('true blocking cycle A->B->C->A is still detected', () => {
+    const cycleComponents = [
+      {
+        Issues: [
+          { id: 'a', title: 'A', status: 'open', priority: 1, issue_type: 'task' },
+          { id: 'b', title: 'B', status: 'open', priority: 1, issue_type: 'task' },
+          { id: 'c', title: 'C', status: 'open', priority: 1, issue_type: 'task' }
+        ],
+        Dependencies: [
+          { issue_id: 'a', depends_on_id: 'b', type: 'blocks' },
+          { issue_id: 'b', depends_on_id: 'c', type: 'blocks' },
+          { issue_id: 'c', depends_on_id: 'a', type: 'blocks' }
+        ]
+      }
+    ];
+
+    const model = buildHierarchyModel('a', cycleComponents);
+    const bNode = model.tree.children.find(n => n.id === 'b');
+    assert.ok(bNode, 'B should appear as child of A');
+    const cNode = bNode.children.find(n => n.id === 'c');
+    assert.ok(cNode, 'C should appear as child of B');
+    const cycleBack = cNode.children.find(n => n.id === 'a');
+    assert.ok(cycleBack, 'A should appear as cycle back-reference');
+    assert.strictEqual(cycleBack.isCycle, true, 'A->B->C->A should be detected as a true cycle');
+    assert.strictEqual(cycleBack.isBackReference, false, 'True cycle should not be a back-reference');
+  });
+
   test('normalizes "parent" type to "parent-child" in edge list', () => {
     const parentComponents = [
       {
