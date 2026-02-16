@@ -5,6 +5,12 @@
  * @param {object} ctx - Context callbacks and helpers.
  */
 function processMessage(message, ctx) {
+  /** Flash the success indicator for 3 seconds. */
+  const flashSuccess = () => {
+    ctx.setIsSuccess(true);
+    setTimeout(() => ctx.setIsSuccess(false), 3000);
+  };
+
   switch (message.type) {
     case 'commandResultJSON': {
       const parsed = ctx.parseListJSON(message.output, message.command, message.graphData);
@@ -86,8 +92,7 @@ function processMessage(message, ctx) {
           suggestionMessage += ` (${linkCount} relationship${linkCount > 1 ? 's' : ''} suggested)`;
         }
         ctx.setOutput(suggestionMessage);
-        ctx.setIsSuccess(true);
-        setTimeout(() => ctx.setIsSuccess(false), 3000);
+        flashSuccess();
       }
       if (message.error) {
         ctx.setOutput(`AI Suggestion Error: ${message.error}`);
@@ -160,8 +165,7 @@ function processMessage(message, ctx) {
       } else if (message.state === 'completed' && ctx.setOutput) {
         ctx.setOutput(`✅ PokePoke completed for ${message.itemId}`);
         if (ctx.setIsSuccess) {
-          ctx.setIsSuccess(true);
-          setTimeout(() => ctx.setIsSuccess(false), 3000);
+          flashSuccess();
         }
       }
       break;
@@ -177,16 +181,14 @@ function processMessage(message, ctx) {
         ctx.setIsError(true);
       } else if (message.success && ctx.setOutput) {
         ctx.setOutput(`🤖 PokePoke launched for ${message.itemId}`);
-        ctx.setIsSuccess(true);
-        setTimeout(() => ctx.setIsSuccess(false), 3000);
+        flashSuccess();
       }
       break;
     case 'pokepokeStopResult':
       if (ctx.setOutput) {
         if (message.success) {
           ctx.setOutput(`🛑 PokePoke stopping for ${message.itemId}`);
-          ctx.setIsSuccess(true);
-          setTimeout(() => ctx.setIsSuccess(false), 3000);
+          flashSuccess();
         } else {
           ctx.setOutput(`❌ ${message.error || 'Failed to stop PokePoke'}`);
           ctx.setIsError(true);
