@@ -119,7 +119,9 @@ function buildParentLookup(graphComponents) {
 
   graphComponents.forEach(component => {
     (component?.Dependencies || []).forEach(dep => {
-      const type = getField(dep, DEP_TYPE_KEYS);
+      const rawType = getField(dep, DEP_TYPE_KEYS);
+      // Normalize: bd outputs 'parent' but UI uses 'parent-child'
+      const type = rawType === 'parent' ? 'parent-child' : rawType;
       if (type !== 'parent-child') {
         return;
       }

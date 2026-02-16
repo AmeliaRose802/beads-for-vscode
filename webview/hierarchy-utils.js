@@ -37,7 +37,9 @@ function buildEdgeList(components) {
       const issueId = getField(dep, DEP_ISSUE_KEYS);
       const dependsOnId = getField(dep, DEP_TARGET_KEYS);
       const rawType = getField(dep, DEP_TYPE_KEYS) || 'related';
-      const type = rawType === 'relates-to' ? 'related' : rawType;
+      // Normalize: bd outputs 'parent' but UI uses 'parent-child'
+      const type = rawType === 'parent' ? 'parent-child'
+        : rawType === 'relates-to' ? 'related' : rawType;
 
       if (issueId && dependsOnId) {
         edges.push({ issueId, dependsOnId, type });

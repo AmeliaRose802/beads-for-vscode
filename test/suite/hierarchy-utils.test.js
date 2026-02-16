@@ -134,6 +134,29 @@ suite('hierarchy-utils', () => {
     assert.strictEqual(loopNode.children[0].isCycle, false, 'Relates-to back-reference should NOT be cycle');
   });
 
+  test('normalizes "parent" type to "parent-child" in edge list', () => {
+    const parentComponents = [
+      {
+        Issues: [
+          { id: 'epic', title: 'Epic', status: 'open', priority: 1, issue_type: 'epic' },
+          { id: 'task-a', title: 'Task A', status: 'open', priority: 2, issue_type: 'task' },
+          { id: 'task-b', title: 'Task B', status: 'open', priority: 2, issue_type: 'task' }
+        ],
+        Dependencies: [
+          { issue_id: 'task-a', depends_on_id: 'epic', type: 'parent' },
+          { issue_id: 'task-b', depends_on_id: 'epic', type: 'parent' }
+        ]
+      }
+    ];
+
+    const model = buildHierarchyModel('epic', parentComponents);
+    const childIds = model.tree.children.map(c => c.id).sort();
+    assert.deepStrictEqual(childIds, ['task-a', 'task-b'], 'Both children should appear');
+    model.tree.children.forEach(child => {
+      assert.strictEqual(child.relationType, 'parent-child', '"parent" should be normalized to "parent-child"');
+    });
+  });
+
   suite('filterHierarchyTree', () => {
     test('returns all children when all types enabled', () => {
       const model = buildHierarchyModel('child', components);

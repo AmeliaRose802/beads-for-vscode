@@ -96,6 +96,32 @@ suite('Parse Utils Tests', () => {
       assert.strictEqual(result.hierarchy[0].children[0].issue.id, 'child-1');
     });
 
+    test('Should build hierarchy when graph uses "parent" type (bd native format)', () => {
+      const json = JSON.stringify([
+        { id: 'epic-1', title: 'Epic', issue_type: 'epic', priority: 1, status: 'open' },
+        { id: 'child-a', title: 'Child A', issue_type: 'task', priority: 2, status: 'open' },
+        { id: 'child-b', title: 'Child B', issue_type: 'task', priority: 2, status: 'open' },
+        { id: 'child-c', title: 'Child C', issue_type: 'task', priority: 2, status: 'open' }
+      ]);
+
+      const graph = JSON.stringify([
+        {
+          Dependencies: [
+            { issue_id: 'child-a', depends_on_id: 'epic-1', type: 'parent' },
+            { issue_id: 'child-b', depends_on_id: 'epic-1', type: 'parent' },
+            { issue_id: 'child-c', depends_on_id: 'epic-1', type: 'parent' }
+          ]
+        }
+      ]);
+
+      const result = parseListJSON(json, 'list', graph);
+      assert.strictEqual(result.hierarchy.length, 1, 'Should have 1 root (epic)');
+      assert.strictEqual(result.hierarchy[0].issue.id, 'epic-1');
+      assert.strictEqual(result.hierarchy[0].children.length, 3, 'All 3 children should appear');
+      const childIds = result.hierarchy[0].children.map(c => c.issue.id).sort();
+      assert.deepStrictEqual(childIds, ['child-a', 'child-b', 'child-c']);
+    });
+
     test('Should mark issues as blocked when they have open blocking dependencies', () => {
       const json = JSON.stringify([
         { id: 'blocker-1', title: 'Blocker', issue_type: 'task', priority: 1, status: 'open' },
