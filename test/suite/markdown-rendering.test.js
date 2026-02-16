@@ -169,6 +169,13 @@ suite('renderMarkdown', () => {
     assert.ok(!html.includes('href="vbscript:'), 'should not contain vbscript: href');
   });
 
+  test('blocks javascript: URLs with null byte obfuscation', () => {
+    const html = renderMarkdown('[xss](javascript\x00:alert(1))');
+    assert.ok(!html.includes('href='), 'should strip null bytes and block javascript:');
+    assert.ok(!html.includes('<a '), 'should not render an anchor tag');
+    assert.ok(html.includes('xss'), 'should still show link text');
+  });
+
   test('allows http and https URLs in links', () => {
     const html = renderMarkdown('[safe](https://example.com)');
     assert.ok(html.includes('href="https://example.com"'));
