@@ -3,7 +3,6 @@ import OutputDisplay from './components/OutputDisplay';
 import CreatePanel from './components/CreatePanel';
 import RelationshipPanel from './components/RelationshipPanel';
 import EditPanel from './components/EditPanel';
-import DependencyGraph from './components/DependencyGraph';
 import HierarchyView from './components/HierarchyView';
 import BlockingView from './components/BlockingView';
 import CommandProgress from './components/CommandProgress';
@@ -26,9 +25,9 @@ const App = () => {
   const [showRelationshipPanel, setShowRelationshipPanel] = useState(false);
   const [showCreatePanel, setShowCreatePanel] = useState(false);
   const [showEditPanel, setShowEditPanel] = useState(false);
-  const [showDependencyGraph, setShowDependencyGraph] = useState(false);
   const [showHierarchyView, setShowHierarchyView] = useState(false);
   const [showBlockingView, setShowBlockingView] = useState(false);
+  const [activeBlockingTab, setActiveBlockingTab] = useState('list');
   const [blockingModel, setBlockingModel] = useState(null);
   const [graphData, setGraphData] = useState(null);
   const [hierarchyModel, setHierarchyModel] = useState(null);
@@ -97,7 +96,6 @@ const App = () => {
     setShowEditPanel,
     setShowHierarchyView,
     setShowBlockingView,
-    setShowDependencyGraph,
     setHierarchyModel,
     setBlockingModel,
     setCreateTitle,
@@ -149,7 +147,6 @@ const App = () => {
         setIssueDetails,
         setLoadingDetails,
         setGraphData,
-        setShowDependencyGraph,
         setHierarchyModel,
         setShowHierarchyView,
         setBlockingModel,
@@ -291,6 +288,11 @@ const App = () => {
     setTargetBead('');
   };
 
+  const handleOpenDependencies = (tab = 'list') => {
+    setActiveBlockingTab(tab);
+    requestBlockingData();
+  };
+
   const handleUpdateIssue = () => {
     const command = buildUpdateCommand({
       issueId: editIssueId, title: editTitle, type: editType,
@@ -344,8 +346,8 @@ const App = () => {
             <button className="action-btn" onClick={() => runCommand('dep cycles')} title="Detect blocking dependency cycles">🔄 Cycles</button>
             <button className="action-btn" onClick={() => { clearOutput(); closeAllPanels(); setShowCreatePanel(!showCreatePanel); }} title="Create a new issue">➕ Create</button>
             <button className="action-btn" onClick={() => { clearOutput(); closeAllPanels(); setShowRelationshipPanel(!showRelationshipPanel); }} title="Manage dependencies between issues">🔗 Add Links</button>
-            <button className="action-btn" onClick={() => requestGraphData('graph')} title="Visualize dependency relationships as a graph">🔀 Graph</button>
-            <button className="action-btn" onClick={() => requestBlockingData()} title="View dependency chains and completion order">🔗 Dependencies</button>
+            <button className="action-btn" onClick={() => handleOpenDependencies('graph')} title="Visualize dependency relationships as a graph within Dependencies">🔀 Graph</button>
+            <button className="action-btn" onClick={() => handleOpenDependencies('list')} title="View dependency chains and completion order">🔗 Dependencies</button>
           </div>
         </div>
 
@@ -420,16 +422,6 @@ const App = () => {
           />
         )}
 
-        {showDependencyGraph && (
-          <div className="section">
-            <DependencyGraph
-              graphData={graphData}
-              onIssueClick={(issue) => handleShowIssueInline(issue.id)}
-              onClose={() => setShowDependencyGraph(false)}
-            />
-          </div>
-        )}
-
         {showHierarchyView && (
           <div className="section">
             <HierarchyView
@@ -447,6 +439,9 @@ const App = () => {
           <div className="section">
             <BlockingView
               blockingModel={blockingModel}
+              graphData={graphData}
+              activeTab={activeBlockingTab}
+              onTabChange={setActiveBlockingTab}
               onIssueClick={(issue) => handleShowIssueInline(issue.id)}
               onClose={() => setShowBlockingView(false)}
               onDepAction={(action, fromId, toId) => {

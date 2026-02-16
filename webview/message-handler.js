@@ -117,9 +117,6 @@ function processMessage(message, ctx) {
 
       if (message.data) {
         ctx.setGraphData(message.data);
-        if (purpose === 'graph') {
-          ctx.setShowDependencyGraph(true);
-        }
         if (purpose === 'hierarchy' && targetId) {
           try {
             const model = ctx.buildHierarchyModel(targetId, message.data);

@@ -36,7 +36,6 @@ function createAppActions(ctx) {
     setCreateRelatedId,
     setCreateType,
     setCreatePriority,
-    setShowDependencyGraph,
     updateGraphPurpose,
     vscode,
     outputRef,
@@ -51,7 +50,6 @@ function createAppActions(ctx) {
     setShowRelationshipPanel(false);
     setShowCreatePanel(false);
     setShowEditPanel(false);
-    setShowDependencyGraph(false);
     setShowHierarchyView(false);
     setShowBlockingView(false);
   };

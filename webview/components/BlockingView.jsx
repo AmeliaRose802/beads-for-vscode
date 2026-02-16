@@ -1,9 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import BlockingPlanView from './BlockingPlanView';
 import BlockingOrderTab from './BlockingOrderTab';
-import BlockingParallelTab from './BlockingParallelTab';
 import BlockingGraphTab from './BlockingGraphTab';
-import CriticalPathView from './CriticalPathView';
+import DependencyGraph from './DependencyGraph';
 import LabelDropdown from './LabelDropdown';
 const { formatIssuesForClipboard, buildPhasedClipboardText } = require('../clipboard-utils');
 const { isClosedStatus } = require('../field-utils');
@@ -44,8 +42,29 @@ async function copyTextToClipboard(text) {
 }
 
 /** BlockingView - Visualizes blocking relationships and suggests completion order. */
-const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => {
-  const [activeTab, setActiveTab] = useState('graph');
+const BlockingView = ({
+  blockingModel,
+  graphData = null,
+  onIssueClick,
+  onClose,
+  onDepAction,
+  activeTab: controlledTab,
+  onTabChange
+}) => {
+  const [internalTab, setInternalTab] = useState(controlledTab || 'list');
+  useEffect(() => {
+    if (typeof controlledTab === 'string') {
+      setInternalTab(controlledTab);
+    }
+  }, [controlledTab]);
+  const activeTab = controlledTab || internalTab;
+  const handleTabChange = (tab) => {
+    if (onTabChange) {
+      onTabChange(tab);
+    } else {
+      setInternalTab(tab);
+    }
+  };
   const [filterPriority, setFilterPriority] = useState('');
   const [filterAssignee, setFilterAssignee] = useState('');
   const [filterLabel, setFilterLabel] = useState('');
@@ -93,7 +112,7 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
       </div>
     );
   }
-  const { issues, edges, completionOrder, criticalPath, criticalPaths, readyItems, parallelGroups, fanOutCounts, blocksCount, blockedByCount } = blockingModel;
+  const { issues, edges, completionOrder, criticalPaths, readyItems, parallelGroups, blocksCount, blockedByCount } = blockingModel;
   const availableLabels = useMemo(() => {
     if (!Array.isArray(issues)) return [];
     const labelSet = new Set();
@@ -126,10 +145,6 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
   const filterList = (list) => filteredIds ? list.filter(i => filteredIds.has(i.id)) : list;
   const filteredIssues = filterList(issues);
   const filteredCompletionOrder = filterList(completionOrder);
-  const filteredCriticalPath = filterList(criticalPath);
-  const filteredCriticalPaths = (filteredIds && criticalPaths)
-    ? criticalPaths.map(path => path.filter(i => filteredIds.has(i.id))).filter(path => path.length > 0)
-    : (criticalPaths || []);
   const filteredReadyItems = filterList(readyItems);
   const normalizedParallelGroups = Array.isArray(parallelGroups) ? parallelGroups : [];
   const filteredParallelGroups = (filteredIds
@@ -151,21 +166,6 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
     }
   };
   const copyOrderToClipboard = () => copyIssuesToClipboard(filteredCompletionOrder, 'order');
-  const copyParallelGroupToClipboard = (group, index) => copyIssuesToClipboard(group, `phase-${index}`, `Phase ${index + 1}`);
-  const copyAllParallelGroups = async () => {
-    const text = buildPhasedClipboardText(filteredParallelGroups);
-    if (!text.trim()) {
-      showCopyFeedback('parallel-all', 'Nothing to copy', true);
-      return;
-    }
-    try {
-      await copyTextToClipboard(text);
-      showCopyFeedback('parallel-all', 'Copied!');
-    } catch (error) {
-      console.error('BlockingView clipboard copy failed', error);
-      showCopyFeedback('parallel-all', 'Copy failed', true);
-    }
-  };
   const renderCopyFeedback = (target) => {
     if (!copyFeedback || copyFeedback.target !== target) {
       return null;
@@ -372,18 +372,6 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
       </div>
     </div>
   );
-  const renderCriticalTab = () => {
-    return (
-      <CriticalPathView
-        criticalPaths={filteredCriticalPaths}
-        fanOutCounts={fanOutCounts}
-        onNodeClick={handleNodeClick}
-        onEdgeClick={handleEdgeClick}
-        renderEdgeMenu={renderEdgeMenu}
-        isClosedStatus={isIssueClosed}
-      />
-    );
-  };
   return (
     <div className="blocking-view">
       <div className="blocking-view__header">
@@ -400,29 +388,31 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
 
       <div className="blocking-view__tabs">
         <button
+          className={`blocking-view__tab ${activeTab === 'list' ? 'blocking-view__tab--active' : ''}`}
+          onClick={() => handleTabChange('list')}
+        >📋 List</button>
+        <button
+          className={`blocking-view__tab ${activeTab === 'hierarchy' ? 'blocking-view__tab--active' : ''}`}
+          onClick={() => handleTabChange('hierarchy')}
+        >📐 Hierarchy</button>
+        <button
           className={`blocking-view__tab ${activeTab === 'graph' ? 'blocking-view__tab--active' : ''}`}
-          onClick={() => setActiveTab('graph')}
-        >📊 Graph</button>
-        <button
-          className={`blocking-view__tab ${activeTab === 'order' ? 'blocking-view__tab--active' : ''}`}
-          onClick={() => setActiveTab('order')}
-        >📋 Order</button>
-        <button
-          className={`blocking-view__tab ${activeTab === 'critical' ? 'blocking-view__tab--active' : ''}`}
-          onClick={() => setActiveTab('critical')}
-        >🔥 Critical</button>
-        <button
-          className={`blocking-view__tab ${activeTab === 'parallel' ? 'blocking-view__tab--active' : ''}`}
-          onClick={() => setActiveTab('parallel')}
-        >⚡ Parallel</button>
-        <button
-          className={`blocking-view__tab ${activeTab === 'plan' ? 'blocking-view__tab--active' : ''}`}
-          onClick={() => setActiveTab('plan')}
-        >Plan</button>
+          onClick={() => handleTabChange('graph')}
+        >🔀 Graph</button>
       </div>
 
       <div className="blocking-view__content">
-        {activeTab === 'graph' && (
+        {activeTab === 'list' && (
+          <BlockingOrderTab
+            issues={filteredCompletionOrder}
+            criticalPathIds={criticalPathIds}
+            readyIds={readyIds}
+            onIssueClick={handleNodeClick}
+            onCopy={copyOrderToClipboard}
+            renderCopyFeedback={renderCopyFeedback}
+          />
+        )}
+        {activeTab === 'hierarchy' && (
           <BlockingGraphTab
             parallelGroups={filteredParallelGroups}
             criticalPathIds={criticalPathIds}
@@ -437,36 +427,11 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
             blockedByCount={blockedByCount}
           />
         )}
-        {activeTab === 'order' && (
-          <BlockingOrderTab
-            issues={filteredCompletionOrder}
-            criticalPathIds={criticalPathIds}
-            readyIds={readyIds}
-            onIssueClick={handleNodeClick}
-            onCopy={copyOrderToClipboard}
-            renderCopyFeedback={renderCopyFeedback}
-          />
-        )}
-        {activeTab === 'critical' && renderCriticalTab()}
-        {activeTab === 'parallel' && (
-          <BlockingParallelTab
-            parallelGroups={filteredParallelGroups}
-            readyIds={readyIds}
-            onIssueClick={handleNodeClick}
-            onCopyGroup={copyParallelGroupToClipboard}
-            onCopyAll={copyAllParallelGroups}
-            renderCopyFeedback={renderCopyFeedback}
-            getPhasePreview={getPhasePreview}
-            onTogglePhase={togglePhaseExpanded}
-          />
-        )}
-        {activeTab === 'plan' && (
-          <BlockingPlanView
-            issues={filteredIssues}
-            edges={edges}
-            completionOrder={filteredCompletionOrder}
-            readyIds={readyIds}
-            onIssueClick={handleNodeClick}
+        {activeTab === 'graph' && (
+          <DependencyGraph
+            graphData={graphData}
+            onIssueClick={onIssueClick}
+            showCloseButton={false}
           />
         )}
       </div>

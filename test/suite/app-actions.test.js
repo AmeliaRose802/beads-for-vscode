@@ -17,7 +17,6 @@ suite('app-actions', () => {
       setShowEditPanel: sinon.stub(),
       setShowHierarchyView: sinon.stub(),
       setShowBlockingView: sinon.stub(),
-      setShowDependencyGraph: sinon.stub(),
       setHierarchyModel: sinon.stub(),
       setBlockingModel: sinon.stub(),
       setCreateTitle: sinon.stub(),
@@ -87,7 +86,6 @@ suite('app-actions', () => {
       assert.strictEqual(stubs.setShowRelationshipPanel.calledWith(false), true);
       assert.strictEqual(stubs.setShowCreatePanel.calledWith(false), true);
       assert.strictEqual(stubs.setShowEditPanel.calledWith(false), true);
-      assert.strictEqual(stubs.setShowDependencyGraph.calledWith(false), true);
       assert.strictEqual(stubs.setShowHierarchyView.calledWith(false), true);
       assert.strictEqual(stubs.setShowBlockingView.calledWith(false), true);
     });
