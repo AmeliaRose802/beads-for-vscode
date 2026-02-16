@@ -260,14 +260,20 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
       return null;
     }
     return (
-      <div className="blocking-view__edge-menu">
+      <div
+        className="blocking-view__edge-menu"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="blocking-view__edge-menu-header">
           <span className="blocking-view__edge-menu-label">
             {fromId} → {toId}
           </span>
           <button
             className="blocking-view__edge-menu-close"
-            onClick={closeEdgeMenu}
+            onClick={(e) => {
+              e.stopPropagation();
+              closeEdgeMenu();
+            }}
           >✕</button>
         </div>
         <div className="blocking-view__edge-menu-actions">
