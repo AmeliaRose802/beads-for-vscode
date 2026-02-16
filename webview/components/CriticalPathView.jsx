@@ -8,59 +8,40 @@ const { getStatusIcon } = require('../field-utils');
  */
 function buildCriticalPathTree(criticalPaths) {
   if (!criticalPaths || criticalPaths.length === 0) return [];
-  if (criticalPaths.length === 1) {
-    // Single path - convert to linear tree
-    return criticalPaths[0].map((issue, idx) => ({
-      issue,
-      children: idx < criticalPaths[0].length - 1 ? [{ issue: criticalPaths[0][idx + 1], children: [] }] : []
-    })).slice(0, 1); // Return only root
-  }
 
-  // Build adjacency list from all paths
   const adjacency = new Map(); // Maps issue.id -> Set of child issue.ids
   const issueById = new Map();
-  const allIds = new Set();
+  const hasIncomingEdge = new Set();
 
   criticalPaths.forEach(path => {
     path.forEach((issue, idx) => {
       issueById.set(issue.id, issue);
-      allIds.add(issue.id);
-      
       if (!adjacency.has(issue.id)) {
         adjacency.set(issue.id, new Set());
       }
-      
+
       if (idx < path.length - 1) {
         const nextIssue = path[idx + 1];
         adjacency.get(issue.id).add(nextIssue.id);
+        hasIncomingEdge.add(nextIssue.id);
       }
     });
   });
 
-  // Find root nodes (nodes with no incoming edges in the critical paths)
-  const hasIncomingEdge = new Set();
-  adjacency.forEach(children => {
-    children.forEach(childId => hasIncomingEdge.add(childId));
-  });
-  const rootIds = Array.from(allIds).filter(id => !hasIncomingEdge.has(id));
+  const allIds = Array.from(issueById.keys());
+  const rootIds = allIds.filter(id => !hasIncomingEdge.has(id));
+  const roots = rootIds.length > 0 ? rootIds : (allIds.length ? [allIds[0]] : []);
 
-  // Build tree recursively
   function buildTree(nodeId, visited = new Set()) {
     if (visited.has(nodeId)) {
-      // Cycle detection - return reference node
       return { issue: issueById.get(nodeId), children: [], isCycleRef: true };
     }
 
     const newVisited = new Set(visited);
     newVisited.add(nodeId);
 
-    const children = [];
-    const childIds = adjacency.get(nodeId);
-    if (childIds && childIds.size > 0) {
-      childIds.forEach(childId => {
-        children.push(buildTree(childId, newVisited));
-      });
-    }
+    const childIds = adjacency.get(nodeId) || new Set();
+    const children = Array.from(childIds).map(childId => buildTree(childId, newVisited));
 
     return {
       issue: issueById.get(nodeId),
@@ -68,7 +49,7 @@ function buildCriticalPathTree(criticalPaths) {
     };
   }
 
-  return rootIds.map(rootId => buildTree(rootId));
+  return roots.map(rootId => buildTree(rootId));
 }
 
 /**
