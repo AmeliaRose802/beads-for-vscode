@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { getAISuggestions } = require('./ai-suggestions');
 const { PokePokeManager } = require('./pokepoke-manager');
+const { getBeadsEnv, detectBeadsBackend } = require('./beads-backend');
 
 /**
  * Allowed bd subcommands. Commands from the webview must start with one of
@@ -58,9 +59,11 @@ function activate(context) {
   const workspaceFolders = vscode.workspace.workspaceFolders;
   if (workspaceFolders) {
     const workspacePath = workspaceFolders[0].uri.fsPath;
-    const beadsDbPath = path.join(workspacePath, '.beads', 'beads.db');
+    // Avoid assuming SQLite; beads v0.50+ defaults to Dolt.
+    // Detect backend/layout from `.beads/metadata.json` (with safe fallbacks).
+    const backendInfo = detectBeadsBackend(workspacePath);
 
-    if (!fs.existsSync(beadsDbPath)) {
+    if (backendInfo.backend === 'unknown') {
       // Initialize bd quietly
       execFile('bd', ['init', '--quiet'], { cwd: workspacePath }, (error, _stdout, _stderr) => {
         if (error) {
@@ -69,10 +72,8 @@ function activate(context) {
       });
     }
   }
-  
   // Register the webview provider for the sidebar
   const provider = new BeadsViewProvider(context.extensionUri);
-  
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider('beadsMainView', provider)
   );
@@ -349,10 +350,12 @@ class BeadsViewProvider {
       // Parse command into arguments array, respecting quoted strings
       const args = parseCommandArgs(command);
       
-      // Let beads auto-detect database location (SQLite or Dolt)
-      // BEADS_DB override removed as of beads v0.50+ to support Dolt
-      const env = { 
-        ...process.env
+      const beadsEnv = getBeadsEnv(cwd);
+
+      // Prefer BEADS_DIR and only set BEADS_DB for legacy SQLite metadata.
+      const env = {
+        ...process.env,
+        ...beadsEnv.env
       };
       
       execFile(bdCommand, args, {

@@ -1,6 +1,6 @@
 const child_process = require('child_process');
-const path = require('path');
 const EventEmitter = require('events');
+const { getBeadsEnv } = require('./beads-backend');
 
 /**
  * Possible states for a PokePoke process instance.
@@ -142,11 +142,12 @@ class PokePokeManager extends EventEmitter {
     this._instances.set(itemId, instance);
 
     try {
+      const beadsEnv = getBeadsEnv(this._workspacePath);
       const proc = child_process.spawn(this._pythonPath, args, {
         cwd: this._workspacePath,
         env: {
           ...process.env,
-          BEADS_DB: path.join(this._workspacePath, '.beads', 'beads.db'),
+          ...beadsEnv.env,
           POKEPOKE_ITEM_ID: itemId
         },
         stdio: ['ignore', 'pipe', 'pipe']
