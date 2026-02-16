@@ -17,6 +17,9 @@ const EventEmitter = require('events');
  * @property {string[]} logs - Captured log lines
  * @property {number} startTime - Timestamp when started
  * @property {boolean} isTree - Whether this is a tree assignment
+ * @property {string} [lastLogLine] - Most recent log line
+ * @property {string} [lastErrorLine] - Most recent stderr/error line
+ * @property {string|null} [failureReason] - Cached failure reason
  */
 
 /**
@@ -130,7 +133,10 @@ class PokePokeManager extends EventEmitter {
       logs: [],
       startTime: Date.now(),
       isTree,
-      outputChannel: null
+      outputChannel: null,
+      lastLogLine: '',
+      lastErrorLine: '',
+      failureReason: null
     };
 
     this._instances.set(itemId, instance);
@@ -171,8 +177,13 @@ class PokePokeManager extends EventEmitter {
         const inst = this._instances.get(itemId);
         if (inst) {
           inst.state = code === 0 ? 'completed' : 'failed';
+          if (inst.state === 'failed') {
+            inst.failureReason = this._buildFailureReason(inst, code);
+          } else {
+            inst.failureReason = null;
+          }
           inst.process = null;
-          this.emit('stateChange', { itemId, state: inst.state, code });
+          this.emit('stateChange', { itemId, state: inst.state, code, error: inst.failureReason || undefined });
         }
       });
 
@@ -181,8 +192,9 @@ class PokePokeManager extends EventEmitter {
         if (inst) {
           inst.state = 'failed';
           inst.process = null;
+          inst.failureReason = err.message;
           this._appendLog(itemId, `[error] ${err.message}`);
-          this.emit('stateChange', { itemId, state: 'failed', error: err.message });
+          this.emit('stateChange', { itemId, state: 'failed', error: inst.failureReason });
         }
       });
 
@@ -190,6 +202,7 @@ class PokePokeManager extends EventEmitter {
       return { success: true };
     } catch (err) {
       instance.state = 'failed';
+      instance.failureReason = err.message;
       this.emit('stateChange', { itemId, state: 'failed', error: err.message });
       return { success: false, error: err.message };
     }
@@ -208,12 +221,38 @@ class PokePokeManager extends EventEmitter {
     if (inst.logs.length > this._maxLogLines) {
       inst.logs.shift();
     }
+    const trimmed = line.toString().trim();
+    if (trimmed) {
+      inst.lastLogLine = trimmed;
+      if (trimmed.includes('[stderr]') || trimmed.includes('[error]')) {
+        inst.lastErrorLine = trimmed;
+      }
+    }
 
     if (inst.outputChannel) {
       inst.outputChannel.append(line);
     }
 
     this.emit('log', { itemId, line });
+  }
+
+  /**
+   * Build a human-readable failure reason for an instance.
+   * @param {PokePokeInstance} inst - The PokePoke instance
+   * @param {number|null} code - Exit code, if available
+   * @returns {string}
+   */
+  _buildFailureReason(inst, code) {
+    if (inst.lastErrorLine) {
+      return inst.lastErrorLine.replace(/^\[stderr\]\s*/i, '').replace(/^\[error\]\s*/i, '').trim() || inst.lastErrorLine;
+    }
+    if (inst.lastLogLine) {
+      return inst.lastLogLine;
+    }
+    if (typeof code === 'number') {
+      return `PokePoke exited with code ${code}`;
+    }
+    return 'PokePoke exited unexpectedly';
   }
 
   /**

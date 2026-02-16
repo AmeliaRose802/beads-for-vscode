@@ -137,14 +137,27 @@ function processMessage(message, ctx) {
       ctx.updateGraphPurpose(null);
       break;
     }
-    case 'pokepokeStateChange':
-      if (ctx.setPokepokeInstances) {
-        // Request updated status
-        if (ctx.vscode) {
-          ctx.vscode.postMessage({ type: 'pokepokeGetStatus' });
+    case 'pokepokeStateChange': {
+      if (ctx.setPokepokeInstances && ctx.vscode) {
+        ctx.vscode.postMessage({ type: 'pokepokeGetStatus' });
+      }
+      if (message.state === 'failed' && ctx.setOutput) {
+        const detail =
+          message.error ||
+          (typeof message.code === 'number'
+            ? `PokePoke exited with code ${message.code}`
+            : 'PokePoke exited unexpectedly');
+        ctx.setOutput(`❌ PokePoke failed for ${message.itemId}: ${detail}`);
+        ctx.setIsError && ctx.setIsError(true);
+      } else if (message.state === 'completed' && ctx.setOutput) {
+        ctx.setOutput(`✅ PokePoke completed for ${message.itemId}`);
+        if (ctx.setIsSuccess) {
+          ctx.setIsSuccess(true);
+          setTimeout(() => ctx.setIsSuccess(false), 3000);
         }
       }
       break;
+    }
     case 'pokepokeStatus':
       if (ctx.setPokepokeInstances) {
         ctx.setPokepokeInstances(message.instances || []);

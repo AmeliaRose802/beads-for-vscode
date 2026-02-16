@@ -180,6 +180,26 @@ suite('PokePokeManager', () => {
       mockProc.emit('close', 1);
     });
 
+    test('includes stderr output in failure event', (done) => {
+      const mockProc = createMockProcess();
+      spawnStub.returns(mockProc);
+
+      let seenRunning = false;
+      manager.on('stateChange', (event) => {
+        if (event.state === 'running') {
+          seenRunning = true;
+        }
+        if (event.state === 'failed' && seenRunning) {
+          assert.ok(event.error.includes('boom happened'));
+          done();
+        }
+      });
+
+      manager.launchForItem('bd-1', 'Test');
+      mockProc.stderr.emit('data', Buffer.from('boom happened\n'));
+      mockProc.emit('close', 2);
+    });
+
     test('sets state to failed on process error', (done) => {
       const mockProc = createMockProcess();
       spawnStub.returns(mockProc);
