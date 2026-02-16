@@ -292,6 +292,20 @@ suite('Beads UI Extension Test Suite', () => {
       assert.strictEqual(msg.type, 'cwdResult');
       assert.ok(msg.cwd);
     });
+
+    test('Should handle getBeadsStatus message', async () => {
+      sinon.stub(vscode.workspace, 'workspaceFolders').value(
+        [{ uri: vscode.Uri.file(path.join('test', 'workspace')) }]);
+      sinon.stub(fs, 'existsSync').callsFake((p) => String(p).endsWith(path.join('test', 'workspace', '.beads')));
+
+      await messageHandler({ type: 'getBeadsStatus' });
+      const msg = mockWebviewView.webview.postMessage.firstCall.args[0];
+      assert.strictEqual(msg.type, 'beadsStatus');
+      assert.strictEqual(msg.hasWorkspace, true);
+      assert.ok(msg.workspacePath);
+      assert.ok(msg.beadsDir);
+      assert.strictEqual(msg.initialized, true);
+    });
     test('Should use process.cwd() when no workspace folders', async () => {
       sinon.stub(vscode.workspace, 'workspaceFolders').value(undefined);
       await messageHandler({ type: 'getCwd' });
@@ -480,6 +494,21 @@ function getBeadsViewProviderClass() {
               const folders = vscode.workspace.workspaceFolders;
               const cwd = folders ? folders[0].uri.fsPath : process.cwd();
               webviewView.webview.postMessage({ type: 'cwdResult', cwd });
+              break;
+            }
+            case 'getBeadsStatus': {
+              const folders = vscode.workspace.workspaceFolders;
+              const workspacePath = folders ? folders[0].uri.fsPath : '';
+              const beadsDir = workspacePath ? path.join(workspacePath, '.beads') : '';
+              const initialized = !!(beadsDir && fs.existsSync(beadsDir));
+              webviewView.webview.postMessage({
+                type: 'beadsStatus',
+                hasWorkspace: !!folders,
+                workspacePath,
+                beadsDir,
+                initialized,
+                backend: 'unknown'
+              });
               break;
             }
           }

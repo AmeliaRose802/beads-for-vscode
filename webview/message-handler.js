@@ -31,9 +31,17 @@ function processMessage(message, ctx) {
       break;
     case 'inlineActionResult':
       ctx.handleInlineActionResult(message);
+      if (message.success && typeof message.command === 'string' && message.command.trim().startsWith('init') && ctx.vscode) {
+        ctx.vscode.postMessage({ type: 'getBeadsStatus' });
+      }
       break;
     case 'cwdResult':
       ctx.setCwd(message.cwd);
+      break;
+    case 'beadsStatus':
+      if (ctx.setBeadsStatus) {
+        ctx.setBeadsStatus(message);
+      }
       break;
     case 'currentFileResult':
       ctx.setCurrentFile(message.file || '');

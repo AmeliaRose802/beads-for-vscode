@@ -79,6 +79,42 @@ body {
 .command-progress__item--inline { color: var(--vscode-terminal-ansiYellow); }
 .command-progress__item--background { color: var(--vscode-terminal-ansiBlue); opacity: 0.9; }
 
+/* Workspace initialization warning */
+.init-warning {
+  margin: 8px 4px 16px;
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid var(--vscode-panel-border);
+  background-color: var(--vscode-editor-background);
+}
+
+.init-warning__title {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.init-warning__text {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  line-height: 1.5;
+}
+
+.init-warning__path {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.init-warning__actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+}
+
 /* Section */
 .section { margin-bottom: 16px; }
 .section-title {

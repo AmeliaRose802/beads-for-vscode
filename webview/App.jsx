@@ -7,6 +7,7 @@ import DependencyGraph from './components/DependencyGraph';
 import HierarchyView from './components/HierarchyView';
 import BlockingView from './components/BlockingView';
 import CommandProgress from './components/CommandProgress';
+import BeadsInitWarning from './components/BeadsInitWarning';
 import { useCommandProgress } from './hooks/useCommandProgress';
 const { parseListJSON, parseStatsOutput } = require('./parse-utils');
 const { buildCreateCommand, buildUpdateCommand, safeShellArg } = require('./form-handlers');
@@ -14,12 +15,11 @@ const { buildHierarchyModel } = require('./hierarchy-utils');
 const { buildBlockingModel } = require('./blocking-utils');
 const { processMessage } = require('./message-handler');
 const { createAppActions } = require('./app-actions');
-
 const vscode = acquireVsCodeApi();
-
 // Main App Component
 const App = () => {
   const [cwd, setCwd] = useState('Loading...');
+  const [beadsStatus, setBeadsStatus] = useState(null);
   const [output, setOutput] = useState('Ready to execute commands...');
   const [isError, setIsError] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -36,14 +36,9 @@ const App = () => {
   const hierarchyIssueRef = useRef(null);
   const outputRef = useRef(output);
 
-  const updateGraphPurpose = (purpose) => {
-    graphPurposeRef.current = purpose;
-  };
+  const updateGraphPurpose = (purpose) => { graphPurposeRef.current = purpose; };
+  const updateHierarchyIssue = (issueId) => { hierarchyIssueRef.current = issueId; };
 
-  const updateHierarchyIssue = (issueId) => {
-    hierarchyIssueRef.current = issueId;
-  };
-  
   // Edit issue form state
   const [editIssueId, setEditIssueId] = useState('');
   const [editTitle, setEditTitle] = useState('');
@@ -126,6 +121,7 @@ const App = () => {
   useEffect(() => {
     vscode.postMessage({ type: 'getCwd' });
     vscode.postMessage({ type: 'getCurrentFile' });
+    vscode.postMessage({ type: 'getBeadsStatus' });
 
     const messageHandler = (event) => {
       processMessage(event.data, {
@@ -136,6 +132,7 @@ const App = () => {
         setOutput,
         setIsError,
         setCwd,
+        setBeadsStatus,
         setCurrentFile,
         setEditTitle,
         setEditType,
@@ -171,6 +168,8 @@ const App = () => {
     window.addEventListener('message', messageHandler);
     return () => window.removeEventListener('message', messageHandler);
   }, []);
+
+  const handleInitBeads = () => runInlineAction('init', 'Initialized beads in this workspace');
 
   const handleQuickTypeChange = (issueId, newType) =>
     runInlineAction(`update ${issueId} --type ${newType}`, `Updated ${issueId} type to ${newType}`);
@@ -334,6 +333,7 @@ const App = () => {
       </div>
 
       <div className="main-content">
+        <BeadsInitWarning beadsStatus={beadsStatus} onInit={handleInitBeads} />
         <div className="section">
           <div className="section-title">Quick Actions</div>
           <div className="button-grid">

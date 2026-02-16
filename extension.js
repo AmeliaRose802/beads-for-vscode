@@ -55,23 +55,6 @@ function isAllowedCommand(command) {
  * @param {import('vscode').ExtensionContext} context - VS Code extension context
  */
 function activate(context) {
-  // Auto-initialize bd if not already initialized
-  const workspaceFolders = vscode.workspace.workspaceFolders;
-  if (workspaceFolders) {
-    const workspacePath = workspaceFolders[0].uri.fsPath;
-    // Avoid assuming SQLite; beads v0.50+ defaults to Dolt.
-    // Detect backend/layout from `.beads/metadata.json` (with safe fallbacks).
-    const backendInfo = detectBeadsBackend(workspacePath);
-
-    if (backendInfo.backend === 'unknown') {
-      // Initialize bd quietly
-      execFile('bd', ['init', '--quiet'], { cwd: workspacePath }, (error, _stdout, _stderr) => {
-        if (error) {
-          console.error('Failed to auto-initialize bd:', error);
-        }
-      });
-    }
-  }
   // Register the webview provider for the sidebar
   const provider = new BeadsViewProvider(context.extensionUri);
   context.subscriptions.push(
@@ -213,6 +196,23 @@ class BeadsViewProvider {
               : editor.document.fileName;
           }
           webviewView.webview.postMessage({ type: 'currentFileResult', file: curFile });
+          break;
+        }
+        case 'getBeadsStatus': {
+          const wsFolders = vscode.workspace.workspaceFolders;
+          const workspacePath = wsFolders ? wsFolders[0].uri.fsPath : '';
+          const beadsDir = workspacePath ? path.join(workspacePath, '.beads') : '';
+          const initialized = !!(beadsDir && fs.existsSync(beadsDir));
+          const backend = workspacePath ? detectBeadsBackend(workspacePath).backend : 'unknown';
+
+          webviewView.webview.postMessage({
+            type: 'beadsStatus',
+            hasWorkspace: !!wsFolders,
+            workspacePath,
+            beadsDir,
+            initialized,
+            backend
+          });
           break;
         }
         case 'getAISuggestions': {
