@@ -189,8 +189,9 @@ const App = () => {
         if (message.success) {
           resolve();
           setTimeout(() => {
-            if (typeof output === 'object' && output.command) {
-              runCommand(output.command);
+            const currentOutput = outputRef.current;
+            if (typeof currentOutput === 'object' && currentOutput.command) {
+              runCommand(currentOutput.command);
             }
           }, 500);
         } else {
