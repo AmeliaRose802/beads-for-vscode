@@ -95,6 +95,7 @@ const App = () => {
     setShowEditPanel,
     setShowHierarchyView,
     setShowBlockingView,
+    setShowDependencyGraph,
     setHierarchyModel,
     setBlockingModel,
     setCreateTitle,
@@ -253,7 +254,6 @@ const App = () => {
   const handleShowHierarchy = (issueId) => {
     updateHierarchyIssue(issueId);
     closeAllPanels();
-    setShowDependencyGraph(false);
 
     if (graphData) {
       try {
@@ -310,7 +310,6 @@ const App = () => {
 
   const handleEditIssue = (id) => {
     closeAllPanels();
-    setShowDependencyGraph(false);
 
     // Request issue details from extension using list command with --json
     vscode.postMessage({
@@ -338,8 +337,8 @@ const App = () => {
             <button className="action-btn" onClick={() => runCommand('blocked')} title="Show issues blocked by dependencies">🚫 Blocked</button>
             <button className="action-btn" onClick={() => runCommand('stats')} title="Show project statistics">📊 Stats</button>
             <button className="action-btn" onClick={() => runCommand('dep cycles')} title="Detect blocking dependency cycles">🔄 Cycles</button>
-            <button className="action-btn" onClick={() => { clearOutput(); closeAllPanels(); setShowDependencyGraph(false); setShowCreatePanel(!showCreatePanel); }} title="Create a new issue">➕ Create</button>
-            <button className="action-btn" onClick={() => { clearOutput(); closeAllPanels(); setShowDependencyGraph(false); setShowRelationshipPanel(!showRelationshipPanel); }} title="Manage dependencies between issues">🔗 Add Links</button>
+            <button className="action-btn" onClick={() => { clearOutput(); closeAllPanels(); setShowCreatePanel(!showCreatePanel); }} title="Create a new issue">➕ Create</button>
+            <button className="action-btn" onClick={() => { clearOutput(); closeAllPanels(); setShowRelationshipPanel(!showRelationshipPanel); }} title="Manage dependencies between issues">🔗 Add Links</button>
             <button className="action-btn" onClick={() => requestGraphData('graph')} title="Visualize dependency relationships as a graph">🔀 Graph</button>
             <button className="action-btn" onClick={() => requestBlockingData()} title="View dependency chains and completion order">🔗 Dependencies</button>
           </div>
