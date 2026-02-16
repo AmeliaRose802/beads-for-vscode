@@ -326,6 +326,8 @@ const App = () => {
     setShowEditPanel(true);
   };
 
+  const shouldShowResultsPanel = !showHierarchyView && !showBlockingView;
+
   return (
     <div className="container">
       <div className="header">
@@ -454,7 +456,7 @@ const App = () => {
           </div>
         )}
 
-        {!showHierarchyView && !showBlockingView && (
+        {shouldShowResultsPanel && (
           <div className="section output-section">
             <div className="output-header">
               <div className="section-title">Results</div>
