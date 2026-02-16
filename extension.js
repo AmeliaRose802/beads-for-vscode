@@ -276,6 +276,12 @@ class BeadsViewProvider {
           webviewView.webview.postMessage({ type: 'pokepokeStatus', instances: this._getPokePokeManager().getInstances() });
           break;
         }
+        case 'pokepokeDismiss': {
+          const mgr = this._getPokePokeManager();
+          mgr.remove(data.itemId);
+          webviewView.webview.postMessage({ type: 'pokepokeStatus', instances: mgr.getInstances() });
+          break;
+        }
       }
       } catch (err) {
         console.error('Unhandled error in message handler:', err);
@@ -469,11 +475,9 @@ class BeadsViewProvider {
     const cssPath = path.join(this._extensionUri.fsPath, 'webview', 'styles.css');
     const jsPath = path.join(this._extensionUri.fsPath, 'webview', 'bundle.js');
     
-    // Get URIs for the webview
     const cssUri = webview.asWebviewUri(vscode.Uri.file(cssPath));
     const jsUri = webview.asWebviewUri(vscode.Uri.file(jsPath));
     
-    // Read HTML and replace placeholders
     let html = fs.readFileSync(htmlPath, 'utf8');
     html = html.replace('{{CSS_URI}}', cssUri.toString());
     html = html.replace('{{JS_URI}}', jsUri.toString());
@@ -481,12 +485,10 @@ class BeadsViewProvider {
     return html;
   }
 }
-
 /** Deactivate the Beads UI extension. */
 function deactivate() {
   // PokePoke cleanup is handled via context.subscriptions in activate()
 }
-
 module.exports = {
   activate,
   deactivate,

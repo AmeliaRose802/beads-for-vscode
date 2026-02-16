@@ -7,6 +7,7 @@ import HierarchyView from './components/HierarchyView';
 import BlockingView from './components/BlockingView';
 import CommandProgress from './components/CommandProgress';
 import BeadsInitWarning from './components/BeadsInitWarning';
+import PokePokeStatus from './components/PokePokeStatus';
 import { useCommandProgress } from './hooks/useCommandProgress';
 const { parseListJSON, parseStatsOutput } = require('./parse-utils');
 const { buildCreateCommand, buildUpdateCommand, safeShellArg } = require('./form-handlers');
@@ -354,20 +355,7 @@ const App = () => {
           </div>
         </div>
 
-        {pokepokeInstances.length > 0 && (
-          <div className="section pokepoke-status-section">
-            <div className="section-title">🤖 PokePoke</div>
-            {pokepokeInstances.map((inst) => (
-              <div key={inst.itemId} className={`pokepoke-instance pokepoke-instance--${inst.state}`}>
-                <span className="pokepoke-instance__id">{inst.itemId}</span>
-                <span className="pokepoke-instance__state">{inst.state}</span>
-                {(inst.state === 'running' || inst.state === 'starting') && (
-                  <button className="pokepoke-instance__stop-btn" onClick={() => handlePokePokeStop(inst.itemId)} title="Stop">🛑</button>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+        <PokePokeStatus instances={pokepokeInstances} onStop={handlePokePokeStop} vscode={vscode} />
 
         {showCreatePanel && (
           <CreatePanel

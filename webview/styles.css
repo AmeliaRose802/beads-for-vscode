@@ -2286,6 +2286,13 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   flex-shrink: 0;
 }
 
+.pokepoke-instance__actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .pokepoke-instance__stop-btn {
   background: none;
   border: none;
@@ -2293,11 +2300,25 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   font-size: 14px;
   padding: 2px 4px;
   border-radius: 3px;
-  margin-left: auto;
 }
 
 .pokepoke-instance__stop-btn:hover {
   background: var(--vscode-toolbar-hoverBackground);
+}
+
+.pokepoke-instance__dismiss-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  opacity: 0.85;
+}
+
+.pokepoke-instance__dismiss-btn:hover {
+  background: var(--vscode-toolbar-hoverBackground);
+  opacity: 1;
 }
 
 .issue-card__action-btn--pokepoke-running {

@@ -313,6 +313,22 @@ suite('Beads UI Extension Test Suite', () => {
       assert.strictEqual(msg.type, 'cwdResult');
       assert.ok(msg.cwd);
     });
+    test('Should handle pokepokeDismiss message', async () => {
+      const removeStub = sinon.stub();
+      const getInstancesStub = sinon.stub().returns([]);
+      provider._pokepokeManager = { remove: removeStub, getInstances: getInstancesStub };
+
+      await messageHandler({ type: 'pokepokeDismiss', itemId: 'bd-1' });
+
+      assert.ok(removeStub.calledOnce);
+      assert.ok(removeStub.calledWith('bd-1'));
+      assert.ok(mockWebviewView.webview.postMessage.calledOnce);
+
+      const msg = mockWebviewView.webview.postMessage.firstCall.args[0];
+      assert.strictEqual(msg.type, 'pokepokeStatus');
+      assert.deepStrictEqual(msg.instances, []);
+    });
+
     test('Should handle unknown message type gracefully', async () => {
       await messageHandler({ type: 'unknownType' });
       assert.strictEqual(mockWebviewView.webview.postMessage.callCount, 0);
