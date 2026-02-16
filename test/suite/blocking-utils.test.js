@@ -6,7 +6,8 @@ const {
   findReadyItems,
   findParallelGroups,
   applyFilters,
-  calculateFanOut
+  calculateFanOut,
+  calculateBlockingCounts
 } = require('../../webview/blocking-utils');
 const { buildPlanSchedule } = require('../../webview/plan-utils');
 
@@ -507,6 +508,60 @@ suite('blocking-utils', () => {
     });
   });
 
+  suite('calculateBlockingCounts', () => {
+    test('calculates blocking counts for linear chain', () => {
+      const edges = [
+        { from: 'a', to: 'b' },
+        { from: 'b', to: 'c' }
+      ];
+      const { blocksCount, blockedByCount } = calculateBlockingCounts(['a', 'b', 'c'], edges);
+      
+      // blocksCount: how many items each node blocks (outgoing)
+      assert.strictEqual(blocksCount['a'], 1); // a blocks b
+      assert.strictEqual(blocksCount['b'], 1); // b blocks c
+      assert.strictEqual(blocksCount['c'], 0); // c blocks nothing
+      
+      // blockedByCount: how many items each node is blocked by (incoming)
+      assert.strictEqual(blockedByCount['a'], 0); // a is blocked by nothing
+      assert.strictEqual(blockedByCount['b'], 1); // b is blocked by a
+      assert.strictEqual(blockedByCount['c'], 1); // c is blocked by b
+    });
+
+    test('calculates blocking counts for diamond dependency', () => {
+      const edges = [
+        { from: 'a', to: 'b' },
+        { from: 'a', to: 'c' },
+        { from: 'b', to: 'd' },
+        { from: 'c', to: 'd' }
+      ];
+      const { blocksCount, blockedByCount } = calculateBlockingCounts(['a', 'b', 'c', 'd'], edges);
+      
+      // blocksCount: direct blocking relationships only
+      assert.strictEqual(blocksCount['a'], 2); // a blocks b and c
+      assert.strictEqual(blocksCount['b'], 1); // b blocks d
+      assert.strictEqual(blocksCount['c'], 1); // c blocks d
+      assert.strictEqual(blocksCount['d'], 0); // d blocks nothing
+      
+      // blockedByCount: direct blocked-by relationships only
+      assert.strictEqual(blockedByCount['a'], 0); // a is blocked by nothing
+      assert.strictEqual(blockedByCount['b'], 1); // b is blocked by a
+      assert.strictEqual(blockedByCount['c'], 1); // c is blocked by a
+      assert.strictEqual(blockedByCount['d'], 2); // d is blocked by b and c
+    });
+
+    test('handles empty input', () => {
+      const { blocksCount, blockedByCount } = calculateBlockingCounts([], []);
+      assert.deepStrictEqual(blocksCount, {});
+      assert.deepStrictEqual(blockedByCount, {});
+    });
+
+    test('handles single node', () => {
+      const { blocksCount, blockedByCount } = calculateBlockingCounts(['only'], []);
+      assert.strictEqual(blocksCount['only'], 0);
+      assert.strictEqual(blockedByCount['only'], 0);
+    });
+  });
+
   suite('buildBlockingModel', () => {
     test('builds complete model from linear components', () => {
       const model = buildBlockingModel(linearComponents);
@@ -723,6 +778,30 @@ suite('blocking-utils', () => {
       assert.strictEqual(model.fanOutCounts['b'], 1); // b unblocks d
       assert.strictEqual(model.fanOutCounts['c'], 1); // c unblocks d
       assert.strictEqual(model.fanOutCounts['d'], 0); // d unblocks nothing
+    });
+
+    test('includes blocking counts in model', () => {
+      const model = buildBlockingModel(linearComponents);
+      assert.ok(model.blocksCount);
+      assert.ok(model.blockedByCount);
+      assert.strictEqual(model.blocksCount['a'], 1); // a blocks b
+      assert.strictEqual(model.blocksCount['b'], 1); // b blocks c
+      assert.strictEqual(model.blocksCount['c'], 0); // c blocks nothing
+      assert.strictEqual(model.blockedByCount['a'], 0); // a is blocked by nothing
+      assert.strictEqual(model.blockedByCount['b'], 1); // b is blocked by a
+      assert.strictEqual(model.blockedByCount['c'], 1); // c is blocked by b
+    });
+
+    test('blocking counts reflect diamond dependencies', () => {
+      const model = buildBlockingModel(diamondComponents);
+      assert.strictEqual(model.blocksCount['a'], 2); // a blocks b, c
+      assert.strictEqual(model.blocksCount['b'], 1); // b blocks d
+      assert.strictEqual(model.blocksCount['c'], 1); // c blocks d
+      assert.strictEqual(model.blocksCount['d'], 0); // d blocks nothing
+      assert.strictEqual(model.blockedByCount['a'], 0); // a is blocked by nothing
+      assert.strictEqual(model.blockedByCount['b'], 1); // b is blocked by a
+      assert.strictEqual(model.blockedByCount['c'], 1); // c is blocked by a
+      assert.strictEqual(model.blockedByCount['d'], 2); // d is blocked by b, c
     });
   });
 });

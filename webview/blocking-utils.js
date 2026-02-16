@@ -68,7 +68,9 @@ function emptyModel() {
     criticalPaths: [],
     readyItems: [],
     parallelGroups: [],
-    fanOutCounts: {}
+    fanOutCounts: {},
+    blocksCount: {},
+    blockedByCount: {}
   };
 }
 
