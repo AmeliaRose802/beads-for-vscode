@@ -9,7 +9,9 @@ const BlockingGraphTab= ({
   onEdgeClick,
   onTogglePhase,
   renderEdgeMenu,
-  getPhasePreview
+  getPhasePreview,
+  blocksCount = {},
+  blockedByCount = {}
 }) => (
   <div className="blocking-view__graph">
     <div className="blocking-view__graph-legend">
@@ -56,6 +58,19 @@ const BlockingGraphTab= ({
                     <div className="blocking-view__node-title">{issue.title}</div>
                     {isCritical && <div className="blocking-view__node-badge">Critical</div>}
                     {isReady && <div className="blocking-view__node-badge blocking-view__node-badge--ready">Ready</div>}
+                    {/* Blocking count badges */}
+                    <div className="blocking-view__node-counts">
+                      {blockedByCount[issue.id] > 0 && (
+                        <span className="blocking-view__count-badge blocking-view__count-badge--blocked-by" title={`Blocked by ${blockedByCount[issue.id]} item${blockedByCount[issue.id] !== 1 ? 's' : ''}`}>
+                          ↑ {blockedByCount[issue.id]}
+                        </span>
+                      )}
+                      {blocksCount[issue.id] > 0 && (
+                        <span className="blocking-view__count-badge blocking-view__count-badge--blocks" title={`Blocks ${blocksCount[issue.id]} item${blocksCount[issue.id] !== 1 ? 's' : ''}`}>
+                          ↓ {blocksCount[issue.id]}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 );
               })}

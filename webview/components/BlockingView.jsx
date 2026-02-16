@@ -93,7 +93,7 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
       </div>
     );
   }
-  const { issues, edges, completionOrder, criticalPath, criticalPaths, readyItems, parallelGroups, fanOutCounts } = blockingModel;
+  const { issues, edges, completionOrder, criticalPath, criticalPaths, readyItems, parallelGroups, fanOutCounts, blocksCount, blockedByCount } = blockingModel;
   const availableLabels = useMemo(() => {
     if (!Array.isArray(issues)) return [];
     const labelSet = new Set();
@@ -433,6 +433,8 @@ const BlockingView = ({ blockingModel, onIssueClick, onClose, onDepAction }) => 
             onTogglePhase={togglePhaseExpanded}
             renderEdgeMenu={renderEdgeMenu}
             getPhasePreview={getPhasePreview}
+            blocksCount={blocksCount}
+            blockedByCount={blockedByCount}
           />
         )}
         {activeTab === 'order' && (

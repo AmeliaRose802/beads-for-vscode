@@ -230,6 +230,34 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose }) => {
     });
   });
 
+  // Calculate blocking counts for each issue
+  const blocksCount = {}; // How many items each node blocks (outgoing)
+  const blockedByCount = {}; // How many items each node is blocked by (incoming)
+  
+  // Initialize counts
+  allIssues.forEach(issue => {
+    blocksCount[issue.id] = 0;
+    blockedByCount[issue.id] = 0;
+  });
+  
+  // Count relationships from dependencies
+  allDeps.forEach(dep => {
+    // Determine from and to IDs (handling different formats)
+    const fromId = dep.depends_on_id || dep.from_id || dep.FromID;
+    const toId = dep.issue_id || dep.to_id || dep.ToID;
+    
+    if (fromId && toId) {
+      // In beads format: issue depends on depends_on_id
+      // So depends_on_id (fromId) blocks issue_id (toId)
+      if (blocksCount[fromId] !== undefined) {
+        blocksCount[fromId]++;
+      }
+      if (blockedByCount[toId] !== undefined) {
+        blockedByCount[toId]++;
+      }
+    }
+  });
+
   if (allIssues.length === 0) {
     return (
       <div className="dependency-graph dependency-graph--empty">
@@ -393,6 +421,19 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose }) => {
                 </div>
                 <div className="dependency-graph__node-type">
                   {issue.issue_type}
+                </div>
+                {/* Blocking count badges */}
+                <div className="dependency-graph__node-counts">
+                  {blockedByCount[issue.id] > 0 && (
+                    <span className="dependency-graph__count-badge dependency-graph__count-badge--blocked-by" title={`Blocked by ${blockedByCount[issue.id]} item${blockedByCount[issue.id] !== 1 ? 's' : ''}`}>
+                      ↑ {blockedByCount[issue.id]}
+                    </span>
+                  )}
+                  {blocksCount[issue.id] > 0 && (
+                    <span className="dependency-graph__count-badge dependency-graph__count-badge--blocks" title={`Blocks ${blocksCount[issue.id]} item${blocksCount[issue.id] !== 1 ? 's' : ''}`}>
+                      ↓ {blocksCount[issue.id]}
+                    </span>
+                  )}
                 </div>
               </div>
             );
