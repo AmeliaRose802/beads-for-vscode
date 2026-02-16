@@ -31,7 +31,9 @@ suite('app-actions', () => {
       parseListJSON: sinon.stub().returns({ items: [] }),
       parseStatsOutput: sinon.stub().returns({}),
       vscode: { postMessage: sinon.stub() },
-      outputRef: { current: '' }
+      outputRef: { current: '' },
+      beginCommandProgress: sinon.stub(),
+      completeCommandProgress: sinon.stub()
     };
     return { ctx: stubs, stubs };
   }
@@ -100,6 +102,82 @@ suite('app-actions', () => {
       const msg = stubs.vscode.postMessage.firstCall.args[0];
       assert.strictEqual(msg.type, 'executeCommand');
       assert.strictEqual(msg.useJSON, true);
+    });
+  });
+
+  suite('progress tracking', () => {
+    test('runCommand starts progress when executing remotely', () => {
+      const { ctx, stubs } = buildCtx();
+      const actions = createAppActions(ctx);
+
+      actions.runCommand('list');
+
+      assert.strictEqual(
+        stubs.beginCommandProgress.calledWith('list', 'primary'),
+        true,
+        'runCommand should register primary command progress'
+      );
+    });
+
+    test('runCommand skips progress when serving from cache', () => {
+      const { ctx, stubs } = buildCtx();
+      const parsed = { type: 'list', command: 'list', openIssues: [], closedIssues: [] };
+      stubs.parseListJSON.returns(parsed);
+      const actions = createAppActions(ctx);
+
+      actions.displayResult('list', '[]', true);
+      stubs.beginCommandProgress.resetHistory();
+
+      actions.runCommand('list');
+
+      assert.strictEqual(
+        stubs.beginCommandProgress.called,
+        false,
+        'cached commands should not trigger new progress entries'
+      );
+    });
+
+    test('displayResult signals completion for tracked commands', () => {
+      const { ctx, stubs } = buildCtx();
+      const actions = createAppActions(ctx);
+
+      actions.displayResult('ready', '[]', true);
+
+      assert.strictEqual(
+        stubs.completeCommandProgress.calledWith('ready'),
+        true,
+        'displayResult should complete progress for command'
+      );
+    });
+
+    test('runInlineAction starts inline progress entries', () => {
+      const { ctx, stubs } = buildCtx();
+      const actions = createAppActions(ctx);
+
+      actions.runInlineAction('update bd-1 --title "new"', 'Updated bd-1');
+
+      assert.strictEqual(
+        stubs.beginCommandProgress.calledWith('update bd-1 --title "new"', 'inline'),
+        true,
+        'inline actions should register inline progress'
+      );
+    });
+
+    test('handleInlineActionResult completes inline progress entries', () => {
+      const { ctx, stubs } = buildCtx();
+      const actions = createAppActions(ctx);
+
+      actions.handleInlineActionResult({
+        command: 'update bd-1 --priority 1',
+        output: 'Updated',
+        success: true
+      });
+
+      assert.strictEqual(
+        stubs.completeCommandProgress.calledWith('update bd-1 --priority 1'),
+        true,
+        'inline action results should clear progress entries'
+      );
     });
   });
 

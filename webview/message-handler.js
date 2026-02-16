@@ -21,6 +21,9 @@ function processMessage(message, ctx) {
           ctx.cachePageResult(message.command, parsed);
         }
       }
+      if (ctx.completeCommandProgress) {
+        ctx.completeCommandProgress(message.command);
+      }
       break;
     }
     case 'commandResult':

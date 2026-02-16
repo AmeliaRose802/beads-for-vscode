@@ -39,7 +39,9 @@ function createAppActions(ctx) {
     setShowDependencyGraph,
     updateGraphPurpose,
     vscode,
-    outputRef
+    outputRef,
+    beginCommandProgress = () => {},
+    completeCommandProgress = () => {}
   } = ctx;
 
   /** @type {Map<string, {output: any, isError: boolean}>} */
@@ -69,6 +71,7 @@ function createAppActions(ctx) {
     }
     setIsError(!success);
     setIsSuccess(success);
+    completeCommandProgress(command);
 
     // Cache successful results for cacheable commands
     const cacheKey = CACHEABLE_COMMANDS.find(c => command.includes(c));
@@ -78,6 +81,7 @@ function createAppActions(ctx) {
   };
 
   const runInlineAction = (command, successMessage) => {
+    beginCommandProgress(command, 'inline');
     vscode.postMessage({
       type: 'executeCommand',
       command,
@@ -102,6 +106,7 @@ function createAppActions(ctx) {
     setOutput(`$ bd ${command}\n\nExecuting...`);
     setIsError(false);
     setIsSuccess(false);
+    beginCommandProgress(command, 'primary');
 
     const useJSON = command === 'list' || command === 'ready' || command === 'blocked';
 
@@ -115,6 +120,7 @@ function createAppActions(ctx) {
 
     if (isModifying) {
       setTimeout(() => {
+        beginCommandProgress('sync', 'background');
         vscode.postMessage({
           type: 'executeCommand',
           command: 'sync'
@@ -161,6 +167,7 @@ function createAppActions(ctx) {
 
   const handleInlineActionResult = (message) => {
     const { command, output: cmdOutput, success, successMessage } = message;
+    completeCommandProgress(command);
     if (success) {
       if (command.includes('create')) {
         setCreateTitle(''); setCreateDescription('');
