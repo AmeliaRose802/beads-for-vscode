@@ -2023,6 +2023,40 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 .blocking-view__plan-stat {
   white-space: nowrap;
 }
+.blocking-view__plan-warning {
+  display: flex;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 4px;
+  background-color: var(--vscode-inputValidation-errorBackground, rgba(244, 135, 113, 0.1));
+  border: 1px solid var(--vscode-errorForeground);
+  color: var(--vscode-errorForeground);
+  font-size: 11px;
+}
+.blocking-view__plan-warning-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+.blocking-view__plan-warning-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.blocking-view__plan-warning-title {
+  font-weight: 600;
+}
+.blocking-view__plan-warning-description {
+  margin: 0;
+  color: var(--vscode-descriptionForeground);
+}
+.blocking-view__plan-warning-list {
+  margin: 0;
+  padding-left: 16px;
+  color: var(--vscode-foreground);
+}
+.blocking-view__plan-warning-item {
+  list-style: disc;
+}
 .blocking-view__plan-empty {
   font-size: 11px;
   color: var(--vscode-descriptionForeground);
@@ -2070,7 +2104,14 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 .blocking-view__plan-item--ready {
   border-left: 3px solid var(--vscode-testing-iconPassed, #73c991);
 }
+.blocking-view__plan-item--cycle {
+  border-left: 3px solid var(--vscode-errorForeground);
+  background-color: var(--vscode-inputValidation-errorBackground, rgba(244, 135, 113, 0.1));
+}
 .blocking-view__plan-status {
+  font-size: 11px;
+}
+.blocking-view__plan-cycle {
   font-size: 11px;
 }
 .blocking-view__plan-id {

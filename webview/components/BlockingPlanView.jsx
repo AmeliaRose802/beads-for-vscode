@@ -20,6 +20,8 @@ const BlockingPlanView = ({
     () => buildPlanSchedule(issues, edges, completionOrder, maxParallel),
     [issues, edges, completionOrder, maxParallel]
   );
+  const cycleIdSet = useMemo(() => new Set(plan?.cycleIds || []), [plan]);
+  const hasCycles = Array.isArray(plan?.cycleGroups) && plan.cycleGroups.length > 0;
 
   const handleLimitChange = (event) => {
     const value = event.target.value;
@@ -81,6 +83,34 @@ const BlockingPlanView = ({
         </div>
       </div>
 
+      {hasCycles && (
+        <div className="blocking-view__plan-warning" role="alert">
+          <span className="blocking-view__plan-warning-icon" aria-hidden="true">⚠️</span>
+          <div className="blocking-view__plan-warning-content">
+            <span className="blocking-view__plan-warning-title">Circular dependencies detected</span>
+            <p className="blocking-view__plan-warning-description">
+              Resolve these cycles so work can progress in later waves.
+            </p>
+            <ul className="blocking-view__plan-warning-list">
+              {plan.cycleGroups.map((group, index) => {
+                const label = group
+                  .map(issue => {
+                    const issueId = issue?.id ?? '?';
+                    const title = issue?.title ? ` – ${issue.title}` : '';
+                    return `${issueId}${title}`;
+                  })
+                  .join(' ↔ ');
+                return (
+                  <li key={`cycle-${index}`} className="blocking-view__plan-warning-item">
+                    {label}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </div>
+      )}
+
       {plan.totalItems === 0 ? (
         <div className="blocking-view__plan-empty">
           No open items to schedule. Closed work is treated as complete.
@@ -97,9 +127,11 @@ const BlockingPlanView = ({
             <div className="blocking-view__plan-items">
               {wave.map(issue => {
                 const isReady = readyIds?.has(issue.id);
+                const isCycle = cycleIdSet.has(issue.id);
                 const itemClass = [
                   'blocking-view__plan-item',
-                  isReady ? 'blocking-view__plan-item--ready' : ''
+                  isReady ? 'blocking-view__plan-item--ready' : '',
+                  isCycle ? 'blocking-view__plan-item--cycle' : ''
                 ].filter(Boolean).join(' ');
 
                 return (
@@ -109,6 +141,11 @@ const BlockingPlanView = ({
                     onClick={() => onIssueClick?.(issue)}
                   >
                     <span className="blocking-view__plan-status">{getStatusIcon(issue.status)}</span>
+                    {isCycle && (
+                      <span className="blocking-view__plan-cycle" aria-label="Cycle" title="Circular dependency detected">
+                        🔄
+                      </span>
+                    )}
                     <span className="blocking-view__plan-id">{issue.id}</span>
                     <span className="blocking-view__plan-title">{issue.title}</span>
                   </div>

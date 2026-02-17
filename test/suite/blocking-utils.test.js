@@ -384,6 +384,55 @@ suite('blocking-utils', () => {
       assert.deepStrictEqual(plan.waves[0].map(i => i.id), ['b']);
       assert.deepStrictEqual(plan.waves[1].map(i => i.id), ['c']);
     });
+
+    test('detects cycles and surfaces metadata', () => {
+      const components = [
+        {
+          Issues: [
+            { id: 'a', title: 'A', status: 'open', priority: 1, issue_type: 'task' },
+            { id: 'b', title: 'B', status: 'open', priority: 1, issue_type: 'task' },
+            { id: 'c', title: 'C', status: 'open', priority: 1, issue_type: 'task' }
+          ],
+          Dependencies: [
+            { issue_id: 'a', depends_on_id: 'b', type: 'blocks' },
+            { issue_id: 'b', depends_on_id: 'a', type: 'blocks' },
+            { issue_id: 'c', depends_on_id: 'b', type: 'blocks' }
+          ]
+        }
+      ];
+
+      const model = buildBlockingModel(components);
+      const plan = buildPlanSchedule(model.issues, model.edges, model.completionOrder, 3);
+      assert.ok(Array.isArray(plan.cycleGroups));
+      assert.strictEqual(plan.cycleGroups.length, 1);
+      const cycleIds = plan.cycleGroups[0].map(i => i.id).sort();
+      assert.deepStrictEqual(cycleIds, ['a', 'b']);
+      assert.ok(plan.cycleIds.includes('a'));
+      assert.ok(plan.cycleIds.includes('b'));
+      assert.ok(!plan.cycleIds.includes('c'));
+    });
+
+    test('ignores cycles composed only of closed items', () => {
+      const components = [
+        {
+          Issues: [
+            { id: 'a', title: 'A', status: 'closed', priority: 1, issue_type: 'task' },
+            { id: 'b', title: 'B', status: 'closed', priority: 1, issue_type: 'task' },
+            { id: 'c', title: 'C', status: 'open', priority: 1, issue_type: 'task' }
+          ],
+          Dependencies: [
+            { issue_id: 'a', depends_on_id: 'b', type: 'blocks' },
+            { issue_id: 'b', depends_on_id: 'a', type: 'blocks' },
+            { issue_id: 'c', depends_on_id: 'b', type: 'blocks' }
+          ]
+        }
+      ];
+
+      const model = buildBlockingModel(components);
+      const plan = buildPlanSchedule(model.issues, model.edges, model.completionOrder, 2);
+      assert.deepStrictEqual(plan.cycleGroups, []);
+      assert.deepStrictEqual(plan.cycleIds, []);
+    });
   });
 
   suite('applyFilters', () => {
