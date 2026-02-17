@@ -2,7 +2,6 @@ const { getStatusIcon } = require('../field-utils');
 
 const BlockingOrderTab= ({
   issues,
-  criticalPathIds,
   readyIds,
   onIssueClick,
   onCopy,
@@ -27,11 +26,9 @@ const BlockingOrderTab= ({
     </div>
     <ol className="blocking-view__order-list">
       {issues.map((issue, idx) => {
-        const isCritical = criticalPathIds.has(issue.id);
         const isReady = readyIds.has(issue.id);
         const itemClass = [
           'blocking-view__order-item',
-          isCritical ? 'blocking-view__order-item--critical' : '',
           isReady ? 'blocking-view__order-item--ready' : '',
           issue.status === 'closed' ? 'blocking-view__order-item--done' : ''
         ].filter(Boolean).join(' ');
@@ -46,7 +43,6 @@ const BlockingOrderTab= ({
             <span className="blocking-view__order-status">{getStatusIcon(issue.status)}</span>
             <span className="blocking-view__order-id">{issue.id}</span>
             <span className="blocking-view__order-title">{issue.title}</span>
-            {isCritical && <span className="blocking-view__tag blocking-view__tag--critical">Critical</span>}
             {isReady && <span className="blocking-view__tag blocking-view__tag--ready">Ready</span>}
           </li>
         );

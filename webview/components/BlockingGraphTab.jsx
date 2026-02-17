@@ -2,7 +2,6 @@ const { getStatusIcon } = require('../field-utils');
 
 const BlockingGraphTab= ({
   parallelGroups,
-  criticalPathIds,
   readyIds,
   selectedNode,
   onNodeClick,
@@ -15,9 +14,6 @@ const BlockingGraphTab= ({
 }) => (
   <div className="blocking-view__graph">
     <div className="blocking-view__graph-legend">
-      <span className="blocking-view__legend-item">
-        <span className="blocking-view__legend-swatch blocking-view__legend-swatch--critical" /> Critical Path
-      </span>
       <span className="blocking-view__legend-item">
         <span className="blocking-view__legend-swatch blocking-view__legend-swatch--ready" /> Ready
       </span>
@@ -38,12 +34,10 @@ const BlockingGraphTab= ({
             <div className="blocking-view__layer-label">Phase {depth + 1}</div>
             <div className="blocking-view__layer-items">
               {visibleItems.map(issue => {
-                const isCritical = criticalPathIds.has(issue.id);
                 const isReady = readyIds.has(issue.id);
                 const isSelected = selectedNode === issue.id;
                 const nodeClass = [
                   'blocking-view__node',
-                  isCritical ? 'blocking-view__node--critical' : '',
                   isReady ? 'blocking-view__node--ready' : '',
                   isSelected ? 'blocking-view__node--selected' : '',
                   `blocking-view__node--${issue.status || 'open'}`
@@ -56,7 +50,6 @@ const BlockingGraphTab= ({
                       <span className="blocking-view__node-priority">P{issue.priority}</span>
                     </div>
                     <div className="blocking-view__node-title">{issue.title}</div>
-                    {isCritical && <div className="blocking-view__node-badge">Critical</div>}
                     {isReady && <div className="blocking-view__node-badge blocking-view__node-badge--ready">Ready</div>}
                     {/* Blocking count badges */}
                     <div className="blocking-view__node-counts">

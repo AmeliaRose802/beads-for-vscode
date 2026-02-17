@@ -84,16 +84,6 @@ const BlockingView = ({
     setCopyFeedback({ target, message, isError });
   };
   
-  const criticalPathIds = useMemo(() => {
-    if (!blockingModel?.criticalPaths || !Array.isArray(blockingModel.criticalPaths)) return new Set();
-    const allIds = new Set();
-    blockingModel.criticalPaths.forEach(path => {
-      if (Array.isArray(path)) {
-        path.forEach(i => allIds.add(i.id));
-      }
-    });
-    return allIds;
-  }, [blockingModel]);
   
   const readyIds = useMemo(() => {
     if (!blockingModel?.readyItems) return new Set();
@@ -425,7 +415,6 @@ const BlockingView = ({
         {activeTab === 'list' && (
           <BlockingOrderTab
             issues={filteredCompletionOrder}
-            criticalPathIds={criticalPathIds}
             readyIds={readyIds}
             onIssueClick={handleNodeClick}
             onCopy={copyOrderToClipboard}
@@ -435,7 +424,6 @@ const BlockingView = ({
         {activeTab === 'hierarchy' && (
           <BlockingGraphTab
             parallelGroups={filteredParallelGroups}
-            criticalPathIds={criticalPathIds}
             readyIds={readyIds}
             selectedNode={selectedNode}
             onNodeClick={handleNodeClick}

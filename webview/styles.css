@@ -1471,9 +1471,6 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   border-radius: 2px;
   display: inline-block;
 }
-.blocking-view__legend-swatch--critical {
-  background-color: var(--vscode-errorForeground);
-}
 .blocking-view__legend-swatch--ready {
   background-color: var(--vscode-testing-iconPassed, #73c991);
 }
@@ -1519,9 +1516,6 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 }
 .blocking-view__node:hover {
   border-color: var(--vscode-textLink-foreground);
-}
-.blocking-view__node--critical {
-  border-left: 3px solid var(--vscode-errorForeground);
 }
 .blocking-view__node--ready {
   border-left: 3px solid var(--vscode-testing-iconPassed, #73c991);
@@ -1650,9 +1644,6 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 .blocking-view__order-item:hover {
   background-color: var(--vscode-list-hoverBackground);
 }
-.blocking-view__order-item--critical {
-  border-left: 3px solid var(--vscode-errorForeground);
-}
 .blocking-view__order-item--ready {
   border-left: 3px solid var(--vscode-testing-iconPassed, #73c991);
 }
@@ -1687,10 +1678,6 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   padding: 1px 4px;
   border-radius: 2px;
   flex-shrink: 0;
-}
-.blocking-view__tag--critical {
-  background-color: var(--vscode-errorForeground);
-  color: var(--vscode-editor-background);
 }
 .blocking-view__tag--ready {
   background-color: var(--vscode-testing-iconPassed, #73c991);
