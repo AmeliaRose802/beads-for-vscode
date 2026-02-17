@@ -65,7 +65,7 @@ const CriticalPathView = ({ criticalPaths, fanOutCounts, onNodeClick, onEdgeClic
         <span className="blocking-view__critical-label">
           {totalPaths === 1 
             ? `Critical path (${criticalPaths[0].length} items, longest dependency chain):`
-            : `Top ${totalPaths} critical paths as unified tree (shared dependencies shown once):`
+            : `Unified critical dependency tree (merged from ${totalPaths} critical paths; shared dependencies shown once):`
           }
         </span>
         <div className="blocking-view__critical-subtitle">
