@@ -91,7 +91,7 @@ npm run test:coverage
 This extension includes comprehensive test coverage with 100+ tests:
 
 ```bash
-# Run all tests (lint + integration tests)
+# Run all tests (lint + unit tests)
 npm test
 
 # Run lint only
