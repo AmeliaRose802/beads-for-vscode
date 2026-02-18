@@ -3,7 +3,7 @@ import CopyableIssueId from './CopyableIssueId';
 const { filterHierarchyTree, countDescendants } = require('../hierarchy-utils');
 
 const FILTER_TYPES = [
-  { key: 'parent-child', label: 'Parent', icon: '🪜' },
+  { key: 'parent-child', label: 'Parent' },
   { key: 'blocks', label: 'Blocks', icon: '⛔' },
   { key: 'blocked-by', label: 'Blocked by', icon: '🚧' },
   { key: 'related', label: 'Related', icon: '🔗' }
@@ -18,7 +18,6 @@ const relationLabels = {
 };
 
 const relationIcons = {
-  'parent-child': '🪜',
   blocks: '⛔',
   'blocked-by': '🚧',
   related: '🔗',
@@ -35,7 +34,9 @@ function HierarchyNode({ node, onSelect, depth = 0 }) {
   const [expanded, setExpanded] = useState(depth < DEFAULT_MAX_DEPTH);
   const hasChildren = node.children && node.children.length > 0;
   const label = relationLabels[node.relationType] || (node.direction === 'incoming' ? 'Dependent' : 'Dependency');
-  const icon = relationIcons[node.relationType] || (node.direction === 'incoming' ? '⬆️' : '⬇️');
+  const icon = node.relationType === 'parent-child'
+    ? null
+    : relationIcons[node.relationType] || (node.direction === 'incoming' ? '⬆️' : '⬇️');
 
   const getNodeClassName = () => {
     let className = `hierarchy-node__content hierarchy-node__content--${node.direction || 'outgoing'}`;
@@ -62,7 +63,7 @@ function HierarchyNode({ node, onSelect, depth = 0 }) {
         <div
           className={getNodeClassName()}
           onClick={(e) => { e.stopPropagation(); onSelect(node.id); }}>
-          <span className="hierarchy-node__icon" title={label}>{icon}</span>
+          {icon && <span className="hierarchy-node__icon" title={label}>{icon}</span>}
           <CopyableIssueId id={node.id} className="hierarchy-node__id" />
           <span className={`hierarchy-node__status hierarchy-node__status--${node.status || 'unknown'}`}>
             {node.status || 'unknown'}
@@ -167,7 +168,7 @@ const HierarchyView = ({ hierarchy, onSelectIssue, onClose }) => {
                 checked={enabledTypes.has(key)}
                 onChange={() => toggleType(key)}
               />
-              <span className="hierarchy-view__filter-icon">{icon}</span>
+              {icon && <span className="hierarchy-view__filter-icon">{icon}</span>}
               {label}
             </label>
           ))}
