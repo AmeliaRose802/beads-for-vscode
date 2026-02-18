@@ -62,10 +62,10 @@ function createGraphData(model) {
   }];
 }
 
-function switchToGraphTab(container, window) {
+function switchToGraphTab(container, window, tabLabel = 'Tasks') {
   const graphTab = Array.from(container.querySelectorAll('.blocking-view__tab'))
-    .find((btn) => btn.textContent.includes('Graph'));
-  assert.ok(graphTab, 'Graph tab button should exist');
+    .find((btn) => btn.textContent.includes(tabLabel));
+  assert.ok(graphTab, `${tabLabel} tab button should exist`);
   act(() => {
     graphTab.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
   });
@@ -188,40 +188,39 @@ describe('BlockingView dependency graph tab', () => {
     const graphData = [{
       Issues: [
         { id: 'E1', title: 'Epic', priority: 2, status: 'open', issue_type: 'epic' },
+        { id: 'E2', title: 'External Epic', priority: 2, status: 'open', issue_type: 'epic' },
         { id: 'T1', title: 'Child 1', priority: 2, status: 'open', issue_type: 'task' },
-        { id: 'T2', title: 'Child 2', priority: 2, status: 'open', issue_type: 'task' },
-        { id: 'X1', title: 'External', priority: 2, status: 'open', issue_type: 'task' }
+        { id: 'T2', title: 'Child 2', priority: 2, status: 'open', issue_type: 'task' }
       ],
       Dependencies: [
         { issue_id: 'T1', depends_on_id: 'E1', dependency_type: 'parent-child' },
         { issue_id: 'T2', depends_on_id: 'E1', dependency_type: 'parent-child' },
-        { depends_on_id: 'T1', issue_id: 'X1', dependency_type: 'blocked-by' },
-        { depends_on_id: 'T2', issue_id: 'X1', dependency_type: 'blocked-by' }
+        { depends_on_id: 'T1', issue_id: 'E2', dependency_type: 'blocked-by' },
+        { depends_on_id: 'T2', issue_id: 'E2', dependency_type: 'blocked-by' }
       ]
     }];
 
-    renderBlockingView({
-      blockingModel: createMinimalBlockingModel(),
-      graphData
+    act(() => {
+      root.render(
+        React.createElement(BlockingView, {
+          blockingModel: createMinimalBlockingModel(),
+          graphData,
+          onIssueClick: () => {},
+          onClose: () => {},
+          onDepAction: () => {}
+        })
+      );
     });
+    switchToGraphTab(container, window, 'Epics');
 
     await act(async () => {
       await new Promise(resolve => setTimeout(resolve, 0));
     });
 
-    const epicGroups = container.querySelectorAll('.dependency-graph__epic-group');
-    assert.strictEqual(epicGroups.length, 1, 'should render an epic grouping container');
+    const nodes = Array.from(container.querySelectorAll('.dependency-graph__node'));
+    assert.strictEqual(nodes.length, 2, 'epic view should show only epic nodes');
 
     const edges = container.querySelectorAll('.dependency-graph__edge--blocked-by');
-    assert.strictEqual(edges.length, 1, 'should collapse child blocking edges into a single epic edge');
-
-    const nodes = Array.from(container.querySelectorAll('.dependency-graph__node'));
-    const epicNode = nodes.find(node => node.textContent.includes('E1'));
-    const childNode = nodes.find(node => node.textContent.includes('T1'));
-    assert.ok(epicNode && childNode, 'should render epic and child nodes');
-
-    const epicTop = Number((epicNode.getAttribute('style') || '').match(/top:\s*(\d+)/)?.[1]);
-    const childTop = Number((childNode.getAttribute('style') || '').match(/top:\s*(\d+)/)?.[1]);
-    assert.ok(childTop > epicTop, 'child node should appear below epic node');
+    assert.strictEqual(edges.length, 1, 'should show collapsed blocking edge between epics');
   });
 });

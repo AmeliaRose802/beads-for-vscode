@@ -104,7 +104,7 @@ suite('BlockingView inline dependency editing', () => {
       );
     });
 
-    test('tabs include List, Hierarchy, and Graph labels', () => {
+    test('tabs include List, Hierarchy, Epics, and Tasks labels', () => {
       assert.ok(
         blockingViewSrc.includes('>📋 List<'),
         'BlockingView should label the list tab'
@@ -114,8 +114,12 @@ suite('BlockingView inline dependency editing', () => {
         'BlockingView should label the hierarchy tab'
       );
       assert.ok(
-        blockingViewSrc.includes('>🔀 Graph<'),
-        'BlockingView should label the graph tab'
+        blockingViewSrc.includes('>🏔 Epics<'),
+        'BlockingView should label the epics graph tab'
+      );
+      assert.ok(
+        blockingViewSrc.includes('>🔀 Tasks<'),
+        'BlockingView should label the tasks graph tab'
       );
     });
 

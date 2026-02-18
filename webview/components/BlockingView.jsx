@@ -3,6 +3,7 @@ import BlockingOrderTab from './BlockingOrderTab';
 import BlockingGraphTab from './BlockingGraphTab';
 import BlockingPlanView from './BlockingPlanView';
 import DependencyGraph from './DependencyGraph';
+import { filterGraphDataEpicLevel, filterGraphDataTaskLevel } from './dependency-graph-utils';
 import LabelDropdown from './LabelDropdown';
 import IssueCard from './IssueCard';
 const { copyTextToClipboard, formatIssuesForClipboard, buildPhasedClipboardText, buildPlanClipboardText } = require('../clipboard-utils');
@@ -200,6 +201,8 @@ const BlockingView = ({
     if (!Array.isArray(graphData)) return false;
     return graphData.some(group => Array.isArray(group?.Issues) && group.Issues.length > 0);
   }, [graphData]);
+  const epicGraphData = useMemo(() => filterGraphDataEpicLevel(graphData), [graphData]);
+  const taskGraphData = useMemo(() => filterGraphDataTaskLevel(graphData), [graphData]);
   if (filteredIssues.length === 0 && !hasGraphIssues) {
     return (
       <div className="blocking-view blocking-view--empty">
@@ -380,9 +383,13 @@ const BlockingView = ({
           onClick={() => handleTabChange('hierarchy')}
         >📐 Hierarchy</button>
         <button
-          className={`blocking-view__tab ${activeTab === 'graph' ? 'blocking-view__tab--active' : ''}`}
-          onClick={() => handleTabChange('graph')}
-        >🔀 Graph</button>
+          className={`blocking-view__tab ${activeTab === 'epic-graph' ? 'blocking-view__tab--active' : ''}`}
+          onClick={() => handleTabChange('epic-graph')}
+        >🏔 Epics</button>
+        <button
+          className={`blocking-view__tab ${activeTab === 'task-graph' ? 'blocking-view__tab--active' : ''}`}
+          onClick={() => handleTabChange('task-graph')}
+        >🔀 Tasks</button>
         <button
           className={`blocking-view__tab ${activeTab === 'plan' ? 'blocking-view__tab--active' : ''}`}
           onClick={() => handleTabChange('plan')}
@@ -412,9 +419,16 @@ const BlockingView = ({
             blockedByCount={blockedByCount}
           />
         )}
-        {activeTab === 'graph' && (
+        {activeTab === 'epic-graph' && (
           <DependencyGraph
-            graphData={graphData}
+            graphData={epicGraphData}
+            onIssueClick={handleNodeClick}
+            showCloseButton={false}
+          />
+        )}
+        {activeTab === 'task-graph' && (
+          <DependencyGraph
+            graphData={taskGraphData}
             onIssueClick={handleNodeClick}
             showCloseButton={false}
           />
