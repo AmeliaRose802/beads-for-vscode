@@ -438,7 +438,7 @@ const BlockingView = ({
         {activeTab === 'graph' && (
           <DependencyGraph
             graphData={graphData}
-            onIssueClick={onIssueClick}
+            onIssueClick={handleNodeClick}
             showCloseButton={false}
           />
         )}
