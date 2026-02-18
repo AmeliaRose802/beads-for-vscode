@@ -1,3 +1,5 @@
+import CopyableIssueId from './CopyableIssueId';
+
 const EditPanel= ({ 
   issueId,
   title, 
@@ -15,7 +17,9 @@ const EditPanel= ({
 }) => {
   return (
     <div className="section">
-      <div className="section-title">Edit Issue {issueId}</div>
+      <div className="section-title">
+        Edit Issue <CopyableIssueId id={issueId} className="edit-panel__id" />
+      </div>
       <div className="relationship-content">
         <div className="relationship-group">
           <label className="relationship-label">Title</label>

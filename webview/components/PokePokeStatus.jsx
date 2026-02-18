@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import CopyableIssueId from './CopyableIssueId';
 
 const PokePokeStatus = ({ instances = [], onStop, vscode }) => {
   const dismissTimersRef = useRef(new Map());
@@ -55,7 +56,7 @@ const PokePokeStatus = ({ instances = [], onStop, vscode }) => {
       <div className="section-title">🤖 PokePoke</div>
       {instances.map((inst) => (
         <div key={inst.itemId} className={`pokepoke-instance pokepoke-instance--${inst.state}`}>
-          <span className="pokepoke-instance__id">{inst.itemId}</span>
+          <CopyableIssueId id={inst.itemId} className="pokepoke-instance__id" />
           <span className="pokepoke-instance__state">{inst.state}</span>
           <div className="pokepoke-instance__actions">
             {(inst.state === 'running' || inst.state === 'starting') && (

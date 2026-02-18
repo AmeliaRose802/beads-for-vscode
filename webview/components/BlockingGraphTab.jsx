@@ -1,3 +1,4 @@
+import CopyableIssueId from './CopyableIssueId';
 const { getStatusIcon } = require('../field-utils');
 
 const BlockingGraphTab= ({
@@ -46,7 +47,7 @@ const BlockingGraphTab= ({
                   <div key={issue.id} className={nodeClass} onClick={() => onNodeClick(issue)} title={`${issue.id}: ${issue.title}`}>
                     <div className="blocking-view__node-header">
                       <span className="blocking-view__node-status">{getStatusIcon(issue.status)}</span>
-                      <span className="blocking-view__node-id">{issue.id}</span>
+                      <CopyableIssueId id={issue.id} className="blocking-view__node-id" />
                       <span className="blocking-view__node-priority">P{issue.priority}</span>
                     </div>
                     <div className="blocking-view__node-title">{issue.title}</div>

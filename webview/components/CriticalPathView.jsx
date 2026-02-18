@@ -1,4 +1,5 @@
 import React from 'react';
+import CopyableIssueId from './CopyableIssueId';
 const { getStatusIcon } = require('../field-utils');
 
 /**
@@ -121,7 +122,7 @@ const CriticalTreeNode = ({ node, fanOutCounts, onNodeClick, onEdgeClick, render
           onClick={() => onNodeClick(issue)}
         >
           <span className="blocking-view__critical-status">{getStatusIcon(issue.status)}</span>
-          <span className="blocking-view__critical-id">{issue.id}</span>
+          <CopyableIssueId id={issue.id} className="blocking-view__critical-id" />
           <span className="blocking-view__critical-title">{issue.title}</span>
           <span className="blocking-view__critical-priority">P{issue.priority}</span>
           {fanOutCount > 0 && (

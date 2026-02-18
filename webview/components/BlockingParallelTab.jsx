@@ -1,3 +1,4 @@
+import CopyableIssueId from './CopyableIssueId';
 const { getStatusIcon } = require('../field-utils');
 
 const BlockingParallelTab= ({
@@ -60,7 +61,7 @@ const BlockingParallelTab= ({
                 onClick={() => onIssueClick(issue)}
               >
                 <span className="blocking-view__parallel-status">{getStatusIcon(issue.status)}</span>
-                <span className="blocking-view__parallel-id">{issue.id}</span>
+                <CopyableIssueId id={issue.id} className="blocking-view__parallel-id" />
                 <span className="blocking-view__parallel-title">{issue.title}</span>
               </div>
             ))}

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import CopyableIssueId from './CopyableIssueId';
 const { buildPlanSchedule } = require('../plan-utils');
 const { getStatusIcon } = require('../field-utils');
 
@@ -92,20 +93,23 @@ const BlockingPlanView = ({
               Resolve these cycles so work can progress in later waves.
             </p>
             <ul className="blocking-view__plan-warning-list">
-              {plan.cycleGroups.map((group, index) => {
-                const label = group
-                  .map(issue => {
+              {plan.cycleGroups.map((group, index) => (
+                <li key={`cycle-${index}`} className="blocking-view__plan-warning-item">
+                  {group.map((issue, issueIndex) => {
                     const issueId = issue?.id ?? '?';
-                    const title = issue?.title ? ` – ${issue.title}` : '';
-                    return `${issueId}${title}`;
-                  })
-                  .join(' ↔ ');
-                return (
-                  <li key={`cycle-${index}`} className="blocking-view__plan-warning-item">
-                    {label}
-                  </li>
-                );
-              })}
+                    const hasTitle = Boolean(issue?.title);
+                    return (
+                      <React.Fragment key={`${issueId}-${issueIndex}`}>
+                        <CopyableIssueId id={issueId} className="blocking-view__plan-id" />
+                        {hasTitle && <span className="blocking-view__plan-cycle-title"> – {issue?.title}</span>}
+                        {issueIndex < group.length - 1 && (
+                          <span className="blocking-view__plan-cycle-separator"> ↔ </span>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </li>
+              ))}
             </ul>
           </div>
         </div>
@@ -146,7 +150,7 @@ const BlockingPlanView = ({
                         🔄
                       </span>
                     )}
-                    <span className="blocking-view__plan-id">{issue.id}</span>
+                    <CopyableIssueId id={issue.id} className="blocking-view__plan-id" />
                     <span className="blocking-view__plan-title">{issue.title}</span>
                   </div>
                 );

@@ -1,3 +1,4 @@
+import CopyableIssueId from './CopyableIssueId';
 const { getStatusIcon } = require('../field-utils');
 
 const BlockingOrderTab= ({
@@ -41,7 +42,7 @@ const BlockingOrderTab= ({
           >
             <span className="blocking-view__order-step">{idx + 1}</span>
             <span className="blocking-view__order-status">{getStatusIcon(issue.status)}</span>
-            <span className="blocking-view__order-id">{issue.id}</span>
+            <CopyableIssueId id={issue.id} className="blocking-view__order-id" />
             <span className="blocking-view__order-title">{issue.title}</span>
             {isReady && <span className="blocking-view__tag blocking-view__tag--ready">Ready</span>}
           </li>

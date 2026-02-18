@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import CopyableIssueId from './CopyableIssueId';
 const { getStatusIcon } = require('../field-utils');
 
 /**
@@ -420,7 +421,7 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
                   <span className={`dependency-graph__node-status dependency-graph__node-status--${issue.status}`}>
                     {getStatusIcon(issue.status)}
                   </span>
-                  <span className="dependency-graph__node-id">{issue.id}</span>
+                  <CopyableIssueId id={issue.id} className="dependency-graph__node-id" />
                   <span className={`dependency-graph__node-priority dependency-graph__node-priority--p${issue.priority}`}>
                     P{issue.priority}
                   </span>
@@ -453,7 +454,7 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
       {selectedNode && issueMap[selectedNode] && (
         <div className="dependency-graph__details">
           <div className="dependency-graph__details-header">
-            <strong>{issueMap[selectedNode].id}</strong>
+            <CopyableIssueId id={issueMap[selectedNode].id} className="dependency-graph__details-id" />
             <button 
               className="dependency-graph__details-close" 
               onClick={() => setSelectedNode(null)}

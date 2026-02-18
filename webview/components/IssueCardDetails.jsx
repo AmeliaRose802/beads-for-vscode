@@ -1,3 +1,4 @@
+import CopyableIssueId from './CopyableIssueId';
 import MarkdownRenderer from './MarkdownRenderer';
 
 const IssueCardDetails = ({ 
@@ -54,11 +55,16 @@ const IssueCardDetails = ({
                 <div className="issue-card__relationship-group">
                   <span className="issue-card__relationship-label">Depends on ({dependencies.length}):</span>
                   <div className="issue-card__relationship-list">
-                    {dependencies.map((dep, idx) => (
-                      <span key={idx} className="issue-card__relationship-item issue-card__relationship-item--dependency">
-                        {dep.to_id || dep.ToID || dep.target_id || dep.id || JSON.stringify(dep)}
-                      </span>
-                    ))}
+                    {dependencies.map((dep, idx) => {
+                      const dependencyId = dep.to_id || dep.ToID || dep.target_id || dep.id || JSON.stringify(dep);
+                      return (
+                        <CopyableIssueId
+                          key={idx}
+                          id={dependencyId}
+                          className="issue-card__relationship-item issue-card__relationship-item--dependency"
+                        />
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -66,11 +72,16 @@ const IssueCardDetails = ({
                 <div className="issue-card__relationship-group">
                   <span className="issue-card__relationship-label">Depended on by ({dependents.length}):</span>
                   <div className="issue-card__relationship-list">
-                    {dependents.map((dep, idx) => (
-                      <span key={idx} className="issue-card__relationship-item issue-card__relationship-item--dependent">
-                        {dep.from_id || dep.FromID || dep.source_id || dep.id || JSON.stringify(dep)}
-                      </span>
-                    ))}
+                    {dependents.map((dep, idx) => {
+                      const dependentId = dep.from_id || dep.FromID || dep.source_id || dep.id || JSON.stringify(dep);
+                      return (
+                        <CopyableIssueId
+                          key={idx}
+                          id={dependentId}
+                          className="issue-card__relationship-item issue-card__relationship-item--dependent"
+                        />
+                      );
+                    })}
                   </div>
                 </div>
               )}

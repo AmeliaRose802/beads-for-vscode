@@ -5,37 +5,10 @@ import BlockingPlanView from './BlockingPlanView';
 import DependencyGraph from './DependencyGraph';
 import LabelDropdown from './LabelDropdown';
 import IssueCard from './IssueCard';
-const { formatIssuesForClipboard, buildPhasedClipboardText, buildPlanClipboardText } = require('../clipboard-utils');
+const { copyTextToClipboard, formatIssuesForClipboard, buildPhasedClipboardText, buildPlanClipboardText } = require('../clipboard-utils');
 const { isClosedStatus } = require('../field-utils');
 const COPY_FEEDBACK_DURATION_MS = 2200;
 const PHASE_ITEM_PREVIEW_LIMIT = 5;
-async function copyTextToClipboard(text) {
-  if (!text || !text.length) {
-    throw new Error('No text to copy');
-  }
-  if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(text);
-    return;
-  }
-  if (typeof document === 'undefined') {
-    throw new Error('Clipboard API unavailable');
-  }
-  const textarea = document.createElement('textarea');
-  textarea.value = text;
-  textarea.setAttribute('readonly', '');
-  textarea.style.position = 'absolute';
-  textarea.style.left = '-9999px';
-  document.body.appendChild(textarea);
-  textarea.select();
-  try {
-    const succeeded = document.execCommand && document.execCommand('copy');
-    if (!succeeded) {
-      throw new Error('Copy command rejected');
-    }
-  } finally {
-    document.body.removeChild(textarea);
-  }
-}
 /** BlockingView - Visualizes blocking relationships and suggests completion order. */
 const BlockingView = ({
   blockingModel,
