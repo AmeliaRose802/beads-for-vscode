@@ -4,26 +4,22 @@ import BlockingGraphTab from './BlockingGraphTab';
 import BlockingPlanView from './BlockingPlanView';
 import DependencyGraph from './DependencyGraph';
 import LabelDropdown from './LabelDropdown';
+import IssueCard from './IssueCard';
 const { formatIssuesForClipboard, buildPhasedClipboardText, buildPlanClipboardText } = require('../clipboard-utils');
 const { isClosedStatus } = require('../field-utils');
-
 const COPY_FEEDBACK_DURATION_MS = 2200;
 const PHASE_ITEM_PREVIEW_LIMIT = 5;
-
 async function copyTextToClipboard(text) {
   if (!text || !text.length) {
     throw new Error('No text to copy');
   }
-
   if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
     await navigator.clipboard.writeText(text);
     return;
   }
-
   if (typeof document === 'undefined') {
     throw new Error('Clipboard API unavailable');
   }
-
   const textarea = document.createElement('textarea');
   textarea.value = text;
   textarea.setAttribute('readonly', '');
@@ -31,7 +27,6 @@ async function copyTextToClipboard(text) {
   textarea.style.left = '-9999px';
   document.body.appendChild(textarea);
   textarea.select();
-
   try {
     const succeeded = document.execCommand && document.execCommand('copy');
     if (!succeeded) {
@@ -41,7 +36,6 @@ async function copyTextToClipboard(text) {
     document.body.removeChild(textarea);
   }
 }
-
 /** BlockingView - Visualizes blocking relationships and suggests completion order. */
 const BlockingView = ({
   blockingModel,
@@ -50,7 +44,19 @@ const BlockingView = ({
   onClose,
   onDepAction,
   activeTab: controlledTab,
-  onTabChange
+  onTabChange,
+  issueDetails = {},
+  loadingDetails = {},
+  onCloseIssue,
+  onReopenIssue,
+  onEditIssue,
+  onTypeChange,
+  onPriorityChange,
+  onAssigneeChange,
+  onShowHierarchy,
+  onPokePoke,
+  pokepokeInstances,
+  vscode
 }) => {
   const [internalTab, setInternalTab] = useState(controlledTab || 'list');
   useEffect(() => {
@@ -59,17 +65,12 @@ const BlockingView = ({
     }
   }, [controlledTab]);
   const activeTab = controlledTab || internalTab;
-  const handleTabChange = (tab) => {
-    if (onTabChange) {
-      onTabChange(tab);
-    } else {
-      setInternalTab(tab);
-    }
-  };
+  const handleTabChange = (tab) => (onTabChange ? onTabChange(tab) : setInternalTab(tab));
   const [filterPriority, setFilterPriority] = useState('');
   const [filterAssignee, setFilterAssignee] = useState('');
   const [filterLabel, setFilterLabel] = useState('');
   const [selectedNode, setSelectedNode] = useState(null);
+  const [selectedIssue, setSelectedIssue] = useState(null);
   const [activeEdgeMenu, setActiveEdgeMenu] = useState(null);
   const [retargetState, setRetargetState] = useState(null);
   const [addLinkState, setAddLinkState] = useState(null);
@@ -80,16 +81,11 @@ const BlockingView = ({
     const timeout = setTimeout(() => setCopyFeedback(null), COPY_FEEDBACK_DURATION_MS);
     return () => clearTimeout(timeout);
   }, [copyFeedback]);
-  const showCopyFeedback = (target, message, isError = false) => {
-    setCopyFeedback({ target, message, isError });
-  };
-  
-  
+  const showCopyFeedback = (target, message, isError = false) => setCopyFeedback({ target, message, isError });
   const readyIds = useMemo(() => {
     if (!blockingModel?.readyItems) return new Set();
     return new Set(blockingModel.readyItems.map(i => i.id));
   }, [blockingModel]);
-  
   if (!blockingModel) {
     return (
       <div className="blocking-view blocking-view--empty">
@@ -104,6 +100,10 @@ const BlockingView = ({
     );
   }
   const { issues, edges, completionOrder, criticalPaths, readyItems, parallelGroups, blocksCount, blockedByCount } = blockingModel;
+  const existingAssignees = useMemo(() => {
+    if (!Array.isArray(issues)) return [];
+    return [...new Set(issues.map(issue => issue.assignee).filter(Boolean))];
+  }, [issues]);
   const availableLabels = useMemo(() => {
     if (!Array.isArray(issues)) return [];
     const labelSet = new Set();
@@ -116,7 +116,6 @@ const BlockingView = ({
       a.localeCompare(b, undefined, { sensitivity: 'base' })
     );
   }, [issues]);
-  
   const matchesFilters = useMemo(() => {
     const hasPriority = filterPriority !== '';
     const hasAssignee = filterAssignee.trim() !== '';
@@ -142,6 +141,21 @@ const BlockingView = ({
     ? normalizedParallelGroups.map(g => g.filter(i => filteredIds.has(i.id))).filter(g => g.length > 0)
     : normalizedParallelGroups
   );
+  const formatPriority = (priority) => {
+    if (priority === undefined || priority === null) return 'p2';
+    const raw = String(priority).trim();
+    if (!raw) return 'p2';
+    return raw.toLowerCase().startsWith('p') ? raw.toLowerCase() : `p${raw}`;
+  };
+  const normalizeIssueForCard = (issue) => {
+    if (!issue) return null;
+    return {
+      ...issue,
+      type: issue.type || issue.issue_type || 'task',
+      priority: formatPriority(issue.priority)
+    };
+  };
+  const selectedCardIssue = useMemo(() => normalizeIssueForCard(selectedIssue), [selectedIssue]);
   const copyIssuesToClipboard = async (issueList, target, header) => {
     const formatted = formatIssuesForClipboard(issueList || [], { header });
     if (!formatted.trim()) {
@@ -157,7 +171,6 @@ const BlockingView = ({
     }
   };
   const copyOrderToClipboard = () => copyIssuesToClipboard(filteredCompletionOrder, 'order');
-  
   const copyPlanToClipboard = async (plan) => {
     const formatted = buildPlanClipboardText(plan);
     if (!formatted.trim()) {
@@ -224,30 +237,22 @@ const BlockingView = ({
       </div>
     );
   }
-  
   const handleNodeClick = (issue) => {
     setSelectedNode(issue.id);
+    setSelectedIssue(issue);
     if (onIssueClick) onIssueClick(issue);
   };
-  
   const handleEdgeClick = (fromId, toId, event) => {
     event.stopPropagation();
     setActiveEdgeMenu({ fromId, toId });
     setRetargetState(null);
     setAddLinkState(null);
   };
-  
-  const closeEdgeMenu = () => {
-    setActiveEdgeMenu(null);
-    setRetargetState(null);
-    setAddLinkState(null);
-  };
-  
+  const closeEdgeMenu = () => { setActiveEdgeMenu(null); setRetargetState(null); setAddLinkState(null); };
   const handleRemoveLink = (fromId, toId) => {
     if (onDepAction) onDepAction('remove', fromId, toId);
     closeEdgeMenu();
   };
-  
   const handleRetarget = (fromId, oldToId, newToId) => {
     if (onDepAction && newToId.trim()) {
       onDepAction('remove', fromId, oldToId);
@@ -255,12 +260,10 @@ const BlockingView = ({
     }
     closeEdgeMenu();
   };
-  
   const handleAddLink = (fromId, toId) => {
     if (onDepAction && toId.trim()) onDepAction('add', fromId, toId.trim());
     closeEdgeMenu();
   };
-  
   const renderEdgeMenu = (fromId, toId) => {
     if (!activeEdgeMenu || activeEdgeMenu.fromId !== fromId || activeEdgeMenu.toId !== toId) {
       return null;
@@ -389,9 +392,7 @@ const BlockingView = ({
         </div>
         <button className="blocking-view__close-btn" onClick={onClose}>✕</button>
       </div>
-
       {renderFilters()}
-
       <div className="blocking-view__tabs">
         <button
           className={`blocking-view__tab ${activeTab === 'list' ? 'blocking-view__tab--active' : ''}`}
@@ -410,7 +411,6 @@ const BlockingView = ({
           onClick={() => handleTabChange('plan')}
         >📅 Plan</button>
       </div>
-
       <div className="blocking-view__content">
         {activeTab === 'list' && (
           <BlockingOrderTab
@@ -454,6 +454,43 @@ const BlockingView = ({
           />
         )}
       </div>
+      {selectedCardIssue && (
+        <div className="blocking-view__details">
+          <div className="blocking-view__details-header">
+            <span className="blocking-view__details-title">Issue details</span>
+            <button
+              className="blocking-view__details-close"
+              type="button"
+              onClick={() => setSelectedIssue(null)}
+            >
+              ✕
+            </button>
+          </div>
+          <div className="blocking-view__details-card">
+            <IssueCard
+              issue={selectedCardIssue}
+              onClose={onCloseIssue ? () => onCloseIssue(selectedCardIssue.id) : undefined}
+              onReopen={onReopenIssue ? () => onReopenIssue(selectedCardIssue.id) : undefined}
+              onEdit={onEditIssue ? () => onEditIssue(selectedCardIssue.id) : undefined}
+              onTypeChange={onTypeChange}
+              onPriorityChange={onPriorityChange}
+              onAssigneeChange={onAssigneeChange}
+              onShowHierarchy={onShowHierarchy}
+              onPokePoke={onPokePoke}
+              pokepokeRunning={pokepokeInstances?.some(
+                (instance) =>
+                  instance.itemId === selectedCardIssue.id &&
+                  (instance.state === 'running' || instance.state === 'starting')
+              )}
+              existingAssignees={existingAssignees}
+              detailedData={issueDetails[selectedCardIssue.id]}
+              isLoadingDetails={loadingDetails[selectedCardIssue.id]}
+              defaultExpanded
+              vscode={vscode}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

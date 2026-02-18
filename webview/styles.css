@@ -1617,6 +1617,37 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   max-height: 400px;
   overflow-y: auto;
 }
+.blocking-view__details {
+  border-top: 1px solid var(--vscode-panel-border);
+  padding: 8px 12px;
+  background-color: var(--vscode-editor-background);
+}
+.blocking-view__details-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.blocking-view__details-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--vscode-descriptionForeground);
+}
+.blocking-view__details-close {
+  background: none;
+  border: none;
+  color: var(--vscode-foreground);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+.blocking-view__details-close:hover {
+  background-color: var(--vscode-toolbar-hoverBackground);
+}
+.blocking-view__details-card .issue-card {
+  margin: 0;
+}
 .blocking-view__graph-legend {
   display: flex;
   gap: 12px;

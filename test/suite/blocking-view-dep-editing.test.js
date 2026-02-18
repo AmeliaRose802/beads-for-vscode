@@ -133,6 +133,21 @@ suite('BlockingView inline dependency editing', () => {
       );
     });
 
+    test('renders expanded IssueCard details panel', () => {
+      assert.ok(
+        blockingViewSrc.includes('blocking-view__details'),
+        'BlockingView should render a details panel container'
+      );
+      assert.ok(
+        blockingViewSrc.includes('<IssueCard'),
+        'BlockingView should render IssueCard for selected items'
+      );
+      assert.ok(
+        blockingViewSrc.includes('defaultExpanded'),
+        'IssueCard should default expand in the details panel'
+      );
+    });
+
     test('edge menu has remove option', () => {
       assert.ok(
         blockingViewSrc.includes('Remove link'),
@@ -242,6 +257,17 @@ suite('BlockingView inline dependency editing', () => {
         'onDepAction should use --blocks flag for blocking deps'
       );
     });
+
+    test('passes issue details data into BlockingView', () => {
+      assert.ok(
+        appSrc.includes('issueDetails={issueDetails}'),
+        'App.jsx should pass issueDetails into BlockingView'
+      );
+      assert.ok(
+        appSrc.includes('loadingDetails={loadingDetails}'),
+        'App.jsx should pass loadingDetails into BlockingView'
+      );
+    });
   });
 
   suite('CSS styles', () => {
@@ -253,6 +279,17 @@ suite('BlockingView inline dependency editing', () => {
       assert.ok(
         stylesSrc.includes('.dependency-graph__close-btn'),
         'CSS should style the dependency graph close button'
+      );
+    });
+
+    test('defines blocking view details panel styles', () => {
+      assert.ok(
+        stylesSrc.includes('.blocking-view__details'),
+        'CSS should define blocking view details panel styles'
+      );
+      assert.ok(
+        stylesSrc.includes('.blocking-view__details-header'),
+        'CSS should define blocking view details header styles'
       );
     });
 
