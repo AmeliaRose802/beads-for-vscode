@@ -35,10 +35,8 @@ const App = () => {
   const graphPurposeRef = useRef(null);
   const hierarchyIssueRef = useRef(null);
   const outputRef = useRef(output);
-
   const updateGraphPurpose = (purpose) => { graphPurposeRef.current = purpose; };
   const updateHierarchyIssue = (issueId) => { hierarchyIssueRef.current = issueId; };
-
   // Edit issue form state
   const [editIssueId, setEditIssueId] = useState('');
   const [editTitle, setEditTitle] = useState('');
@@ -46,7 +44,6 @@ const App = () => {
   const [editPriority, setEditPriority] = useState('2');
   const [editDescription, setEditDescription] = useState('');
   const [editStatus, setEditStatus] = useState('open');
-
   // Create issue form state
   const [createTitle, setCreateTitle] = useState('');
   const [createType, setCreateType] = useState('task');
@@ -57,24 +54,20 @@ const App = () => {
   const [createRelatedId, setCreateRelatedId] = useState('');
   const [isAILoading, setIsAILoading] = useState(false);
   const [currentFile, setCurrentFile] = useState('');
-
   // Issue details state (for inline expansion)
   const [issueDetails, setIssueDetails] = useState({}); // Map of issueId -> details
   const [loadingDetails, setLoadingDetails] = useState({}); // Map of issueId -> boolean
-
   // PokePoke state
   const [pokepokeInstances, setPokepokeInstances] = useState([]);
   // Relationship form state
   const [sourceBead, setSourceBead] = useState('');
   const [targetBead, setTargetBead] = useState('');
   const [relationType, setRelationType] = useState('parent');
-
   const {
     pendingOperations,
     beginCommandProgress,
     completeCommandProgress
   } = useCommandProgress();
-
   const {
     displayResult,
     runCommand,
@@ -112,11 +105,9 @@ const App = () => {
     beginCommandProgress,
     completeCommandProgress
   });
-
   useEffect(() => {
     outputRef.current = output;
   }, [output]);
-
   useEffect(() => {
     vscode.postMessage({ type: 'getCwd' });
     vscode.postMessage({ type: 'getCurrentFile' });
@@ -162,16 +153,12 @@ const App = () => {
         hierarchyIssueRef
       });
     };
-
     window.addEventListener('message', messageHandler);
     return () => window.removeEventListener('message', messageHandler);
   }, []);
-
   const handleInitBeads = () => runInlineAction('init', 'Initialized beads in this workspace');
-
   const handleQuickTypeChange = (issueId, newType) =>
     runInlineAction(`update ${issueId} --type ${newType}`, `Updated ${issueId} type to ${newType}`);
-
   const handleQuickPriorityChange = (issueId, newPriority) =>
     runInlineAction(`update ${issueId} --priority ${newPriority}`, `Updated ${issueId} priority to P${newPriority}`);
   const handleAssigneeChange = (issueId, newAssignee) => new Promise((resolve, reject) => {
@@ -181,7 +168,6 @@ const App = () => {
     const successMsg = trimmedAssignee
       ? `Assigned ${issueId} to ${newAssignee}`
       : `Cleared assignee for ${issueId}`;
-
     beginCommandProgress(command, 'inline');
     const messageHandler = (event) => {
       const message = event.data;
@@ -200,7 +186,6 @@ const App = () => {
         }
       }
     };
-
     window.addEventListener('message', messageHandler);
     vscode.postMessage({
       type: 'executeCommand',
@@ -208,7 +193,6 @@ const App = () => {
       isInlineAction: true,
       successMessage: successMsg
     });
-
     setTimeout(() => {
       window.removeEventListener('message', messageHandler);
       completeCommandProgress(command);
@@ -235,19 +219,16 @@ const App = () => {
     }
     runInlineAction(command, `Created new ${createType}`);
   };
-
   const handleAISuggest = async () => {
     if (!createTitle.trim()) {
       setOutput('Error: Title is required for AI suggestions');
       setIsError(true);
       return;
     }
-
     setIsAILoading(true);
     setOutput('🤖 Analyzing issue with AI...');
     setIsError(false);
     setIsSuccess(false);
-
     // Request AI suggestions from extension
     vscode.postMessage({
       type: 'getAISuggestions',
@@ -255,17 +236,14 @@ const App = () => {
       currentDescription: createDescription
     });
   };
-
   const handleShowIssueInline = (issueId) => {
     if (issueDetails[issueId] || loadingDetails[issueId]) return;
     setLoadingDetails(prev => ({ ...prev, [issueId]: true }));
     vscode.postMessage({ type: 'getIssueDetails', issueId });
   };
-
   const handleShowHierarchy = (issueId) => {
     updateHierarchyIssue(issueId);
     closeAllPanels();
-
     if (graphData) {
       try {
         const model = buildHierarchyModel(issueId, graphData);
@@ -279,13 +257,10 @@ const App = () => {
       requestGraphData('hierarchy');
     }
   };
-
   const handlePokePoke = (itemId, title, isTree) =>
     vscode.postMessage({ type: 'pokepokeLaunch', itemId, title, isTree });
-
   const handlePokePokeStop = (itemId) =>
     vscode.postMessage({ type: 'pokepokeStop', itemId });
-
   const handleDepAction = (action) => {
     if (!sourceBead.trim() || !targetBead.trim()) { setOutput('Error: Please provide both source and target bead IDs'); setIsError(true); return; }
     const beadIdPattern = /^[a-zA-Z0-9_-]+$/;
@@ -328,22 +303,21 @@ const App = () => {
     setEditPriority('2');
     setEditStatus('open');
   };
-
   const handleEditIssue = (id) => {
     closeAllPanels();
-
     // Request issue details from extension using list command with --json
     vscode.postMessage({
       type: 'executeCommand',
       command: `list --id ${id} --json`
     });
-    
     setEditIssueId(id);
     setShowEditPanel(true);
   };
-
+  const handleCloseIssue = (id) =>
+    runInlineAction(`close ${id} -r "Closed from UI"`, `Closed ${id}`);
+  const handleReopenIssue = (id) =>
+    runInlineAction(`reopen ${id} -r "Reopened from UI"`, `Reopened ${id}`);
   const shouldShowResultsPanel = !showHierarchyView && !showBlockingView;
-
   return (
     <div className="container">
       <div className="header">
@@ -351,7 +325,6 @@ const App = () => {
         <div className="cwd">{cwd}</div>
         <CommandProgress entries={pendingOperations} />
       </div>
-
       <div className="main-content">
         <BeadsInitWarning beadsStatus={beadsStatus} onInit={handleInitBeads} />
         <div className="section">
@@ -368,9 +341,7 @@ const App = () => {
             <button className="action-btn" onClick={() => handleOpenDependencies('list')} title="View dependency chains and completion order">🔗 Dependencies</button>
           </div>
         </div>
-
         <PokePokeStatus instances={pokepokeInstances} onStop={handlePokePokeStop} vscode={vscode} />
-
         {showCreatePanel && (
           <CreatePanel
             title={createTitle}
@@ -449,6 +420,18 @@ const App = () => {
               onTabChange={setActiveBlockingTab}
               onIssueClick={(issue) => handleShowIssueInline(issue.id)}
               onClose={() => setShowBlockingView(false)}
+              issueDetails={issueDetails}
+              loadingDetails={loadingDetails}
+              onCloseIssue={handleCloseIssue}
+              onReopenIssue={handleReopenIssue}
+              onEditIssue={handleEditIssue}
+              onTypeChange={handleQuickTypeChange}
+              onPriorityChange={handleQuickPriorityChange}
+              onAssigneeChange={handleAssigneeChange}
+              onShowHierarchy={handleShowHierarchy}
+              onPokePoke={handlePokePoke}
+              pokepokeInstances={pokepokeInstances}
+              vscode={vscode}
               onDepAction={(action, fromId, toId) => {
                 runInlineAction(
                   `dep ${action} ${fromId} --blocks ${toId}`,
@@ -475,8 +458,8 @@ const App = () => {
               isError={isError} 
               isSuccess={isSuccess}
               onShowIssue={handleShowIssueInline}
-              onCloseIssue={(id) => runInlineAction(`close ${id} -r "Closed from UI"`, `Closed ${id}`)}
-              onReopenIssue={(id) => runInlineAction(`reopen ${id} -r "Reopened from UI"`, `Reopened ${id}`)}
+              onCloseIssue={handleCloseIssue}
+              onReopenIssue={handleReopenIssue}
               onEditIssue={handleEditIssue}
               onLinkParent={(childId, parentId) => runInlineAction(`dep add ${childId} --parent ${parentId}`, `Linked ${childId} → ${parentId}`)}
               onTypeChange={handleQuickTypeChange}

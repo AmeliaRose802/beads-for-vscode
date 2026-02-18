@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AssigneeDropdown from './AssigneeDropdown';
 import IssueCardDetails from './IssueCardDetails';
 import { parseComments } from './utils';
 import { useAsyncData } from '../hooks/useAsyncData';
 
-const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, onPriorityChange, onAssigneeChange, onShowHierarchy, onPokePoke, pokepokeRunning, existingAssignees, detailedData, isLoadingDetails, onDragStart, onDrop, isDragging, isDropTarget, vscode }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, onPriorityChange, onAssigneeChange, onShowHierarchy, onPokePoke, pokepokeRunning, existingAssignees, detailedData, isLoadingDetails, onDragStart, onDrop, isDragging, isDropTarget, vscode, defaultExpanded = false }) => {
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [comments, setComments] = useState([]);
   const [showQuickEdit, setShowQuickEdit] = useState(false);
   const [dependencies, setDependencies] = useState(null);
   const [dependents, setDependents] = useState(null);
+  const [commentsLoaded, setCommentsLoaded] = useState(false);
   const [isEditingAssignee, setIsEditingAssignee] = useState(false);
   const [assigneeSaveState, setAssigneeSaveState] = useState('idle'); // idle, saving, saved, error
   const [shouldLoadDeps, setShouldLoadDeps] = useState(false);
@@ -43,9 +44,43 @@ const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, on
       if (msg.success && msg.output) {
         setComments(parseComments(msg.output));
       }
+      setCommentsLoaded(true);
       setShouldLoadComments(false);
     }
   });
+
+  useEffect(() => {
+    if (defaultExpanded && !isExpanded) {
+      setIsExpanded(true);
+    }
+  }, [defaultExpanded, isExpanded]);
+
+  useEffect(() => {
+    if (!isExpanded) return;
+
+    if (!detailedData && !isLoadingDetails && onClick) {
+      onClick();
+    }
+
+    if (totalRelationships > 0 && dependencies === null && !loadingDeps && vscode) {
+      setShouldLoadDeps(true);
+    }
+
+    if (!commentsLoaded && !loadingComments && vscode) {
+      setShouldLoadComments(true);
+    }
+  }, [
+    isExpanded,
+    detailedData,
+    isLoadingDetails,
+    onClick,
+    totalRelationships,
+    dependencies,
+    loadingDeps,
+    commentsLoaded,
+    loadingComments,
+    vscode
+  ]);
 
   const handleCardClick = (e) => {
     // Don't trigger card click if clicking on action buttons, quick edit, assignee editor, or copy button
@@ -59,20 +94,6 @@ const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, on
     const willExpand = !isExpanded;
     setIsExpanded(willExpand);
     
-    // Load details on expansion if not already loaded
-    if (willExpand && !detailedData && onClick) {
-      onClick();
-    }
-    
-    // Trigger dependencies loading on expansion if there are any and not already loaded
-    if (willExpand && totalRelationships > 0 && dependencies === null && !loadingDeps && vscode) {
-      setShouldLoadDeps(true);
-    }
-    
-    // Trigger comments loading on expansion if not already loaded
-    if (willExpand && comments.length === 0 && !loadingComments && vscode) {
-      setShouldLoadComments(true);
-    }
   };
 
   const handleShowHierarchyClick = (e) => {

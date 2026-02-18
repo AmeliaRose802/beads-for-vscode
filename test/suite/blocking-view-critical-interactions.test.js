@@ -129,4 +129,19 @@ describe('BlockingView dependency graph tab', () => {
     assert.ok(issue);
     assert.strictEqual(issue.id, 'A1');
   });
+
+  it('shows expanded details when selecting a node', () => {
+    renderBlockingView();
+    const nodes = container.querySelectorAll('.dependency-graph__node');
+    assert.ok(nodes.length > 0, 'graph should render nodes');
+
+    act(() => {
+      nodes[0].dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    });
+
+    const detailsPanel = container.querySelector('.blocking-view__details');
+    assert.ok(detailsPanel, 'should render details panel');
+    const expandedDetails = container.querySelector('.issue-card__details');
+    assert.ok(expandedDetails, 'IssueCard should be expanded by default');
+  });
 });
