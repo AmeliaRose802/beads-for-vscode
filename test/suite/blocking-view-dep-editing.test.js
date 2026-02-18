@@ -6,6 +6,9 @@ suite('BlockingView inline dependency editing', () => {
   const blockingViewSrc = fs.readFileSync(
     path.join(__dirname, '../../webview/components/BlockingView.jsx'), 'utf8'
   );
+  const edgeMenuSrc = fs.readFileSync(
+    path.join(__dirname, '../../webview/components/EdgeMenu.jsx'), 'utf8'
+  );
   const blockingGraphTabSrc = fs.readFileSync(
     path.join(__dirname, '../../webview/components/BlockingGraphTab.jsx'), 'utf8'
   );
@@ -36,15 +39,15 @@ suite('BlockingView inline dependency editing', () => {
 
     test('has retargetState for re-targeting links', () => {
       assert.ok(
-        blockingViewSrc.includes('retargetState'),
-        'BlockingView should track retarget state'
+        edgeMenuSrc.includes('retargetState'),
+        'EdgeMenu should track retarget state'
       );
     });
 
     test('has addLinkState for adding new links', () => {
       assert.ok(
-        blockingViewSrc.includes('addLinkState'),
-        'BlockingView should track add-link state'
+        edgeMenuSrc.includes('addLinkState'),
+        'EdgeMenu should track add-link state'
       );
     });
 
@@ -154,42 +157,42 @@ suite('BlockingView inline dependency editing', () => {
 
     test('edge menu has remove option', () => {
       assert.ok(
-        blockingViewSrc.includes('Remove link'),
+        edgeMenuSrc.includes('Remove link'),
         'Edge menu should have remove link option'
       );
     });
 
     test('edge menu has re-target option', () => {
       assert.ok(
-        blockingViewSrc.includes('Re-target'),
+        edgeMenuSrc.includes('Re-target'),
         'Edge menu should have re-target option'
       );
     });
 
     test('edge menu has add link option', () => {
       assert.ok(
-        blockingViewSrc.includes('Add link from'),
+        edgeMenuSrc.includes('Add link from'),
         'Edge menu should have add link option'
       );
     });
 
     test('edge menu has close button', () => {
       assert.ok(
-        blockingViewSrc.includes('blocking-view__edge-menu-close'),
+        edgeMenuSrc.includes('blocking-view__edge-menu-close'),
         'Edge menu should have a close button'
       );
     });
 
     test('re-target shows input field', () => {
       assert.ok(
-        blockingViewSrc.includes('blocking-view__edge-menu-input'),
+        edgeMenuSrc.includes('blocking-view__edge-menu-input'),
         'Re-target should show an input field'
       );
     });
 
     test('add link shows input field', () => {
       assert.ok(
-        blockingViewSrc.includes('Target ID...'),
+        edgeMenuSrc.includes('Target ID...'),
         'Add link should show an input field with placeholder'
       );
     });
@@ -200,12 +203,12 @@ suite('BlockingView inline dependency editing', () => {
         'closeEdgeMenu should reset activeEdgeMenu'
       );
       assert.ok(
-        blockingViewSrc.includes('setRetargetState(null)'),
-        'closeEdgeMenu should reset retargetState'
+        edgeMenuSrc.includes('setRetargetState(null)'),
+        'EdgeMenu should reset retargetState on Escape'
       );
       assert.ok(
-        blockingViewSrc.includes('setAddLinkState(null)'),
-        'closeEdgeMenu should reset addLinkState'
+        edgeMenuSrc.includes('setAddLinkState(null)'),
+        'EdgeMenu should reset addLinkState on Escape'
       );
     });
 
@@ -218,15 +221,15 @@ suite('BlockingView inline dependency editing', () => {
 
     test('keyboard Enter submits re-target', () => {
       assert.ok(
-        blockingViewSrc.includes("e.key === 'Enter'") &&
-        blockingViewSrc.includes('handleRetarget'),
+        edgeMenuSrc.includes("e.key === 'Enter'") &&
+        edgeMenuSrc.includes('handleRetargetSubmit'),
         'Enter key should submit re-target'
       );
     });
 
     test('keyboard Escape cancels re-target', () => {
       assert.ok(
-        blockingViewSrc.includes("e.key === 'Escape'"),
+        edgeMenuSrc.includes("e.key === 'Escape'"),
         'Escape key should cancel re-target/add-link'
       );
     });
