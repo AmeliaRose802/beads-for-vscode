@@ -6,7 +6,7 @@ import DependencyGraphNode from './DependencyGraphNode';
 import DependencyGraphDetails from './DependencyGraphDetails';
 import { shouldShowNode, shouldShowEdge, calculateBlockingCounts } from './dependency-graph-utils';
 import { calculateLayout } from './dependency-graph-layout';
-const { classifyWheelGesture, clampScale } = require('../graph-gestures');
+import usePanZoom from '../hooks/usePanZoom';
 const { getField, DEP_TYPE_KEYS, DEP_ISSUE_KEYS, DEP_TARGET_KEYS } = require('../field-utils');
 
 const normalizeRelationshipType = (rawType) => {
@@ -24,9 +24,6 @@ const normalizeRelationshipType = (rawType) => {
  */
 const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = true }) => {
   const containerRef = useRef(null);
-  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
-  const [isPanning, setIsPanning] = useState(false);
-  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [selectedNode, setSelectedNode] = useState(null);
   const [hoveredNode, setHoveredNode] = useState(null);
   const [nodePositions, setNodePositions] = useState({});
@@ -36,6 +33,28 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
     showHighPriorityOnly: false,
     focusMode: false
   });
+
+  // Calculate SVG dimensions based on node positions
+  const positionValues = Object.values(nodePositions);
+  const maxX = positionValues.length > 0 
+    ? Math.max(...positionValues.map(p => p.x)) + 250 
+    : 1000;
+  const maxY = positionValues.length > 0 
+    ? Math.max(...positionValues.map(p => p.y)) + 100 
+    : 1000;
+
+  // Use pan/zoom hook
+  const {
+    transform,
+    handleMouseDown,
+    handleMouseMove,
+    handleMouseUp,
+    handleWheel,
+    resetView,
+    zoomIn,
+    zoomOut
+  } = usePanZoom(containerRef, { maxX, maxY });
+
   const renderCloseButton = () => {
     if (!showCloseButton || typeof onClose !== 'function') {
       return null;
@@ -54,102 +73,11 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
     }
   }, [graphData, calculateLayoutCallback]);
 
-  // Pan handlers
-  const handleMouseDown = (e) => {
-    if (e.target === containerRef.current || e.target.classList.contains('dependency-graph__canvas')) {
-      setIsPanning(true);
-      setPanStart({ x: e.clientX - transform.x, y: e.clientY - transform.y });
-    }
-  };
-  const handleMouseMove = (e) => {
-    if (isPanning) {
-      const newX = e.clientX - panStart.x;
-      const newY = e.clientY - panStart.y;
-      
-      // Get container bounds for constraint calculation
-      const container = containerRef.current;
-      if (container) {
-        const containerRect = container.getBoundingClientRect();
-        const canvasWidth = maxX * transform.scale;
-        const canvasHeight = maxY * transform.scale;
-        
-        // Constrain panning to keep some content visible
-        const minX = Math.min(0, containerRect.width - canvasWidth - 100);
-        const maxXPos = Math.max(0, 100);
-        const minY = Math.min(0, containerRect.height - canvasHeight - 100);
-        const maxYPos = Math.max(0, 100);
-        
-        setTransform(prev => ({
-          ...prev,
-          x: Math.max(minX, Math.min(newX, maxXPos)),
-          y: Math.max(minY, Math.min(newY, maxYPos))
-        }));
-      } else {
-        setTransform(prev => ({
-          ...prev,
-          x: newX,
-          y: newY
-        }));
-      }
-    }
-  };
-
-  const handleMouseUp = () => {
-    setIsPanning(false);
-  };
-
-  // Zoom handler
-  const handleWheel = (e) => {
-    const { deltaX, deltaY } = e;
-    const intent = classifyWheelGesture(e);
-
-    if (intent === 'zoom') {
-      e.preventDefault();
-      const container = containerRef.current;
-      if (container) {
-        const rect = container.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-        
-        const multiplier = deltaY > 0 ? 0.9 : 1.1;
-        const newScale = clampScale(transform.scale * multiplier);
-        const scaleDelta = newScale / transform.scale;
-        
-        // Adjust position to zoom toward mouse cursor
-        setTransform(prev => ({
-          x: mouseX - (mouseX - prev.x) * scaleDelta,
-          y: mouseY - (mouseY - prev.y) * scaleDelta,
-          scale: newScale
-        }));
-      }
-      return;
-    }
-
-    e.preventDefault();
-    setTransform(prev => ({
-      ...prev,
-      x: prev.x - deltaX,
-      y: prev.y - deltaY
-    }));
-  };
-
   const handleNodeClick = (issue) => {
     setSelectedNode(issue.id);
     if (onIssueClick) {
       onIssueClick(issue);
     }
-  };
-
-  const resetView = () => {
-    setTransform({ x: 0, y: 0, scale: 1 });
-  };
-
-  const zoomIn = () => {
-    setTransform(prev => ({ ...prev, scale: Math.min(prev.scale * 1.2, 3) }));
-  };
-
-  const zoomOut = () => {
-    setTransform(prev => ({ ...prev, scale: Math.max(prev.scale / 1.2, 0.2) }));
   };
 
   if (!graphData) {
@@ -309,12 +237,11 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
     );
   }
 
-  // Calculate SVG dimensions based on node positions
-  const positionValues = Object.values(nodePositions);
-  const maxX = positionValues.length > 0 
+  // Calculate SVG dimensions based on node positions (for rendering)
+  const renderMaxX = positionValues.length > 0 
     ? Math.max(...positionValues.map(p => p.x)) + 250 
     : 1000;
-  const maxY = positionValues.length > 0 
+  const renderMaxY = positionValues.length > 0 
     ? Math.max(...positionValues.map(p => p.y)) + 100 
     : 1000;
 
@@ -352,8 +279,8 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
           className="dependency-graph__canvas"
           style={{
             transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`,
-            width: maxX,
-            height: maxY
+            width: renderMaxX,
+            height: renderMaxY
           }}
         >
           <DependencyGraphBackgrounds
@@ -362,7 +289,7 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
           />
 
           {/* Render edges first (behind nodes) */}
-          <svg className="dependency-graph__edges" width={maxX} height={maxY}>
+          <svg className="dependency-graph__edges" width={renderMaxX} height={renderMaxY}>
             <defs>
               <marker
                 id="arrowhead"

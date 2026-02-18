@@ -3,6 +3,7 @@ import BlockingOrderTab from './BlockingOrderTab';
 import BlockingGraphTab from './BlockingGraphTab';
 import BlockingPlanView from './BlockingPlanView';
 import DependencyGraph from './DependencyGraph';
+import EdgeMenu from './EdgeMenu';
 import { filterGraphDataEpicLevel, filterGraphDataTaskLevel } from './dependency-graph-utils';
 import LabelDropdown from './LabelDropdown';
 import IssueCard from './IssueCard';
@@ -46,8 +47,6 @@ const BlockingView = ({
   const [selectedNode, setSelectedNode] = useState(null);
   const [selectedIssue, setSelectedIssue] = useState(null);
   const [activeEdgeMenu, setActiveEdgeMenu] = useState(null);
-  const [retargetState, setRetargetState] = useState(null);
-  const [addLinkState, setAddLinkState] = useState(null);
   const [copyFeedback, setCopyFeedback] = useState(null);
   const [expandedPhases, setExpandedPhases] = useState(() => new Set());
   useEffect(() => {
@@ -225,10 +224,8 @@ const BlockingView = ({
   const handleEdgeClick = (fromId, toId, event) => {
     event.stopPropagation();
     setActiveEdgeMenu({ fromId, toId });
-    setRetargetState(null);
-    setAddLinkState(null);
   };
-  const closeEdgeMenu = () => { setActiveEdgeMenu(null); setRetargetState(null); setAddLinkState(null); };
+  const closeEdgeMenu = () => { setActiveEdgeMenu(null); };
   const handleRemoveLink = (fromId, toId) => {
     if (onDepAction) onDepAction('remove', fromId, toId);
     closeEdgeMenu();
@@ -249,83 +246,14 @@ const BlockingView = ({
       return null;
     }
     return (
-      <div
-        className="blocking-view__edge-menu"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="blocking-view__edge-menu-header">
-          <span className="blocking-view__edge-menu-label">
-            {fromId} → {toId}
-          </span>
-          <button
-            className="blocking-view__edge-menu-close"
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              closeEdgeMenu();
-            }}
-          >✕</button>
-        </div>
-        <div className="blocking-view__edge-menu-actions">
-          <button
-            className="blocking-view__edge-menu-btn blocking-view__edge-menu-btn--remove"
-            type="button"
-            onClick={() => handleRemoveLink(fromId, toId)}
-          >🗑 Remove link</button>
-          {retargetState ? (
-            <div className="blocking-view__edge-menu-input-row">
-              <input
-                className="blocking-view__edge-menu-input"
-                placeholder="New target ID..."
-                value={retargetState.newTarget}
-                onChange={(e) => setRetargetState({ ...retargetState, newTarget: e.target.value })}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleRetarget(fromId, toId, retargetState.newTarget);
-                  if (e.key === 'Escape') setRetargetState(null);
-                }}
-                autoFocus
-              />
-              <button
-                className="blocking-view__edge-menu-btn"
-                type="button"
-                onClick={() => handleRetarget(fromId, toId, retargetState.newTarget)}
-              >✓</button>
-            </div>
-          ) : (
-            <button
-              className="blocking-view__edge-menu-btn"
-              type="button"
-              onClick={() => setRetargetState({ newTarget: '' })}
-            >🔄 Re-target</button>
-          )}
-          {addLinkState ? (
-            <div className="blocking-view__edge-menu-input-row">
-              <input
-                className="blocking-view__edge-menu-input"
-                placeholder="Target ID..."
-                value={addLinkState.targetId}
-                onChange={(e) => setAddLinkState({ ...addLinkState, targetId: e.target.value })}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleAddLink(fromId, addLinkState.targetId);
-                  if (e.key === 'Escape') setAddLinkState(null);
-                }}
-                autoFocus
-              />
-              <button
-                className="blocking-view__edge-menu-btn"
-                type="button"
-                onClick={() => handleAddLink(fromId, addLinkState.targetId)}
-              >✓</button>
-            </div>
-          ) : (
-            <button
-              className="blocking-view__edge-menu-btn"
-              type="button"
-              onClick={() => setAddLinkState({ targetId: '' })}
-            >➕ Add link from {fromId}</button>
-          )}
-        </div>
-      </div>
+      <EdgeMenu
+        fromId={fromId}
+        toId={toId}
+        onRemove={handleRemoveLink}
+        onRetarget={handleRetarget}
+        onAddLink={handleAddLink}
+        onClose={closeEdgeMenu}
+      />
     );
   };
   const renderFilters = () => (
