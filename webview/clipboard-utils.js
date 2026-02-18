@@ -26,6 +26,41 @@ function normalizeIssues(issues) {
 }
 
 /**
+ * Copies text to the clipboard with a DOM fallback.
+ * @param {string} text
+ * @returns {Promise<void>}
+ */
+async function copyTextToClipboard(text) {
+  if (!text || !text.length) {
+    throw new Error('No text to copy');
+  }
+  const root = typeof globalThis !== 'undefined' ? globalThis : {};
+  if (root.navigator?.clipboard?.writeText) {
+    await root.navigator.clipboard.writeText(text);
+    return;
+  }
+  const doc = root.document;
+  if (!doc) {
+    throw new Error('Clipboard API unavailable');
+  }
+  const textarea = doc.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'absolute';
+  textarea.style.left = '-9999px';
+  doc.body.appendChild(textarea);
+  textarea.select();
+  try {
+    const succeeded = doc.execCommand && doc.execCommand('copy');
+    if (!succeeded) {
+      throw new Error('Copy command rejected');
+    }
+  } finally {
+    doc.body.removeChild(textarea);
+  }
+}
+
+/**
  * Formats a list of issues into a numbered clipboard-friendly string.
  * @param {Array<{id: string, title?: string}>} issues
  * @param {{ header?: string, startIndex?: number }} options
@@ -112,6 +147,7 @@ function buildPlanClipboardText(plan) {
 }
 
 module.exports = {
+  copyTextToClipboard,
   formatIssuesForClipboard,
   buildPhasedClipboardText,
   buildPlanClipboardText

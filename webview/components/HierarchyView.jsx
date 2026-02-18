@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import CopyableIssueId from './CopyableIssueId';
 const { filterHierarchyTree, countDescendants } = require('../hierarchy-utils');
 
 const FILTER_TYPES = [
@@ -62,7 +63,7 @@ function HierarchyNode({ node, onSelect, depth = 0 }) {
           className={getNodeClassName()}
           onClick={(e) => { e.stopPropagation(); onSelect(node.id); }}>
           <span className="hierarchy-node__icon" title={label}>{icon}</span>
-          <span className="hierarchy-node__id">{node.id}</span>
+          <CopyableIssueId id={node.id} className="hierarchy-node__id" />
           <span className={`hierarchy-node__status hierarchy-node__status--${node.status || 'unknown'}`}>
             {node.status || 'unknown'}
           </span>
@@ -130,9 +131,11 @@ const HierarchyView = ({ hierarchy, onSelectIssue, onClose }) => {
     if (!parentChain.length) return null;
     return parentChain.map((item, idx) => (
       <React.Fragment key={item.id}>
-        <button className="hierarchy-view__crumb" onClick={() => onSelectIssue(item.id)}>
-          {item.id}
-        </button>
+        <CopyableIssueId
+          id={item.id}
+          className="hierarchy-view__crumb"
+          onClick={() => onSelectIssue(item.id)}
+        />
         {idx < parentChain.length - 1 && <span className="hierarchy-view__crumb-separator">/</span>}
       </React.Fragment>
     ));
@@ -145,7 +148,7 @@ const HierarchyView = ({ hierarchy, onSelectIssue, onClose }) => {
           <div className="hierarchy-view__title">📐 Hierarchy</div>
           {rootIssue && (
             <div className="hierarchy-view__root">
-              <span className="hierarchy-view__root-id">{rootIssue.id}</span>
+              <CopyableIssueId id={rootIssue.id} className="hierarchy-view__root-id" />
               <span className="hierarchy-view__root-title">{rootIssue.title}</span>
             </div>
           )}
