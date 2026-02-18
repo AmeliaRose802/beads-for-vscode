@@ -919,6 +919,32 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 .dependency-graph__legend-icon--blocked { color: var(--vscode-errorForeground); }
 .dependency-graph__legend-icon--closed { color: var(--vscode-terminal-ansiGreen); }
 
+.dependency-graph__legend-line {
+  display: inline-block;
+  width: 18px;
+  height: 0;
+  border-top: 2px solid var(--vscode-textLink-foreground);
+  margin-right: 4px;
+  transform: translateY(-1px);
+}
+
+.dependency-graph__legend-line--blocked-by {
+  border-top-color: var(--vscode-terminal-ansiYellow);
+}
+
+.dependency-graph__legend-line--blocks {
+  border-top-color: var(--vscode-errorForeground);
+}
+
+.dependency-graph__legend-line--parent-child {
+  border-top-color: var(--vscode-textLink-foreground);
+}
+
+.dependency-graph__legend-line--related {
+  border-top-color: var(--vscode-descriptionForeground);
+  border-top-style: dashed;
+}
+
 .dependency-graph__legend-separator {
   color: var(--vscode-panel-border);
 }
@@ -937,6 +963,8 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 }
 
 .dependency-graph__layer-background {
+  position: absolute;
+  z-index: -2;
   border-radius: 8px;
   border: 1px solid transparent;
   transition: background-color 0.2s ease;
@@ -948,6 +976,14 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 
 .dependency-graph__layer-background--odd {
   background-color: color-mix(in srgb, var(--vscode-terminal-ansiBlue) 2%, var(--vscode-editor-background));
+}
+
+.dependency-graph__epic-group {
+  position: absolute;
+  z-index: -1;
+  border: 2px solid color-mix(in srgb, var(--vscode-terminal-ansiMagenta) 35%, var(--vscode-panel-border));
+  border-radius: 10px;
+  background-color: color-mix(in srgb, var(--vscode-terminal-ansiMagenta) 6%, var(--vscode-editor-background));
 }
 
 .dependency-graph__container:active {
@@ -974,10 +1010,37 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 .dependency-graph__edge {
   fill: none;
   stroke: var(--vscode-textLink-foreground);
+  color: var(--vscode-textLink-foreground);
   stroke-width: 2;
   opacity: 0.6;
   transition: all 0.3s ease;
   will-change: opacity, stroke-width;
+}
+
+/* Relationship type styling */
+.dependency-graph__edge--blocked-by {
+  stroke: var(--vscode-terminal-ansiYellow);
+  color: var(--vscode-terminal-ansiYellow);
+  opacity: 0.75;
+}
+
+.dependency-graph__edge--blocks {
+  stroke: var(--vscode-errorForeground);
+  color: var(--vscode-errorForeground);
+  opacity: 0.8;
+}
+
+.dependency-graph__edge--parent-child {
+  stroke: var(--vscode-textLink-foreground);
+  color: var(--vscode-textLink-foreground);
+  opacity: 0.65;
+}
+
+.dependency-graph__edge--related {
+  stroke: var(--vscode-descriptionForeground);
+  color: var(--vscode-descriptionForeground);
+  stroke-dasharray: 4, 3;
+  opacity: 0.5;
 }
 
 .dependency-graph__edge--high-priority {
@@ -1060,6 +1123,10 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 
 .dependency-graph__node.type-epic {
   background-color: color-mix(in srgb, var(--vscode-terminal-ansiMagenta) 10%, var(--vscode-editor-background));
+}
+
+.dependency-graph__node--epic-child {
+  border-style: dashed;
 }
 
 .dependency-graph__node.type-feature {

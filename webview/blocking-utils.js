@@ -211,10 +211,18 @@ function calculateFanOut(nodeIds, edges) {
 function reconstructPath(endNode, predecessor) {
   const path = [];
   let current = endNode;
-  while (current !== null) {
+  const visited = new Set();
+
+  while (current !== null && !visited.has(current)) {
     path.unshift(current);
-    current = predecessor[current];
+    visited.add(current);
+    current = predecessor[current] ?? null;
   }
+
+  if (current !== null) {
+    path.unshift(current);
+  }
+
   return path;
 }
 

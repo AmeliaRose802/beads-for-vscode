@@ -39,6 +39,19 @@ function createBlockingModel() {
   };
 }
 
+function createMinimalBlockingModel() {
+  return {
+    issues: [],
+    edges: [],
+    completionOrder: [],
+    criticalPath: [],
+    criticalPaths: [],
+    readyItems: [],
+    parallelGroups: [],
+    fanOutCounts: {}
+  };
+}
+
 function createGraphData(model) {
   return [{
     Issues: model.issues.map((issue) => ({ ...issue })),
@@ -91,8 +104,8 @@ describe('BlockingView dependency graph tab', () => {
   });
 
   function renderBlockingView(overrides = {}) {
-    const blockingModel = createBlockingModel();
-    const graphData = createGraphData(blockingModel);
+    const blockingModel = overrides.blockingModel || createBlockingModel();
+    const graphData = overrides.graphData || createGraphData(blockingModel);
     act(() => {
       root.render(
         React.createElement(BlockingView, {
@@ -105,13 +118,13 @@ describe('BlockingView dependency graph tab', () => {
       );
     });
     switchToGraphTab(container, window);
-    return blockingModel;
+    return { blockingModel, graphData };
   }
 
   it('renders a dependency graph node for each issue', () => {
-    const model = renderBlockingView();
+    const { blockingModel } = renderBlockingView();
     const nodes = container.querySelectorAll('.dependency-graph__node');
-    assert.strictEqual(nodes.length, model.issues.length, 'should show a node per issue');
+    assert.strictEqual(nodes.length, blockingModel.issues.length, 'should show a node per issue');
   });
 
   it('invokes onIssueClick when selecting a graph node', () => {
@@ -143,5 +156,72 @@ describe('BlockingView dependency graph tab', () => {
     assert.ok(detailsPanel, 'should render details panel');
     const expandedDetails = container.querySelector('.issue-card__details');
     assert.ok(expandedDetails, 'IssueCard should be expanded by default');
+  });
+
+  it('adds relationship type classes to dependency graph edges', async () => {
+    const graphData = [{
+      Issues: [
+        { id: 'A1', title: 'Root blocker', priority: 1, status: 'open', issue_type: 'task' },
+        { id: 'B2', title: 'Blocked item', priority: 1, status: 'open', issue_type: 'task' }
+      ],
+      Dependencies: [{
+        depends_on_id: 'A1',
+        issue_id: 'B2',
+        dependency_type: 'blocked-by'
+      }]
+    }];
+
+    renderBlockingView({
+      blockingModel: createMinimalBlockingModel(),
+      graphData
+    });
+
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    });
+
+    const edges = container.querySelectorAll('.dependency-graph__edge--blocked-by');
+    assert.strictEqual(edges.length, 1, 'should render blocked-by class on edge');
+  });
+
+  it('groups epic descendants and collapses outgoing blocking edges', async () => {
+    const graphData = [{
+      Issues: [
+        { id: 'E1', title: 'Epic', priority: 2, status: 'open', issue_type: 'epic' },
+        { id: 'T1', title: 'Child 1', priority: 2, status: 'open', issue_type: 'task' },
+        { id: 'T2', title: 'Child 2', priority: 2, status: 'open', issue_type: 'task' },
+        { id: 'X1', title: 'External', priority: 2, status: 'open', issue_type: 'task' }
+      ],
+      Dependencies: [
+        { issue_id: 'T1', depends_on_id: 'E1', dependency_type: 'parent-child' },
+        { issue_id: 'T2', depends_on_id: 'E1', dependency_type: 'parent-child' },
+        { depends_on_id: 'T1', issue_id: 'X1', dependency_type: 'blocked-by' },
+        { depends_on_id: 'T2', issue_id: 'X1', dependency_type: 'blocked-by' }
+      ]
+    }];
+
+    renderBlockingView({
+      blockingModel: createMinimalBlockingModel(),
+      graphData
+    });
+
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    });
+
+    const epicGroups = container.querySelectorAll('.dependency-graph__epic-group');
+    assert.strictEqual(epicGroups.length, 1, 'should render an epic grouping container');
+
+    const edges = container.querySelectorAll('.dependency-graph__edge--blocked-by');
+    assert.strictEqual(edges.length, 1, 'should collapse child blocking edges into a single epic edge');
+
+    const nodes = Array.from(container.querySelectorAll('.dependency-graph__node'));
+    const epicNode = nodes.find(node => node.textContent.includes('E1'));
+    const childNode = nodes.find(node => node.textContent.includes('T1'));
+    assert.ok(epicNode && childNode, 'should render epic and child nodes');
+
+    const epicTop = Number((epicNode.getAttribute('style') || '').match(/top:\s*(\d+)/)?.[1]);
+    const childTop = Number((childNode.getAttribute('style') || '').match(/top:\s*(\d+)/)?.[1]);
+    assert.ok(childTop > epicTop, 'child node should appear below epic node');
   });
 });

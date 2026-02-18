@@ -1,10 +1,20 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import CopyableIssueId from './CopyableIssueId';
 import DependencyGraphFilters from './DependencyGraphFilters';
+import DependencyGraphLegend from './DependencyGraphLegend';
+import DependencyGraphBackgrounds from './DependencyGraphBackgrounds';
 import DependencyGraphNode from './DependencyGraphNode';
+import DependencyGraphDetails from './DependencyGraphDetails';
 import { shouldShowNode, shouldShowEdge, calculateBlockingCounts } from './dependency-graph-utils';
 import { calculateLayout } from './dependency-graph-layout';
 const { classifyWheelGesture, clampScale } = require('../graph-gestures');
+const { getField, DEP_TYPE_KEYS, DEP_ISSUE_KEYS, DEP_TARGET_KEYS } = require('../field-utils');
+
+const normalizeRelationshipType = (rawType) => {
+  const value = String(rawType || 'related').toLowerCase();
+  if (value === 'parent') return 'parent-child';
+  if (value === 'relates-to') return 'related';
+  return value;
+};
 
 /**
  * DependencyGraph - Interactive visualization of issue dependencies
@@ -207,7 +217,83 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
   // Filter nodes and edges based on current filters
   const nodeFilter = (issue) => shouldShowNode(issue, filters, selectedNode, allDeps);
   const visibleIssues = allIssues.filter(nodeFilter);
-  const visibleDeps = allDeps.filter(dep => shouldShowEdge(dep, issueMap, nodeFilter));
+  const visibleIssueIds = new Set(visibleIssues.map(issue => issue.id));
+
+  const parentLookup = {};
+  allDeps.forEach(dep => {
+    const type = normalizeRelationshipType(getField(dep, DEP_TYPE_KEYS));
+    if (type !== 'parent-child') return;
+
+    const childId = getField(dep, DEP_ISSUE_KEYS);
+    const parentId = getField(dep, DEP_TARGET_KEYS);
+    if (childId && parentId) {
+      parentLookup[childId] = parentId;
+    }
+  });
+
+  const rootEpicMemo = {};
+  const rootEpicFor = (id) => {
+    if (Object.prototype.hasOwnProperty.call(rootEpicMemo, id)) {
+      return rootEpicMemo[id];
+    }
+
+    const visited = new Set();
+    let currentId = id;
+    while (currentId && !visited.has(currentId)) {
+      visited.add(currentId);
+      const issue = issueMap[currentId];
+      if (issue && issue.issue_type === 'epic') {
+        rootEpicMemo[id] = currentId;
+        return currentId;
+      }
+      currentId = parentLookup[currentId];
+    }
+
+    rootEpicMemo[id] = null;
+    return null;
+  };
+
+  const blockingTypes = new Set(['blocks', 'blocked-by']);
+  const visibleDeps = [];
+  const edgeKeySet = new Set();
+
+  allDeps.forEach(dep => {
+    if (!shouldShowEdge(dep, issueMap, nodeFilter)) return;
+
+    const originalFromId = dep.depends_on_id || dep.from_id || dep.FromID;
+    const originalToId = dep.issue_id || dep.to_id || dep.ToID;
+    if (!originalFromId || !originalToId) return;
+
+    const depType = normalizeRelationshipType(getField(dep, DEP_TYPE_KEYS));
+
+    // Hide internal parent-child edges; they are implied by epic grouping containers.
+    if (depType === 'parent-child') {
+      const fromEpic = rootEpicFor(originalFromId);
+      const toEpic = rootEpicFor(originalToId);
+      if (fromEpic && fromEpic === toEpic) {
+        return;
+      }
+    }
+
+    let fromId = originalFromId;
+    let toId = originalToId;
+
+    // Collapse outgoing blocking edges from epic descendants into a single epic edge.
+    if (blockingTypes.has(depType)) {
+      const fromEpic = rootEpicFor(originalFromId);
+      const toEpic = rootEpicFor(originalToId);
+
+      if (fromEpic && fromEpic !== originalFromId && toEpic !== fromEpic && visibleIssueIds.has(fromEpic)) {
+        fromId = fromEpic;
+      }
+    }
+
+    const key = `${fromId}|${toId}|${depType}`;
+    if (edgeKeySet.has(key)) return;
+    edgeKeySet.add(key);
+
+    visibleDeps.push({ ...dep, __fromId: fromId, __toId: toId, __type: depType });
+  });
 
   if (visibleIssues.length === 0) {
     return (
@@ -251,24 +337,7 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
         {renderCloseButton()}
       </div>
 
-      <div className="dependency-graph__legend">
-        <span className="dependency-graph__legend-item">
-          <span className="dependency-graph__legend-icon dependency-graph__legend-icon--open">○</span> Open
-        </span>
-        <span className="dependency-graph__legend-item">
-          <span className="dependency-graph__legend-icon dependency-graph__legend-icon--in-progress">◐</span> In Progress
-        </span>
-        <span className="dependency-graph__legend-item">
-          <span className="dependency-graph__legend-icon dependency-graph__legend-icon--blocked">●</span> Blocked
-        </span>
-        <span className="dependency-graph__legend-item">
-          <span className="dependency-graph__legend-icon dependency-graph__legend-icon--closed">✓</span> Closed
-        </span>
-        <span className="dependency-graph__legend-separator">|</span>
-        <span className="dependency-graph__legend-item dependency-graph__legend-item--hint">
-          Drag or scroll to pan • Pinch/ctrl+scroll to zoom
-        </span>
-      </div>
+      <DependencyGraphLegend />
 
       <div
         ref={containerRef}
@@ -287,33 +356,10 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
             height: maxY
           }}
         >
-          {/* Render layer backgrounds first (behind edges and nodes) */}
-          {Object.values(nodePositions).reduce((layers, pos) => {
-            if (pos.layerInfo && !layers.some(layer => layer.x === pos.layerInfo.x && layer.component === pos.component)) {
-              layers.push({
-                x: pos.layerInfo.x - 10,
-                width: pos.layerInfo.width + 20,
-                startY: pos.layerInfo.startY,
-                height: pos.layerInfo.height,
-                layer: pos.layer,
-                component: pos.component
-              });
-            }
-            return layers;
-          }, []).map((layer, idx) => (
-            <div
-              key={`layer-${layer.component}-${layer.layer}`}
-              className={`dependency-graph__layer-background ${layer.layer % 2 === 0 ? 'dependency-graph__layer-background--even' : 'dependency-graph__layer-background--odd'}`}
-              style={{
-                position: 'absolute',
-                left: layer.x,
-                top: layer.startY,
-                width: layer.width,
-                height: layer.height,
-                zIndex: -2
-              }}
-            />
-          ))}
+          <DependencyGraphBackgrounds
+            nodePositions={nodePositions}
+            visibleIssues={visibleIssues}
+          />
 
           {/* Render edges first (behind nodes) */}
           <svg className="dependency-graph__edges" width={maxX} height={maxY}>
@@ -342,8 +388,8 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
               </marker>
             </defs>
             {visibleDeps.map((dep, idx) => {
-              const fromId = dep.depends_on_id || dep.from_id || dep.FromID;
-              const toId = dep.issue_id || dep.to_id || dep.ToID;
+              const fromId = dep.__fromId || dep.depends_on_id || dep.from_id || dep.FromID;
+              const toId = dep.__toId || dep.issue_id || dep.to_id || dep.ToID;
               const fromPos = nodePositions[fromId];
               const toPos = nodePositions[toId];
               
@@ -370,6 +416,9 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
               const isCompletedEdge = isFromCompleted || isToCompleted;
               const completedClass = isCompletedEdge ? 'dependency-graph__edge--completed' : '';
 
+              const depType = dep.__type || normalizeRelationshipType(getField(dep, DEP_TYPE_KEYS));
+              const typeClass = depType ? `dependency-graph__edge--${depType}` : '';
+
               let pathData;
               if (Math.abs(fromY - toY) < 10) {
                 // Nodes on same level - simple horizontal line
@@ -394,10 +443,12 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
               return (
                 <path
                   key={idx}
-                  className={`dependency-graph__edge ${isHighlighted ? 'dependency-graph__edge--highlighted' : ''} ${priorityClass} ${completedClass}`}
+                  className={`dependency-graph__edge ${isHighlighted ? 'dependency-graph__edge--highlighted' : ''} ${priorityClass} ${completedClass} ${typeClass}`}
                   d={pathData}
                   markerEnd={edgePriority <= 1 ? "url(#arrowhead-high-priority)" : "url(#arrowhead)"}
-                />
+                >
+                  <title>{depType || 'related'}</title>
+                </path>
               );
             })}
           </svg>
@@ -410,6 +461,7 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
             const isSelected = selectedNode === issue.id;
             const isHovered = hoveredNode === issue.id;
             const isCompleted = issue.status === 'closed' || issue.status === 'done';
+            const isEpicChild = pos.epicRoot && pos.epicRoot !== issue.id;
 
             return (
               <DependencyGraphNode
@@ -419,6 +471,7 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
                 isSelected={isSelected}
                 isHovered={isHovered}
                 isCompleted={isCompleted}
+                isEpicChild={isEpicChild}
                 blockedByCount={blockedByCount[issue.id] || 0}
                 blocksCount={blocksCount[issue.id] || 0}
                 onClick={handleNodeClick}
@@ -430,32 +483,11 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
         </div>
       </div>
 
-      {selectedNode && issueMap[selectedNode] && (
-        <div className="dependency-graph__details">
-          <div className="dependency-graph__details-header">
-            <CopyableIssueId id={issueMap[selectedNode].id} className="dependency-graph__details-id" />
-            <button 
-              className="dependency-graph__details-close" 
-              onClick={() => setSelectedNode(null)}
-            >
-              ✕
-            </button>
-          </div>
-          <div className="dependency-graph__details-title">
-            {issueMap[selectedNode].title}
-          </div>
-          <div className="dependency-graph__details-meta">
-            <span className={`dependency-graph__details-badge dependency-graph__details-badge--${issueMap[selectedNode].issue_type}`}>
-              {issueMap[selectedNode].issue_type}
-            </span>
-            <span className={`dependency-graph__details-badge dependency-graph__details-badge--p${issueMap[selectedNode].priority}`}>
-              P{issueMap[selectedNode].priority}
-            </span>
-            <span className={`dependency-graph__details-status dependency-graph__details-status--${issueMap[selectedNode].status}`}>
-              {issueMap[selectedNode].status}
-            </span>
-          </div>
-        </div>
+      {selectedNode && (
+        <DependencyGraphDetails
+          issue={issueMap[selectedNode]}
+          onClose={() => setSelectedNode(null)}
+        />
       )}
     </div>
   );

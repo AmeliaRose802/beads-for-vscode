@@ -196,7 +196,11 @@ const BlockingView = ({
     };
   };
   const isIssueClosed = (issue) => issue && isClosedStatus(issue.status);
-  if (filteredIssues.length === 0) {
+  const hasGraphIssues = useMemo(() => {
+    if (!Array.isArray(graphData)) return false;
+    return graphData.some(group => Array.isArray(group?.Issues) && group.Issues.length > 0);
+  }, [graphData]);
+  if (filteredIssues.length === 0 && !hasGraphIssues) {
     return (
       <div className="blocking-view blocking-view--empty">
         <div className="blocking-view__header">
