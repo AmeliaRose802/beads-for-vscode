@@ -318,7 +318,7 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 .issue-card--not-clickable { cursor: default; }
 .issue-card--not-clickable:hover { background-color: var(--vscode-editor-background); border-color: var(--vscode-panel-border); }
 .issue-card--priority-p0 { border-left-color: var(--vscode-errorForeground); }
-.issue-card--priority-p1 { border-left-color: var(--vscode-terminal-ansiYellow); }
+.issue-card--priority-p1 { border-left-color: var(--vscode-textLink-foreground); }
 .issue-card--priority-p2, .issue-card--priority-p3, .issue-card--priority-p4 { border-left-color: var(--vscode-descriptionForeground); }
 
 /* Drag and Drop Styles */
@@ -359,7 +359,7 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 .issue-card__badge { padding: 2px 5px; border-radius: 3px; font-size: 10px; color: var(--vscode-badge-foreground); }
 .issue-card__badge--priority { font-weight: 600; }
 .issue-card__badge--priority-p0 { background-color: var(--vscode-errorForeground); }
-.issue-card__badge--priority-p1 { background-color: #0066cc; color: #ffffff; }
+.issue-card__badge--priority-p1 { background-color: var(--vscode-textLink-foreground); color: #ffffff; }
 .issue-card__badge--priority-p2, .issue-card__badge--priority-p3, .issue-card__badge--priority-p4 { background-color: var(--vscode-descriptionForeground); }
 .issue-card__badge--type-bug { background-color: var(--vscode-errorForeground); }
 .issue-card__badge--type-feature { background-color: var(--vscode-terminal-ansiCyan); }
@@ -971,7 +971,7 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 }
 
 .dependency-graph__node.priority-p1 {
-  border-left: 4px solid var(--vscode-terminal-ansiYellow);
+  border-left: 4px solid var(--vscode-textLink-foreground);
 }
 
 .dependency-graph__node.priority-default {
@@ -1028,8 +1028,8 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 }
 
 .dependency-graph__node-priority--p1 {
-  background-color: var(--vscode-terminal-ansiYellow);
-  color: black;
+  background-color: var(--vscode-textLink-foreground);
+  color: #ffffff;
 }
 
 .dependency-graph__node-priority--p2,
@@ -1159,7 +1159,7 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 .dependency-graph__details-badge--chore { background-color: var(--vscode-descriptionForeground); color: var(--vscode-editor-background); }
 
 .dependency-graph__details-badge--p0 { background-color: var(--vscode-errorForeground); color: white; }
-.dependency-graph__details-badge--p1 { background-color: var(--vscode-terminal-ansiYellow); color: black; }
+.dependency-graph__details-badge--p1 { background-color: var(--vscode-textLink-foreground); color: #ffffff; }
 .dependency-graph__details-badge--p2,
 .dependency-graph__details-badge--p3,
 .dependency-graph__details-badge--p4 { background-color: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }
