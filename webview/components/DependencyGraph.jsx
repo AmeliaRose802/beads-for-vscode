@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import CopyableIssueId from './CopyableIssueId';
-const { getStatusIcon } = require('../field-utils');
+import DependencyGraphFilters from './DependencyGraphFilters';
+import DependencyGraphNode from './DependencyGraphNode';
+import { shouldShowNode, shouldShowEdge, calculateBlockingCounts } from './dependency-graph-utils';
+import { calculateLayout } from './dependency-graph-layout';
 const { classifyWheelGesture, clampScale } = require('../graph-gestures');
 
 /**
@@ -17,6 +20,12 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
   const [selectedNode, setSelectedNode] = useState(null);
   const [hoveredNode, setHoveredNode] = useState(null);
   const [nodePositions, setNodePositions] = useState({});
+  const [filters, setFilters] = useState({
+    showCompleted: true,
+    showBlocked: true,
+    showHighPriorityOnly: false,
+    focusMode: false
+  });
   const renderCloseButton = () => {
     if (!showCloseButton || typeof onClose !== 'function') {
       return null;
@@ -26,110 +35,14 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
     );
   };
   // Calculate node positions using a layered layout algorithm
-  const calculateLayout = useCallback((data) => {
-    if (!Array.isArray(data) || data.length === 0) return {};
-
-    const positions = {};
-    const NODE_WIDTH = 200;
-    const NODE_HEIGHT = 60;
-    const HORIZONTAL_GAP = 80;
-    const VERTICAL_GAP = 40;
-    const COMPONENT_GAP = 100;
-
-    let globalOffsetY = 50;
-
-    data.forEach((component, componentIdx) => {
-      const issues = component.Issues || [];
-      const deps = component.Dependencies || [];
-
-      // Build dependency graph for this component
-      const inDegree = {};
-      const outEdges = {};
-      
-      issues.forEach(issue => {
-        inDegree[issue.id] = 0;
-        outEdges[issue.id] = [];
-      });
-
-      deps.forEach(dep => {
-        const from = dep.depends_on_id || dep.from_id || dep.FromID;
-        const to = dep.issue_id || dep.to_id || dep.ToID;
-        if (inDegree[to] !== undefined) {
-          inDegree[to]++;
-        }
-        if (outEdges[from]) {
-          outEdges[from].push(to);
-        }
-      });
-
-      // Assign layers using topological sort (Kahn's algorithm)
-      const layers = [];
-      const queue = [];
-      const layerMap = {};
-
-      Object.keys(inDegree).forEach(id => {
-        if (inDegree[id] === 0) {
-          queue.push(id);
-          layerMap[id] = 0;
-        }
-      });
-
-      while (queue.length > 0) {
-        const nodeId = queue.shift();
-        const layer = layerMap[nodeId];
-        
-        if (!layers[layer]) layers[layer] = [];
-        layers[layer].push(nodeId);
-
-        outEdges[nodeId]?.forEach(targetId => {
-          inDegree[targetId]--;
-          if (inDegree[targetId] === 0) {
-            queue.push(targetId);
-            layerMap[targetId] = layer + 1;
-          }
-        });
-      }
-
-      // Handle cycles - assign remaining nodes to their own layers
-      Object.keys(inDegree).forEach(id => {
-        if (layerMap[id] === undefined) {
-          const maxLayer = layers.length;
-          if (!layers[maxLayer]) layers[maxLayer] = [];
-          layers[maxLayer].push(id);
-          layerMap[id] = maxLayer;
-        }
-      });
-
-      // Position nodes in layers
-      const componentStartY = globalOffsetY;
-      let maxHeightInComponent = 0;
-
-      layers.forEach((layerNodes, layerIdx) => {
-        const layerHeight = layerNodes.length * (NODE_HEIGHT + VERTICAL_GAP);
-        maxHeightInComponent = Math.max(maxHeightInComponent, layerHeight);
-
-        layerNodes.forEach((nodeId, nodeIdx) => {
-          positions[nodeId] = {
-            x: 50 + layerIdx * (NODE_WIDTH + HORIZONTAL_GAP),
-            y: componentStartY + nodeIdx * (NODE_HEIGHT + VERTICAL_GAP),
-            layer: layerIdx,
-            component: componentIdx
-          };
-        });
-      });
-
-      globalOffsetY += maxHeightInComponent + COMPONENT_GAP;
-    });
-
-    return positions;
-  }, []);
+  const calculateLayoutCallback = useCallback(calculateLayout, []);
 
   useEffect(() => {
     if (graphData) {
-      const positions = calculateLayout(graphData);
+      const positions = calculateLayoutCallback(graphData);
       setNodePositions(positions);
     }
-  }, [graphData, calculateLayout]);
+  }, [graphData, calculateLayoutCallback]);
 
   // Pan handlers
   const handleMouseDown = (e) => {
@@ -140,11 +53,34 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
   };
   const handleMouseMove = (e) => {
     if (isPanning) {
-      setTransform(prev => ({
-        ...prev,
-        x: e.clientX - panStart.x,
-        y: e.clientY - panStart.y
-      }));
+      const newX = e.clientX - panStart.x;
+      const newY = e.clientY - panStart.y;
+      
+      // Get container bounds for constraint calculation
+      const container = containerRef.current;
+      if (container) {
+        const containerRect = container.getBoundingClientRect();
+        const canvasWidth = maxX * transform.scale;
+        const canvasHeight = maxY * transform.scale;
+        
+        // Constrain panning to keep some content visible
+        const minX = Math.min(0, containerRect.width - canvasWidth - 100);
+        const maxXPos = Math.max(0, 100);
+        const minY = Math.min(0, containerRect.height - canvasHeight - 100);
+        const maxYPos = Math.max(0, 100);
+        
+        setTransform(prev => ({
+          ...prev,
+          x: Math.max(minX, Math.min(newX, maxXPos)),
+          y: Math.max(minY, Math.min(newY, maxYPos))
+        }));
+      } else {
+        setTransform(prev => ({
+          ...prev,
+          x: newX,
+          y: newY
+        }));
+      }
     }
   };
 
@@ -159,11 +95,23 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
 
     if (intent === 'zoom') {
       e.preventDefault();
-      const multiplier = deltaY > 0 ? 0.9 : 1.1;
-      setTransform(prev => ({
-        ...prev,
-        scale: clampScale(prev.scale * multiplier)
-      }));
+      const container = containerRef.current;
+      if (container) {
+        const rect = container.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        
+        const multiplier = deltaY > 0 ? 0.9 : 1.1;
+        const newScale = clampScale(transform.scale * multiplier);
+        const scaleDelta = newScale / transform.scale;
+        
+        // Adjust position to zoom toward mouse cursor
+        setTransform(prev => ({
+          x: mouseX - (mouseX - prev.x) * scaleDelta,
+          y: mouseY - (mouseY - prev.y) * scaleDelta,
+          scale: newScale
+        }));
+      }
       return;
     }
 
@@ -254,34 +202,14 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
   });
 
   // Calculate blocking counts for each issue
-  const blocksCount = {}; // How many items each node blocks (outgoing)
-  const blockedByCount = {}; // How many items each node is blocked by (incoming)
-  
-  // Initialize counts
-  allIssues.forEach(issue => {
-    blocksCount[issue.id] = 0;
-    blockedByCount[issue.id] = 0;
-  });
-  
-  // Count relationships from dependencies
-  allDeps.forEach(dep => {
-    // Determine from and to IDs (handling different formats)
-    const fromId = dep.depends_on_id || dep.from_id || dep.FromID;
-    const toId = dep.issue_id || dep.to_id || dep.ToID;
-    
-    if (fromId && toId) {
-      // In beads format: issue depends on depends_on_id
-      // So depends_on_id (fromId) blocks issue_id (toId)
-      if (blocksCount[fromId] !== undefined) {
-        blocksCount[fromId]++;
-      }
-      if (blockedByCount[toId] !== undefined) {
-        blockedByCount[toId]++;
-      }
-    }
-  });
+  const { blocksCount, blockedByCount } = calculateBlockingCounts(allIssues, allDeps);
 
-  if (allIssues.length === 0) {
+  // Filter nodes and edges based on current filters
+  const nodeFilter = (issue) => shouldShowNode(issue, filters, selectedNode, allDeps);
+  const visibleIssues = allIssues.filter(nodeFilter);
+  const visibleDeps = allDeps.filter(dep => shouldShowEdge(dep, issueMap, nodeFilter));
+
+  if (visibleIssues.length === 0) {
     return (
       <div className="dependency-graph dependency-graph--empty">
         <div className="dependency-graph__header">
@@ -294,21 +222,6 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
       </div>
     );
   }
-
-  const getPriorityClass = (priority) => {
-    if (priority === 0) return 'priority-p0';
-    if (priority === 1) return 'priority-p1';
-    return 'priority-default';
-  };
-
-  const getTypeClass = (type) => {
-    switch (type) {
-      case 'epic': return 'type-epic';
-      case 'feature': return 'type-feature';
-      case 'bug': return 'type-bug';
-      default: return 'type-task';
-    }
-  };
 
   // Calculate SVG dimensions based on node positions
   const positionValues = Object.values(nodePositions);
@@ -323,6 +236,12 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
     <div className="dependency-graph">
       <div className="dependency-graph__header">
         <h3 className="dependency-graph__title">📊 Dependency Graph</h3>
+        
+        <DependencyGraphFilters 
+          filters={filters} 
+          onFiltersChange={setFilters}
+        />
+        
         <div className="dependency-graph__controls">
           <button className="dependency-graph__control-btn" onClick={zoomIn} title="Zoom in">+</button>
           <button className="dependency-graph__control-btn" onClick={zoomOut} title="Zoom out">−</button>
@@ -368,21 +287,61 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
             height: maxY
           }}
         >
+          {/* Render layer backgrounds first (behind edges and nodes) */}
+          {Object.values(nodePositions).reduce((layers, pos) => {
+            if (pos.layerInfo && !layers.some(layer => layer.x === pos.layerInfo.x && layer.component === pos.component)) {
+              layers.push({
+                x: pos.layerInfo.x - 10,
+                width: pos.layerInfo.width + 20,
+                startY: pos.layerInfo.startY,
+                height: pos.layerInfo.height,
+                layer: pos.layer,
+                component: pos.component
+              });
+            }
+            return layers;
+          }, []).map((layer, idx) => (
+            <div
+              key={`layer-${layer.component}-${layer.layer}`}
+              className={`dependency-graph__layer-background ${layer.layer % 2 === 0 ? 'dependency-graph__layer-background--even' : 'dependency-graph__layer-background--odd'}`}
+              style={{
+                position: 'absolute',
+                left: layer.x,
+                top: layer.startY,
+                width: layer.width,
+                height: layer.height,
+                zIndex: -2
+              }}
+            />
+          ))}
+
           {/* Render edges first (behind nodes) */}
           <svg className="dependency-graph__edges" width={maxX} height={maxY}>
             <defs>
               <marker
                 id="arrowhead"
-                markerWidth="10"
-                markerHeight="7"
-                refX="9"
-                refY="3.5"
+                markerWidth="12"
+                markerHeight="9"
+                refX="11"
+                refY="4.5"
                 orient="auto"
+                markerUnits="strokeWidth"
               >
-                <polygon points="0 0, 10 3.5, 0 7" fill="var(--vscode-textLink-foreground)" />
+                <polygon points="0 0, 12 4.5, 0 9" fill="currentColor" />
+              </marker>
+              <marker
+                id="arrowhead-high-priority"
+                markerWidth="12"
+                markerHeight="9"
+                refX="11"
+                refY="4.5"
+                orient="auto"
+                markerUnits="strokeWidth"
+              >
+                <polygon points="0 0, 12 4.5, 0 9" fill="var(--vscode-errorForeground)" />
               </marker>
             </defs>
-            {allDeps.map((dep, idx) => {
+            {visibleDeps.map((dep, idx) => {
               const fromId = dep.depends_on_id || dep.from_id || dep.FromID;
               const toId = dep.issue_id || dep.to_id || dep.ToID;
               const fromPos = nodePositions[fromId];
@@ -395,70 +354,77 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
               const toX = toPos.x;           // Left edge of target
               const toY = toPos.y + 30;
 
-              // Create a curved path
-              const midX = (fromX + toX) / 2;
-              const controlOffset = Math.abs(toY - fromY) / 2;
-              
+              // Create orthogonal (right-angle) path to avoid overlaps
               const isHighlighted = selectedNode === fromId || selectedNode === toId ||
                                     hoveredNode === fromId || hoveredNode === toId;
+
+              // Determine edge priority for styling
+              const fromIssue = issueMap[fromId];
+              const toIssue = issueMap[toId];
+              const edgePriority = fromIssue && toIssue ? Math.min(fromIssue.priority || 4, toIssue.priority || 4) : 4;
+              const priorityClass = edgePriority <= 1 ? 'dependency-graph__edge--high-priority' : '';
+              
+              // Check if edge involves completed items
+              const isFromCompleted = fromIssue && (fromIssue.status === 'closed' || fromIssue.status === 'done');
+              const isToCompleted = toIssue && (toIssue.status === 'closed' || toIssue.status === 'done');
+              const isCompletedEdge = isFromCompleted || isToCompleted;
+              const completedClass = isCompletedEdge ? 'dependency-graph__edge--completed' : '';
+
+              let pathData;
+              if (Math.abs(fromY - toY) < 10) {
+                // Nodes on same level - simple horizontal line
+                pathData = `M ${fromX} ${fromY} L ${toX} ${toY}`;
+              } else {
+                // Nodes on different levels - orthogonal routing
+                const horizontalGap = toX - fromX;
+                const verticalOffset = toY - fromY;
+                
+                if (horizontalGap > 60) {
+                  // Standard case: enough horizontal space
+                  const midX = fromX + Math.max(40, horizontalGap / 2);
+                  pathData = `M ${fromX} ${fromY} L ${midX} ${fromY} L ${midX} ${toY} L ${toX} ${toY}`;
+                } else {
+                  // Tight space or reverse direction - route around
+                  const routeX = fromX + 25;
+                  const clearanceY = verticalOffset > 0 ? toY + 45 : toY - 45;
+                  pathData = `M ${fromX} ${fromY} L ${routeX} ${fromY} L ${routeX} ${clearanceY} L ${toX - 25} ${clearanceY} L ${toX - 25} ${toY} L ${toX} ${toY}`;
+                }
+              }
 
               return (
                 <path
                   key={idx}
-                  className={`dependency-graph__edge ${isHighlighted ? 'dependency-graph__edge--highlighted' : ''}`}
-                  d={`M ${fromX} ${fromY} C ${midX + controlOffset} ${fromY}, ${midX - controlOffset} ${toY}, ${toX} ${toY}`}
-                  markerEnd="url(#arrowhead)"
+                  className={`dependency-graph__edge ${isHighlighted ? 'dependency-graph__edge--highlighted' : ''} ${priorityClass} ${completedClass}`}
+                  d={pathData}
+                  markerEnd={edgePriority <= 1 ? "url(#arrowhead-high-priority)" : "url(#arrowhead)"}
                 />
               );
             })}
           </svg>
 
           {/* Render nodes */}
-          {allIssues.map(issue => {
+          {visibleIssues.map(issue => {
             const pos = nodePositions[issue.id];
             if (!pos) return null;
 
             const isSelected = selectedNode === issue.id;
             const isHovered = hoveredNode === issue.id;
+            const isCompleted = issue.status === 'closed' || issue.status === 'done';
 
             return (
-              <div
+              <DependencyGraphNode
                 key={issue.id}
-                className={`dependency-graph__node ${getPriorityClass(issue.priority)} ${getTypeClass(issue.issue_type)} ${isSelected ? 'dependency-graph__node--selected' : ''} ${isHovered ? 'dependency-graph__node--hovered' : ''}`}
-                style={{ left: pos.x, top: pos.y }}
-                onClick={() => handleNodeClick(issue)}
-                onMouseEnter={() => setHoveredNode(issue.id)}
-                onMouseLeave={() => setHoveredNode(null)}
-              >
-                <div className="dependency-graph__node-header">
-                  <span className={`dependency-graph__node-status dependency-graph__node-status--${issue.status}`}>
-                    {getStatusIcon(issue.status)}
-                  </span>
-                  <CopyableIssueId id={issue.id} className="dependency-graph__node-id" />
-                  <span className={`dependency-graph__node-priority dependency-graph__node-priority--p${issue.priority}`}>
-                    P{issue.priority}
-                  </span>
-                </div>
-                <div className="dependency-graph__node-title" title={issue.title}>
-                  {issue.title}
-                </div>
-                <div className="dependency-graph__node-type">
-                  {issue.issue_type}
-                </div>
-                {/* Blocking count badges */}
-                <div className="dependency-graph__node-counts">
-                  {blockedByCount[issue.id] > 0 && (
-                    <span className="dependency-graph__count-badge dependency-graph__count-badge--blocked-by" title={`Blocked by ${blockedByCount[issue.id]} item${blockedByCount[issue.id] !== 1 ? 's' : ''}`}>
-                      ↑ {blockedByCount[issue.id]}
-                    </span>
-                  )}
-                  {blocksCount[issue.id] > 0 && (
-                    <span className="dependency-graph__count-badge dependency-graph__count-badge--blocks" title={`Blocks ${blocksCount[issue.id]} item${blocksCount[issue.id] !== 1 ? 's' : ''}`}>
-                      ↓ {blocksCount[issue.id]}
-                    </span>
-                  )}
-                </div>
-              </div>
+                issue={issue}
+                position={pos}
+                isSelected={isSelected}
+                isHovered={isHovered}
+                isCompleted={isCompleted}
+                blockedByCount={blockedByCount[issue.id] || 0}
+                blocksCount={blocksCount[issue.id] || 0}
+                onClick={handleNodeClick}
+                onMouseEnter={setHoveredNode}
+                onMouseLeave={setHoveredNode}
+              />
             );
           })}
         </div>

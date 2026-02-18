@@ -808,6 +808,31 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   padding: 8px 12px;
   background-color: var(--vscode-sideBarSectionHeader-background);
   border-bottom: 1px solid var(--vscode-panel-border);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dependency-graph__filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.dependency-graph__filter-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--vscode-foreground);
+  cursor: pointer;
+  user-select: none;
+}
+
+.dependency-graph__filter-toggle input[type="checkbox"] {
+  width: 12px;
+  height: 12px;
+  accent-color: var(--vscode-textLink-foreground);
 }
 
 .dependency-graph__title {
@@ -907,6 +932,22 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   background-image: 
     radial-gradient(circle, var(--vscode-panel-border) 1px, transparent 1px);
   background-size: 20px 20px;
+  contain: layout style;
+  will-change: scroll-position;
+}
+
+.dependency-graph__layer-background {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  transition: background-color 0.2s ease;
+}
+
+.dependency-graph__layer-background--even {
+  background-color: color-mix(in srgb, var(--vscode-textLink-foreground) 3%, var(--vscode-editor-background));
+}
+
+.dependency-graph__layer-background--odd {
+  background-color: color-mix(in srgb, var(--vscode-terminal-ansiBlue) 2%, var(--vscode-editor-background));
 }
 
 .dependency-graph__container:active {
@@ -918,6 +959,8 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   transform-origin: 0 0;
   min-width: 100%;
   min-height: 100%;
+  contain: layout style paint;
+  will-change: transform;
 }
 
 .dependency-graph__edges {
@@ -932,13 +975,35 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   fill: none;
   stroke: var(--vscode-textLink-foreground);
   stroke-width: 2;
-  opacity: 0.5;
-  transition: opacity 0.2s, stroke-width 0.2s;
+  opacity: 0.6;
+  transition: all 0.3s ease;
+  will-change: opacity, stroke-width;
+}
+
+.dependency-graph__edge--high-priority {
+  stroke: var(--vscode-errorForeground);
+  stroke-width: 3;
+  opacity: 0.8;
 }
 
 .dependency-graph__edge--highlighted {
   opacity: 1;
   stroke-width: 3;
+  transition: all 0.2s ease;
+}
+
+.dependency-graph__edge--highlighted.dependency-graph__edge--high-priority {
+  stroke-width: 4;
+}
+
+.dependency-graph__edge--completed {
+  opacity: 0.3;
+  stroke-dasharray: 5, 5;
+  transition: all 0.3s ease;
+}
+
+.dependency-graph__edge--completed.dependency-graph__edge--highlighted {
+  opacity: 0.6;
 }
 
 .dependency-graph__node {
@@ -949,21 +1014,36 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   border: 2px solid var(--vscode-panel-border);
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease, transform 0.2s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  will-change: transform, opacity, filter;
 }
 
 .dependency-graph__node:hover,
 .dependency-graph__node--hovered {
   border-color: var(--vscode-focusBorder);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-3px) scale(1.02);
 }
 
 .dependency-graph__node--selected {
   border-color: var(--vscode-textLink-foreground);
   border-width: 3px;
   box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.2);
+  transform: scale(1.05);
+}
+
+.dependency-graph__node--completed {
+  opacity: 0.5;
+  filter: grayscale(20%);
+  transition: all 0.3s ease;
+}
+
+.dependency-graph__node--completed:hover,
+.dependency-graph__node--completed.dependency-graph__node--hovered {
+  opacity: 0.8;
+  filter: grayscale(10%);
+  transform: translateY(-2px) scale(1.01);
 }
 
 .dependency-graph__node.priority-p0 {
