@@ -107,6 +107,28 @@ function matchesStatus(issue, statusFilter) {
 }
 
 /**
+ * Checks if an issue matches the priority filter.
+ * @param {object} issue - Issue object
+ * @param {string} priorityFilter - Priority filter value (e.g., "P0 - Critical")
+ * @returns {boolean}
+ */
+function matchesPriority(issue, priorityFilter) {
+  if (!priorityFilter) return true;
+  const normalized = priorityFilter.trim().toLowerCase();
+  if (!normalized) return true;
+  
+  // Extract priority number from filter (e.g., "P0 - Critical" -> "0")
+  const match = normalized.match(/p(\d)/);
+  if (!match) return true;
+  const filterPriority = match[1];
+  
+  // Extract priority from issue (handles "p0", "0", etc.)
+  const issuePriority = String(issue.priority || '2').toLowerCase().replace(/^p/, '');
+  
+  return issuePriority === filterPriority;
+}
+
+/**
  * Filters a hierarchy tree node and its children.
  * Returns null if node and all children are filtered out.
  * @param {object} node - Tree node with issue and children
@@ -235,6 +257,7 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
   const [assigneeFilter, setAssigneeFilter] = useState('');
   const [labelFilter, setLabelFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState('');
   const className = isError ? 'error' : isSuccess ? 'success' : '';
 
   // Reset to page 1 and clear filters when output changes
@@ -244,12 +267,13 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
     setAssigneeFilter('');
     setLabelFilter('');
     setStatusFilter('');
+    setPriorityFilter('');
   }, [output]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchFilter, assigneeFilter, labelFilter, statusFilter]);
+  }, [searchFilter, assigneeFilter, labelFilter, statusFilter, priorityFilter]);
 
   const handlePageSizeChange = (newSize) => {
     setPageSize(newSize);
@@ -262,6 +286,7 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
     setAssigneeFilter('');
     setLabelFilter('');
     setStatusFilter('');
+    setPriorityFilter('');
   };
   
   if (typeof output === 'object' && output.type === 'stats') {
@@ -282,7 +307,8 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
       matchesSearch(issue, searchFilter) &&
       matchesAssignee(issue, assigneeFilter) &&
       matchesLabel(issue, labelFilter) &&
-      matchesStatus(issue, statusFilter);
+      matchesStatus(issue, statusFilter) &&
+      matchesPriority(issue, priorityFilter);
 
     const handleDragStart = (issue) => {
       setDraggedIssue(issue);
@@ -300,7 +326,7 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
       : output.openIssues.map(issue => ({ issue, children: [] }));
 
     // Apply filtering to hierarchy
-    const hasActiveFilters = searchFilter || assigneeFilter || labelFilter || statusFilter;
+    const hasActiveFilters = searchFilter || assigneeFilter || labelFilter || statusFilter || priorityFilter;
     const filteredRoots = useMemo(() => {
       if (!hasActiveFilters) return hierarchyRoots;
       const filtered = [];
@@ -311,13 +337,13 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
         }
       }
       return filtered;
-    }, [hierarchyRoots, searchFilter, assigneeFilter, labelFilter, statusFilter]);
+    }, [hierarchyRoots, searchFilter, assigneeFilter, labelFilter, statusFilter, priorityFilter]);
 
     // Filter closed issues as well
     const filteredClosedIssues = useMemo(() => {
       if (!hasActiveFilters) return output.closedIssues;
       return output.closedIssues.filter(filterFn);
-    }, [output.closedIssues, searchFilter, assigneeFilter, labelFilter, statusFilter]);
+    }, [output.closedIssues, searchFilter, assigneeFilter, labelFilter, statusFilter, priorityFilter]);
 
     const totalUnfilteredItems = hierarchyRoots.length;
     const totalFilteredItems = filteredRoots.length;
@@ -334,10 +360,12 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
           assigneeFilter={assigneeFilter}
           labelFilter={labelFilter}
           statusFilter={statusFilter}
+          priorityFilter={priorityFilter}
           onSearchChange={setSearchFilter}
           onAssigneeChange={setAssigneeFilter}
           onLabelChange={setLabelFilter}
           onStatusChange={setStatusFilter}
+          onPriorityChange={setPriorityFilter}
           onClearAll={handleClearAllFilters}
           allIssues={allIssues}
         />

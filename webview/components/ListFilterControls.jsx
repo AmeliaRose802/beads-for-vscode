@@ -211,17 +211,19 @@ const FilterDropdown = ({
 
 /**
  * ListFilterControls provides filtering UI for the list view.
- * Supports filtering by assignee, label, status, and search term.
+ * Supports filtering by assignee, label, status, priority, and search term.
  *
  * @param {object} props - Component props.
  * @param {string} props.searchFilter - Current search filter value.
  * @param {string} props.assigneeFilter - Current assignee filter value.
  * @param {string} props.labelFilter - Current label filter value.
  * @param {string} props.statusFilter - Current status filter value.
+ * @param {string} props.priorityFilter - Current priority filter value.
  * @param {Function} props.onSearchChange - Called when search changes.
  * @param {Function} props.onAssigneeChange - Called when assignee filter changes.
  * @param {Function} props.onLabelChange - Called when label filter changes.
  * @param {Function} props.onStatusChange - Called when status filter changes.
+ * @param {Function} props.onPriorityChange - Called when priority filter changes.
  * @param {Function} props.onClearAll - Called when clearing all filters.
  * @param {Array} props.allIssues - All issues for extracting filter options.
  * @returns {React.ReactElement}
@@ -231,18 +233,21 @@ const ListFilterControls = ({
   assigneeFilter,
   labelFilter,
   statusFilter,
+  priorityFilter,
   onSearchChange,
   onAssigneeChange,
   onLabelChange,
   onStatusChange,
+  onPriorityChange,
   onClearAll,
   allIssues = []
 }) => {
   const availableLabels = useMemo(() => extractLabels(allIssues), [allIssues]);
   const availableAssignees = useMemo(() => extractAssignees(allIssues), [allIssues]);
   const statusOptions = ['In progress', 'Not in progress'];
+  const priorityOptions = ['P0 - Critical', 'P1 - High', 'P2 - Medium', 'P3 - Low', 'P4 - Backlog'];
 
-  const hasActiveFilters = searchFilter || assigneeFilter || labelFilter || statusFilter;
+  const hasActiveFilters = searchFilter || assigneeFilter || labelFilter || statusFilter || priorityFilter;
 
   return (
     <div className="list-filter-controls">
@@ -297,6 +302,17 @@ const ListFilterControls = ({
           placeholder="Label"
           ariaLabel="Filter by label"
           icon="🏷️"
+        />
+      </div>
+
+      <div className="list-filter-controls__filter">
+        <FilterDropdown
+          value={priorityFilter}
+          onChange={onPriorityChange}
+          options={priorityOptions}
+          placeholder="Priority"
+          ariaLabel="Filter by priority"
+          icon="🎯"
         />
       </div>
 
