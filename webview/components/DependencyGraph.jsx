@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import CopyableIssueId from './CopyableIssueId';
 const { getStatusIcon } = require('../field-utils');
+const { classifyWheelGesture, clampScale } = require('../graph-gestures');
 
 /**
  * DependencyGraph - Interactive visualization of issue dependencies
@@ -16,7 +17,6 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
   const [selectedNode, setSelectedNode] = useState(null);
   const [hoveredNode, setHoveredNode] = useState(null);
   const [nodePositions, setNodePositions] = useState({});
-
   const renderCloseButton = () => {
     if (!showCloseButton || typeof onClose !== 'function') {
       return null;
@@ -25,7 +25,6 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
       <button className="dependency-graph__close-btn" onClick={onClose}>✕</button>
     );
   };
-
   // Calculate node positions using a layered layout algorithm
   const calculateLayout = useCallback((data) => {
     if (!Array.isArray(data) || data.length === 0) return {};
@@ -139,7 +138,6 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
       setPanStart({ x: e.clientX - transform.x, y: e.clientY - transform.y });
     }
   };
-
   const handleMouseMove = (e) => {
     if (isPanning) {
       setTransform(prev => ({
@@ -156,10 +154,25 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
 
   // Zoom handler
   const handleWheel = (e) => {
+    const { deltaX, deltaY } = e;
+    const intent = classifyWheelGesture(e);
+
+    if (intent === 'zoom') {
+      e.preventDefault();
+      const multiplier = deltaY > 0 ? 0.9 : 1.1;
+      setTransform(prev => ({
+        ...prev,
+        scale: clampScale(prev.scale * multiplier)
+      }));
+      return;
+    }
+
     e.preventDefault();
-    const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    const newScale = Math.min(Math.max(transform.scale * delta, 0.2), 3);
-    setTransform(prev => ({ ...prev, scale: newScale }));
+    setTransform(prev => ({
+      ...prev,
+      x: prev.x - deltaX,
+      y: prev.y - deltaY
+    }));
   };
 
   const handleNodeClick = (issue) => {
@@ -334,7 +347,7 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
         </span>
         <span className="dependency-graph__legend-separator">|</span>
         <span className="dependency-graph__legend-item dependency-graph__legend-item--hint">
-          Drag to pan • Scroll to zoom
+          Drag or scroll to pan • Pinch/ctrl+scroll to zoom
         </span>
       </div>
 
