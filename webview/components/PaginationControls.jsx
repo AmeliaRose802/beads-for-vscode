@@ -18,13 +18,17 @@ const PAGE_SIZE_OPTIONS = [
  * @param {number} props.totalItems - Total number of items
  * @param {Function} props.onPageChange - Callback when page changes
  * @param {Function} props.onPageSizeChange - Callback when page size changes
+ * @param {number|null} [props.filteredCount] - Filtered item count (when filters active)
+ * @param {number|null} [props.unfilteredCount] - Total unfiltered item count
  */
 const PaginationControls = ({ 
   currentPage, 
   pageSize, 
   totalItems, 
   onPageChange, 
-  onPageSizeChange 
+  onPageSizeChange,
+  filteredCount,
+  unfilteredCount
 }) => {
   const effectivePageSize = pageSize === 'all' ? totalItems : pageSize;
   const totalPages = effectivePageSize > 0 ? Math.ceil(totalItems / effectivePageSize) : 1;
@@ -51,6 +55,12 @@ const PaginationControls = ({
 
   // Don't show pagination if showing all or only one page
   const showNavigation = pageSize !== 'all' && totalPages > 1;
+
+  // Generate item count display text
+  const hasFilters = filteredCount !== null && unfilteredCount !== null;
+  const itemCountText = hasFilters
+    ? `Showing ${filteredCount} of ${unfilteredCount} item${unfilteredCount !== 1 ? 's' : ''}`
+    : `${totalItems} item${totalItems !== 1 ? 's' : ''}`;
 
   return (
     <div className="pagination-controls">
@@ -92,7 +102,7 @@ const PaginationControls = ({
       )}
       
       <div className="pagination-controls__info">
-        {totalItems} item{totalItems !== 1 ? 's' : ''}
+        {itemCountText}
       </div>
     </div>
   );

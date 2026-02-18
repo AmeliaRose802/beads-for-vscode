@@ -1297,6 +1297,170 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   color: var(--vscode-list-activeSelectionForeground);
 }
 
+/* List Filter Controls */
+.list-filter-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  margin-bottom: 8px;
+  background-color: var(--vscode-sideBarSectionHeader-background);
+  border-radius: 4px;
+  flex-wrap: wrap;
+}
+
+.list-filter-controls__search {
+  position: relative;
+  flex: 1;
+  min-width: 150px;
+  max-width: 250px;
+}
+
+.list-filter-controls__search-input {
+  width: 100%;
+  background-color: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border);
+  border-radius: 3px;
+  padding: 4px 24px 4px 8px;
+  font-size: 11px;
+}
+
+.list-filter-controls__search-input:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.list-filter-controls__search-input::placeholder {
+  color: var(--vscode-input-placeholderForeground);
+}
+
+.list-filter-controls__clear-btn {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--vscode-descriptionForeground);
+  cursor: pointer;
+  font-size: 10px;
+  padding: 2px;
+  line-height: 1;
+}
+
+.list-filter-controls__clear-btn:hover {
+  color: var(--vscode-foreground);
+}
+
+.list-filter-controls__filter {
+  min-width: 100px;
+  max-width: 150px;
+}
+
+.list-filter-controls__clear-all {
+  background-color: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  border: none;
+  border-radius: 3px;
+  padding: 4px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.list-filter-controls__clear-all:hover {
+  background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+/* Filter Dropdown */
+.filter-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.filter-dropdown__input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.filter-dropdown__input {
+  width: 100%;
+  background-color: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border);
+  border-radius: 3px;
+  padding: 4px 24px 4px 8px;
+  font-size: 11px;
+}
+
+.filter-dropdown__input:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.filter-dropdown__input::placeholder {
+  color: var(--vscode-input-placeholderForeground);
+}
+
+.filter-dropdown__clear {
+  position: absolute;
+  right: 4px;
+  background: none;
+  border: none;
+  color: var(--vscode-descriptionForeground);
+  cursor: pointer;
+  font-size: 10px;
+  padding: 2px;
+  line-height: 1;
+}
+
+.filter-dropdown__clear:hover {
+  color: var(--vscode-foreground);
+}
+
+.filter-dropdown__list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: var(--vscode-dropdown-background);
+  border: 1px solid var(--vscode-dropdown-border);
+  border-radius: 3px;
+  margin-top: 2px;
+  max-height: 150px;
+  overflow-y: auto;
+  z-index: 1000;
+  list-style: none;
+  padding: 0;
+  margin: 2px 0 0 0;
+}
+
+.filter-dropdown__option {
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--vscode-dropdown-foreground);
+}
+
+.filter-dropdown__option:hover,
+.filter-dropdown__option--highlighted {
+  background-color: var(--vscode-list-hoverBackground);
+}
+
+.filter-dropdown__option--highlighted {
+  background-color: var(--vscode-list-activeSelectionBackground);
+  color: var(--vscode-list-activeSelectionForeground);
+}
+
+.list-filter-controls__info {
+  margin-left: auto;
+  color: var(--vscode-descriptionForeground);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
 /* Hierarchy View */
 .hierarchy-view {
   background-color: var(--vscode-editor-background);

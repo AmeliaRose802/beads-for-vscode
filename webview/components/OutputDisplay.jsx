@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import IssueCard from './IssueCard';
 import StatsDisplay from './StatsDisplay';
 import PaginationControls from './PaginationControls';
+import ListFilterControls from './ListFilterControls';
 
 const STORAGE_KEY = 'beads-ui-page-size';
 
@@ -43,6 +44,76 @@ function paginateItems(items, page, pageSize) {
   if (pageSize === 'all') return items;
   const start = (page - 1) * pageSize;
   return items.slice(start, start + pageSize);
+}
+
+/**
+ * Checks if an issue matches the search filter.
+ * @param {object} issue - Issue object
+ * @param {string} search - Search term (case-insensitive)
+ * @returns {boolean}
+ */
+function matchesSearch(issue, search) {
+  if (!search) return true;
+  const lower = search.toLowerCase();
+  const id = (issue.id || '').toLowerCase();
+  const title = (issue.title || '').toLowerCase();
+  const description = (issue.description || '').toLowerCase();
+  return id.includes(lower) || title.includes(lower) || description.includes(lower);
+}
+
+/**
+ * Checks if an issue matches the assignee filter.
+ * @param {object} issue - Issue object
+ * @param {string} assigneeFilter - Assignee filter (case-insensitive)
+ * @returns {boolean}
+ */
+function matchesAssignee(issue, assigneeFilter) {
+  if (!assigneeFilter) return true;
+  const assignee = (issue.assignee || '').toLowerCase();
+  return assignee.includes(assigneeFilter.toLowerCase());
+}
+
+/**
+ * Checks if an issue matches the label filter.
+ * @param {object} issue - Issue object
+ * @param {string} labelFilter - Label filter (case-insensitive)
+ * @returns {boolean}
+ */
+function matchesLabel(issue, labelFilter) {
+  if (!labelFilter) return true;
+  if (!Array.isArray(issue.labels) || issue.labels.length === 0) return false;
+  const lower = labelFilter.toLowerCase();
+  return issue.labels.some((label) => label.toLowerCase().includes(lower));
+}
+
+/**
+ * Filters a hierarchy tree node and its children.
+ * Returns null if node and all children are filtered out.
+ * @param {object} node - Tree node with issue and children
+ * @param {Function} filterFn - Filter function for issues
+ * @returns {object|null} Filtered node or null
+ */
+function filterHierarchyNode(node, filterFn) {
+  const issueMatches = filterFn(node.issue);
+  const filteredChildren = [];
+  
+  if (Array.isArray(node.children)) {
+    for (const child of node.children) {
+      const filteredChild = filterHierarchyNode(child, filterFn);
+      if (filteredChild) {
+        filteredChildren.push(filteredChild);
+      }
+    }
+  }
+  
+  // Include node if issue matches OR if any children match
+  if (issueMatches || filteredChildren.length > 0) {
+    return {
+      ...node,
+      children: filteredChildren
+    };
+  }
+  return null;
 }
 
 const IssueTreeNode = ({
@@ -140,17 +211,34 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
   const [draggedIssue, setDraggedIssue] = useState(null);
   const [pageSize, setPageSize] = useState(getStoredPageSize);
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchFilter, setSearchFilter] = useState('');
+  const [assigneeFilter, setAssigneeFilter] = useState('');
+  const [labelFilter, setLabelFilter] = useState('');
   const className = isError ? 'error' : isSuccess ? 'success' : '';
 
-  // Reset to page 1 when output changes
+  // Reset to page 1 and clear filters when output changes
   useEffect(() => {
     setCurrentPage(1);
+    setSearchFilter('');
+    setAssigneeFilter('');
+    setLabelFilter('');
   }, [output]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchFilter, assigneeFilter, labelFilter]);
 
   const handlePageSizeChange = (newSize) => {
     setPageSize(newSize);
     setCurrentPage(1);
     savePageSize(newSize);
+  };
+
+  const handleClearAllFilters = () => {
+    setSearchFilter('');
+    setAssigneeFilter('');
+    setLabelFilter('');
   };
   
   if (typeof output === 'object' && output.type === 'stats') {
@@ -158,12 +246,19 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
   }
   
   if (typeof output === 'object' && output.type === 'list') {
+    // All issues for filter options extraction
+    const allIssues = [...output.openIssues, ...output.closedIssues];
+
     // Extract existing assignees from all issues
     const existingAssignees = [...new Set(
-      [...output.openIssues, ...output.closedIssues]
-        .map(issue => issue.assignee)
-        .filter(Boolean)
+      allIssues.map(issue => issue.assignee).filter(Boolean)
     )];
+
+    // Create filter function
+    const filterFn = (issue) =>
+      matchesSearch(issue, searchFilter) &&
+      matchesAssignee(issue, assigneeFilter) &&
+      matchesLabel(issue, labelFilter);
 
     const handleDragStart = (issue) => {
       setDraggedIssue(issue);
@@ -180,21 +275,55 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
       ? output.hierarchy
       : output.openIssues.map(issue => ({ issue, children: [] }));
 
-    const totalRootItems = hierarchyRoots.length;
-    const paginatedRoots = paginateItems(hierarchyRoots, currentPage, pageSize);
+    // Apply filtering to hierarchy
+    const hasActiveFilters = searchFilter || assigneeFilter || labelFilter;
+    const filteredRoots = useMemo(() => {
+      if (!hasActiveFilters) return hierarchyRoots;
+      const filtered = [];
+      for (const root of hierarchyRoots) {
+        const filteredNode = filterHierarchyNode(root, filterFn);
+        if (filteredNode) {
+          filtered.push(filteredNode);
+        }
+      }
+      return filtered;
+    }, [hierarchyRoots, searchFilter, assigneeFilter, labelFilter]);
+
+    // Filter closed issues as well
+    const filteredClosedIssues = useMemo(() => {
+      if (!hasActiveFilters) return output.closedIssues;
+      return output.closedIssues.filter(filterFn);
+    }, [output.closedIssues, searchFilter, assigneeFilter, labelFilter]);
+
+    const totalUnfilteredItems = hierarchyRoots.length;
+    const totalFilteredItems = filteredRoots.length;
+    const paginatedRoots = paginateItems(filteredRoots, currentPage, pageSize);
 
     return (
       <div className={`output ${className} output-display`}>
         <div className="output-display__command">
           $ bd {output.command}
         </div>
+
+        <ListFilterControls
+          searchFilter={searchFilter}
+          assigneeFilter={assigneeFilter}
+          labelFilter={labelFilter}
+          onSearchChange={setSearchFilter}
+          onAssigneeChange={setAssigneeFilter}
+          onLabelChange={setLabelFilter}
+          onClearAll={handleClearAllFilters}
+          allIssues={allIssues}
+        />
         
         <PaginationControls
           currentPage={currentPage}
           pageSize={pageSize}
-          totalItems={totalRootItems}
+          totalItems={totalFilteredItems}
           onPageChange={setCurrentPage}
           onPageSizeChange={handlePageSizeChange}
+          filteredCount={hasActiveFilters ? totalFilteredItems : null}
+          unfilteredCount={hasActiveFilters ? totalUnfilteredItems : null}
         />
 
         <div className="issue-tree">
@@ -227,13 +356,13 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
           )}
         </div>
         
-        {output.closedIssues.length > 0 && (
+        {filteredClosedIssues.length > 0 && (
           <details className="output-display__closed-section">
             <summary className="output-display__closed-summary">
-              ✓ Closed ({output.closedIssues.length})
+              ✓ Closed ({filteredClosedIssues.length}{hasActiveFilters && output.closedIssues.length !== filteredClosedIssues.length ? ` of ${output.closedIssues.length}` : ''})
             </summary>
             <div className="output-display__closed-items">
-              {output.closedIssues.map((issue, idx) => (
+              {filteredClosedIssues.map((issue, idx) => (
                 <IssueCard 
                   key={idx} 
                   issue={issue} 
