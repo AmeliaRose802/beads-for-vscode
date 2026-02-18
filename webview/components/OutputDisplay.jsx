@@ -87,6 +87,26 @@ function matchesLabel(issue, labelFilter) {
 }
 
 /**
+ * Checks if an issue matches the status filter.
+ * @param {object} issue - Issue object
+ * @param {string} statusFilter - Status filter value
+ * @returns {boolean}
+ */
+function matchesStatus(issue, statusFilter) {
+  if (!statusFilter) return true;
+  const normalized = statusFilter.trim().toLowerCase();
+  if (!normalized) return true;
+  if (normalized.startsWith('not')) {
+    return issue.status !== 'in_progress' && issue.status !== 'closed' && issue.status !== 'done';
+  }
+  if (normalized.startsWith('in')) {
+    return issue.status === 'in_progress';
+  }
+  const issueStatus = (issue.status || '').toLowerCase().replace(/_/g, ' ');
+  return issueStatus.includes(normalized);
+}
+
+/**
  * Filters a hierarchy tree node and its children.
  * Returns null if node and all children are filtered out.
  * @param {object} node - Tree node with issue and children
@@ -214,6 +234,7 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
   const [searchFilter, setSearchFilter] = useState('');
   const [assigneeFilter, setAssigneeFilter] = useState('');
   const [labelFilter, setLabelFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const className = isError ? 'error' : isSuccess ? 'success' : '';
 
   // Reset to page 1 and clear filters when output changes
@@ -222,12 +243,13 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
     setSearchFilter('');
     setAssigneeFilter('');
     setLabelFilter('');
+    setStatusFilter('');
   }, [output]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchFilter, assigneeFilter, labelFilter]);
+  }, [searchFilter, assigneeFilter, labelFilter, statusFilter]);
 
   const handlePageSizeChange = (newSize) => {
     setPageSize(newSize);
@@ -239,6 +261,7 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
     setSearchFilter('');
     setAssigneeFilter('');
     setLabelFilter('');
+    setStatusFilter('');
   };
   
   if (typeof output === 'object' && output.type === 'stats') {
@@ -258,7 +281,8 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
     const filterFn = (issue) =>
       matchesSearch(issue, searchFilter) &&
       matchesAssignee(issue, assigneeFilter) &&
-      matchesLabel(issue, labelFilter);
+      matchesLabel(issue, labelFilter) &&
+      matchesStatus(issue, statusFilter);
 
     const handleDragStart = (issue) => {
       setDraggedIssue(issue);
@@ -276,7 +300,7 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
       : output.openIssues.map(issue => ({ issue, children: [] }));
 
     // Apply filtering to hierarchy
-    const hasActiveFilters = searchFilter || assigneeFilter || labelFilter;
+    const hasActiveFilters = searchFilter || assigneeFilter || labelFilter || statusFilter;
     const filteredRoots = useMemo(() => {
       if (!hasActiveFilters) return hierarchyRoots;
       const filtered = [];
@@ -287,13 +311,13 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
         }
       }
       return filtered;
-    }, [hierarchyRoots, searchFilter, assigneeFilter, labelFilter]);
+    }, [hierarchyRoots, searchFilter, assigneeFilter, labelFilter, statusFilter]);
 
     // Filter closed issues as well
     const filteredClosedIssues = useMemo(() => {
       if (!hasActiveFilters) return output.closedIssues;
       return output.closedIssues.filter(filterFn);
-    }, [output.closedIssues, searchFilter, assigneeFilter, labelFilter]);
+    }, [output.closedIssues, searchFilter, assigneeFilter, labelFilter, statusFilter]);
 
     const totalUnfilteredItems = hierarchyRoots.length;
     const totalFilteredItems = filteredRoots.length;
@@ -309,9 +333,11 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
           searchFilter={searchFilter}
           assigneeFilter={assigneeFilter}
           labelFilter={labelFilter}
+          statusFilter={statusFilter}
           onSearchChange={setSearchFilter}
           onAssigneeChange={setAssigneeFilter}
           onLabelChange={setLabelFilter}
+          onStatusChange={setStatusFilter}
           onClearAll={handleClearAllFilters}
           allIssues={allIssues}
         />

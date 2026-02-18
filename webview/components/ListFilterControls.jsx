@@ -211,15 +211,17 @@ const FilterDropdown = ({
 
 /**
  * ListFilterControls provides filtering UI for the list view.
- * Supports filtering by assignee, label, and search term.
+ * Supports filtering by assignee, label, status, and search term.
  *
  * @param {object} props - Component props.
  * @param {string} props.searchFilter - Current search filter value.
  * @param {string} props.assigneeFilter - Current assignee filter value.
  * @param {string} props.labelFilter - Current label filter value.
+ * @param {string} props.statusFilter - Current status filter value.
  * @param {Function} props.onSearchChange - Called when search changes.
  * @param {Function} props.onAssigneeChange - Called when assignee filter changes.
  * @param {Function} props.onLabelChange - Called when label filter changes.
+ * @param {Function} props.onStatusChange - Called when status filter changes.
  * @param {Function} props.onClearAll - Called when clearing all filters.
  * @param {Array} props.allIssues - All issues for extracting filter options.
  * @returns {React.ReactElement}
@@ -228,16 +230,19 @@ const ListFilterControls = ({
   searchFilter,
   assigneeFilter,
   labelFilter,
+  statusFilter,
   onSearchChange,
   onAssigneeChange,
   onLabelChange,
+  onStatusChange,
   onClearAll,
   allIssues = []
 }) => {
   const availableLabels = useMemo(() => extractLabels(allIssues), [allIssues]);
   const availableAssignees = useMemo(() => extractAssignees(allIssues), [allIssues]);
+  const statusOptions = ['In progress', 'Not in progress'];
 
-  const hasActiveFilters = searchFilter || assigneeFilter || labelFilter;
+  const hasActiveFilters = searchFilter || assigneeFilter || labelFilter || statusFilter;
 
   return (
     <div className="list-filter-controls">
@@ -270,6 +275,17 @@ const ListFilterControls = ({
           placeholder="Assignee"
           ariaLabel="Filter by assignee"
           icon="👤"
+        />
+      </div>
+
+      <div className="list-filter-controls__filter">
+        <FilterDropdown
+          value={statusFilter}
+          onChange={onStatusChange}
+          options={statusOptions}
+          placeholder="Status"
+          ariaLabel="Filter by status"
+          icon="⏳"
         />
       </div>
 
