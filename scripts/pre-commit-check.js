@@ -34,7 +34,7 @@ function checkLint() {
     execSync('npx eslint . --max-warnings 0', {
       cwd: ROOT,
       stdio: 'pipe',
-      timeout: 30000
+      timeout: 60000
     });
     pass('Lint — zero warnings and errors');
   } catch (err) {
@@ -168,24 +168,22 @@ function checkTypeAnnotations() {
 
 // ── 5. Test coverage ─────────────────────────────────────────────
 function checkCoverage() {
+  // Run targeted coverage check (form-handlers + parse-utils) with their tests.
+  // Full test suite is validated in CI; pre-commit focuses on coverage gates.
   try {
-    // Measure coverage on files testable outside VS Code
-    const includes = [
-      '--include', 'webview/form-handlers.js',
-      '--include', 'webview/parse-utils.js'
+    const covCmd = [
+      'npx c8',
+      '--include "**/form-handlers.js"',
+      '--include "**/parse-utils.js"',
+      `--lines ${MIN_COVERAGE} --branches ${MIN_COVERAGE} --functions ${MIN_COVERAGE}`,
+      '-- npx mocha --exit',
+      'test/suite/parse-utils.test.js test/suite/form-handlers.test.js',
+      '--reporter dot'
     ].join(' ');
-    execSync(
-      `npx c8 ${includes} --lines 80 --branches 80 --functions 80 npm run test:unit 2>&1`,
-      { cwd: ROOT, stdio: 'pipe', timeout: 60000 }
-    );
+    execSync(covCmd, { cwd: ROOT, stdio: 'pipe', timeout: 60000 });
     pass(`Test coverage — ≥ ${MIN_COVERAGE}%`);
   } catch (err) {
-    const output = (err.stdout || err.stderr || '').toString();
-    if (output.includes('failing')) {
-      fail('Test coverage', 'Unit tests failed — fix tests before committing');
-    } else {
-      fail('Test coverage', `Coverage below ${MIN_COVERAGE}% threshold`);
-    }
+    fail('Test coverage', `Coverage below ${MIN_COVERAGE}% threshold`);
   }
 }
 

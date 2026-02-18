@@ -260,6 +260,155 @@ suite('Parse Utils Tests', () => {
     });
   });
 
+  suite('formatPriority edge cases', () => {
+    test('Should handle priority as just "p" with no number', () => {
+      const json = JSON.stringify([
+        { id: 't-1', title: 'Test', issue_type: 'task', priority: 'p', status: 'open' }
+      ]);
+      const result = parseListJSON(json, 'list');
+      assert.strictEqual(result.openIssues[0].priority, 'p2');
+    });
+
+    test('Should handle empty string priority', () => {
+      const json = JSON.stringify([
+        { id: 't-1', title: 'Test', issue_type: 'task', priority: '', status: 'open' }
+      ]);
+      const result = parseListJSON(json, 'list');
+      assert.strictEqual(result.openIssues[0].priority, 'p2');
+    });
+
+    test('Should handle priority as "p0"', () => {
+      const json = JSON.stringify([
+        { id: 't-1', title: 'Test', issue_type: 'task', priority: 'p0', status: 'open' }
+      ]);
+      const result = parseListJSON(json, 'list');
+      assert.strictEqual(result.openIssues[0].priority, 'p0');
+    });
+  });
+
+  suite('normalizeIssue edge cases', () => {
+    test('Should skip null issues in list', () => {
+      const json = JSON.stringify([
+        null,
+        { id: 't-1', title: 'Valid', issue_type: 'task', priority: 1, status: 'open' }
+      ]);
+      const result = parseListJSON(json, 'list');
+      assert.strictEqual(result.openIssues.length, 1);
+    });
+
+    test('Should skip issues without id', () => {
+      const json = JSON.stringify([
+        { title: 'No ID', issue_type: 'task', priority: 1, status: 'open' },
+        { id: 't-1', title: 'Valid', issue_type: 'task', priority: 1, status: 'open' }
+      ]);
+      const result = parseListJSON(json, 'list');
+      assert.strictEqual(result.openIssues.length, 1);
+    });
+  });
+
+  suite('buildBlockedSet edge cases', () => {
+    test('Should handle blocked-by dependency type', () => {
+      const json = JSON.stringify([
+        { id: 'a', title: 'A', issue_type: 'task', priority: 1, status: 'open' },
+        { id: 'b', title: 'B', issue_type: 'task', priority: 1, status: 'open' }
+      ]);
+      const graph = JSON.stringify([{
+        IssueMap: {
+          'a': { id: 'a', status: 'open' },
+          'b': { id: 'b', status: 'open' }
+        },
+        Dependencies: [
+          { from_id: 'a', to_id: 'b', type: 'blocked-by' }
+        ]
+      }]);
+      const result = parseListJSON(json, 'list', graph);
+      assert.strictEqual(result.openIssues.find(i => i.id === 'a').isBlocked, true);
+    });
+
+    test('Should handle dependencies with missing from/to ids', () => {
+      const json = JSON.stringify([
+        { id: 'a', title: 'A', issue_type: 'task', priority: 1, status: 'open' }
+      ]);
+      const graph = JSON.stringify([{
+        Dependencies: [
+          { type: 'blocks' }
+        ]
+      }]);
+      const result = parseListJSON(json, 'list', graph);
+      assert.strictEqual(result.openIssues[0].isBlocked, false);
+    });
+  });
+
+  suite('parseGraphComponents edge cases', () => {
+    test('Should handle non-array non-string graph data', () => {
+      const json = JSON.stringify([
+        { id: 'a', title: 'A', issue_type: 'task', priority: 1, status: 'open' }
+      ]);
+      const result = parseListJSON(json, 'list', 42);
+      assert.strictEqual(result.openIssues.length, 1);
+    });
+
+    test('Should handle invalid JSON string graph data', () => {
+      const json = JSON.stringify([
+        { id: 'a', title: 'A', issue_type: 'task', priority: 1, status: 'open' }
+      ]);
+      const result = parseListJSON(json, 'list', '{invalid json}');
+      assert.strictEqual(result.openIssues.length, 1);
+    });
+  });
+
+  suite('buildHierarchyFromGraph edge cases', () => {
+    test('Should handle empty issues with graph data', () => {
+      const json = JSON.stringify([]);
+      const graph = JSON.stringify([{ Dependencies: [] }]);
+      const result = parseListJSON(json, 'list', graph);
+      assert.strictEqual(result.openIssues.length, 0);
+    });
+
+    test('Should handle parent referencing non-existent node', () => {
+      const json = JSON.stringify([
+        { id: 'child-1', title: 'Child', issue_type: 'task', priority: 2, status: 'open' }
+      ]);
+      const graph = JSON.stringify([{
+        Dependencies: [
+          { issue_id: 'child-1', depends_on_id: 'missing-parent', type: 'parent-child' }
+        ]
+      }]);
+      const result = parseListJSON(json, 'list', graph);
+      assert.strictEqual(result.hierarchy.length, 1);
+      assert.strictEqual(result.hierarchy[0].issue.id, 'child-1');
+    });
+  });
+
+  suite('parseListJSON edge cases', () => {
+    test('Should return singular issue in header for single item', () => {
+      const json = JSON.stringify([
+        { id: 'a', title: 'A', issue_type: 'task', priority: 1, status: 'open' }
+      ]);
+      const result = parseListJSON(json, 'list');
+      assert.ok(result.header.includes('1 issue'));
+      assert.ok(!result.header.includes('issues'));
+    });
+
+    test('Should sort closed issues by closed_at date', () => {
+      const json = JSON.stringify([
+        { id: 'a', title: 'A', status: 'closed', closed_at: '2026-01-01T00:00:00Z' },
+        { id: 'b', title: 'B', status: 'closed', closed_at: '2026-02-01T00:00:00Z' }
+      ]);
+      const result = parseListJSON(json, 'list');
+      assert.strictEqual(result.closedIssues[0].id, 'b');
+    });
+
+    test('Should handle closed items without closed_at dates in sort', () => {
+      const json = JSON.stringify([
+        { id: 'a', title: 'A', status: 'closed' },
+        { id: 'b', title: 'B', status: 'closed' }
+      ]);
+      const result = parseListJSON(json, 'list');
+      assert.strictEqual(result.closedIssues.length, 2);
+    });
+  });
+
   suite('parseStatsOutput', () => {
     test('Should parse statistics header', () => {
       const text = '📊 Project Statistics\nTotal: 10\nOpen: 5';
