@@ -17,6 +17,43 @@ const normalizeRelationshipType = (rawType) => {
 };
 
 /**
+ * Calculate a smooth bezier curve path for edges.
+ * Uses cubic bezier curves to create visually distinct paths that help reduce visual clutter.
+ */
+const calculateBezierPath = (fromX, fromY, toX, toY) => {
+  const horizontalGap = toX - fromX;
+  const verticalOffset = toY - fromY;
+  
+  if (Math.abs(verticalOffset) < 10) {
+    // Nodes on same level - simple horizontal bezier
+    const controlOffset = Math.abs(horizontalGap) * 0.5;
+    return `M ${fromX} ${fromY} C ${fromX + controlOffset} ${fromY}, ${toX - controlOffset} ${toY}, ${toX} ${toY}`;
+  }
+  
+  if (horizontalGap > 60) {
+    // Standard case: enough horizontal space - smooth S-curve
+    const midX = fromX + Math.max(40, horizontalGap / 2);
+    const controlOffset = Math.min(40, Math.abs(horizontalGap) * 0.3);
+    
+    return `M ${fromX} ${fromY} ` +
+           `C ${fromX + controlOffset} ${fromY}, ${midX - controlOffset} ${fromY}, ${midX} ${fromY} ` +
+           `S ${midX + controlOffset} ${toY}, ${toX} ${toY}`;
+  } else {
+    // Tight space or reverse direction - route around with smooth curves
+    const routeX = fromX + 25;
+    const clearanceY = verticalOffset > 0 ? toY + 45 : toY - 45;
+    const controlOffset = 15;
+    
+    return `M ${fromX} ${fromY} ` +
+           `L ${routeX} ${fromY} ` +
+           `C ${routeX} ${fromY + controlOffset * Math.sign(verticalOffset)}, ${routeX} ${clearanceY - controlOffset * Math.sign(verticalOffset)}, ${routeX} ${clearanceY} ` +
+           `L ${toX - 25} ${clearanceY} ` +
+           `C ${toX - 25} ${clearanceY + controlOffset * Math.sign(verticalOffset)}, ${toX - 25} ${toY - controlOffset * Math.sign(verticalOffset)}, ${toX - 25} ${toY} ` +
+           `L ${toX} ${toY}`;
+  }
+};
+
+/**
  * DependencyGraph - Interactive visualization of issue dependencies
  * 
  * Renders a graph showing issues as nodes and dependencies as edges.
@@ -293,25 +330,25 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
             <defs>
               <marker
                 id="arrowhead"
-                markerWidth="12"
-                markerHeight="9"
-                refX="11"
-                refY="4.5"
+                markerWidth="14"
+                markerHeight="11"
+                refX="13"
+                refY="5.5"
                 orient="auto"
                 markerUnits="strokeWidth"
               >
-                <polygon points="0 0, 12 4.5, 0 9" fill="currentColor" />
+                <polygon points="0 0, 14 5.5, 0 11" fill="currentColor" />
               </marker>
               <marker
                 id="arrowhead-high-priority"
-                markerWidth="12"
-                markerHeight="9"
-                refX="11"
-                refY="4.5"
+                markerWidth="14"
+                markerHeight="11"
+                refX="13"
+                refY="5.5"
                 orient="auto"
                 markerUnits="strokeWidth"
               >
-                <polygon points="0 0, 12 4.5, 0 9" fill="var(--vscode-errorForeground)" />
+                <polygon points="0 0, 14 5.5, 0 11" fill="var(--vscode-errorForeground)" />
               </marker>
             </defs>
             {visibleDeps.map((dep, idx) => {
@@ -327,9 +364,11 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
               const toX = toPos.x;           // Left edge of target
               const toY = toPos.y + 30;
 
-              // Create orthogonal (right-angle) path to avoid overlaps
-              const isHighlighted = selectedNode === fromId || selectedNode === toId ||
-                                    hoveredNode === fromId || hoveredNode === toId;
+              // Check if this edge is connected to the hovered or selected node
+              const isConnectedToSelected = selectedNode === fromId || selectedNode === toId;
+              const isConnectedToHovered = hoveredNode === fromId || hoveredNode === toId;
+              const isHighlighted = isConnectedToSelected || isConnectedToHovered;
+              const isDimmed = (hoveredNode && !isConnectedToHovered) || (selectedNode && !isConnectedToSelected && !hoveredNode);
 
               // Determine edge priority for styling
               const fromIssue = issueMap[fromId];
@@ -345,32 +384,15 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
 
               const depType = dep.__type || normalizeRelationshipType(getField(dep, DEP_TYPE_KEYS));
               const typeClass = depType ? `dependency-graph__edge--${depType}` : '';
+              const dimmedClass = isDimmed ? 'dependency-graph__edge--dimmed' : '';
 
-              let pathData;
-              if (Math.abs(fromY - toY) < 10) {
-                // Nodes on same level - simple horizontal line
-                pathData = `M ${fromX} ${fromY} L ${toX} ${toY}`;
-              } else {
-                // Nodes on different levels - orthogonal routing
-                const horizontalGap = toX - fromX;
-                const verticalOffset = toY - fromY;
-                
-                if (horizontalGap > 60) {
-                  // Standard case: enough horizontal space
-                  const midX = fromX + Math.max(40, horizontalGap / 2);
-                  pathData = `M ${fromX} ${fromY} L ${midX} ${fromY} L ${midX} ${toY} L ${toX} ${toY}`;
-                } else {
-                  // Tight space or reverse direction - route around
-                  const routeX = fromX + 25;
-                  const clearanceY = verticalOffset > 0 ? toY + 45 : toY - 45;
-                  pathData = `M ${fromX} ${fromY} L ${routeX} ${fromY} L ${routeX} ${clearanceY} L ${toX - 25} ${clearanceY} L ${toX - 25} ${toY} L ${toX} ${toY}`;
-                }
-              }
+              // Use bezier curves for smoother, more distinguishable paths
+              const pathData = calculateBezierPath(fromX, fromY, toX, toY);
 
               return (
                 <path
                   key={idx}
-                  className={`dependency-graph__edge ${isHighlighted ? 'dependency-graph__edge--highlighted' : ''} ${priorityClass} ${completedClass} ${typeClass}`}
+                  className={`dependency-graph__edge ${isHighlighted ? 'dependency-graph__edge--highlighted' : ''} ${priorityClass} ${completedClass} ${typeClass} ${dimmedClass}`}
                   d={pathData}
                   markerEnd={edgePriority <= 1 ? "url(#arrowhead-high-priority)" : "url(#arrowhead)"}
                 >
