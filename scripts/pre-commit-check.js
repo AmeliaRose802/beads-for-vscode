@@ -168,17 +168,15 @@ function checkTypeAnnotations() {
 
 // ── 5. Test coverage ─────────────────────────────────────────────
 function checkCoverage() {
-  // Run targeted coverage check (form-handlers + parse-utils) with their tests.
-  // Full test suite is validated in CI; pre-commit focuses on coverage gates.
+  // Run coverage check across all testable source files using wildcard patterns.
+  // This automatically picks up new webview modules and root-level source files.
   try {
     const covCmd = [
       'npx c8',
-      '--include "**/form-handlers.js"',
-      '--include "**/parse-utils.js"',
+      '--include "webview/*.js"',
+      '--include "beads-backend.js"',
       `--lines ${MIN_COVERAGE} --branches ${MIN_COVERAGE} --functions ${MIN_COVERAGE}`,
-      '-- npx mocha --exit',
-      'test/suite/parse-utils.test.js test/suite/form-handlers.test.js',
-      '--reporter dot'
+      '-- npm run test:unit --silent'
     ].join(' ');
     execSync(covCmd, { cwd: ROOT, stdio: 'pipe', timeout: 60000 });
     pass(`Test coverage — ≥ ${MIN_COVERAGE}%`);
