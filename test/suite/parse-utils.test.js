@@ -122,6 +122,40 @@ suite('Parse Utils Tests', () => {
       assert.deepStrictEqual(childIds, ['child-a', 'child-b', 'child-c']);
     });
 
+    test('Should attach parent ids and child counts from graph data', () => {
+      const json = JSON.stringify([
+        { id: 'parent-1', title: 'Parent', issue_type: 'feature', priority: 1, status: 'open' },
+        { id: 'child-1', title: 'Child', issue_type: 'task', priority: 2, status: 'open' }
+      ]);
+
+      const graph = JSON.stringify([
+        {
+          Dependencies: [
+            { issue_id: 'child-1', depends_on_id: 'parent-1', type: 'parent-child' }
+          ]
+        }
+      ]);
+
+      const result = parseListJSON(json, 'list', graph);
+      const parent = result.openIssues.find(i => i.id === 'parent-1');
+      const child = result.openIssues.find(i => i.id === 'child-1');
+
+      assert.strictEqual(child.parent_id, 'parent-1');
+      assert.strictEqual(child.child_count, 0);
+      assert.strictEqual(parent.child_count, 1);
+    });
+
+    test('Should fall back to parent_id provided in issue data when graph is missing', () => {
+      const json = JSON.stringify([
+        { id: 'child-2', title: 'Child', issue_type: 'task', priority: 2, status: 'open', parent_id: 'provided-parent' }
+      ]);
+
+      const result = parseListJSON(json, 'list');
+      const child = result.openIssues.find(i => i.id === 'child-2');
+
+      assert.strictEqual(child.parent_id, 'provided-parent');
+    });
+
     test('Should mark issues as blocked when they have open blocking dependencies', () => {
       const json = JSON.stringify([
         { id: 'blocker-1', title: 'Blocker', issue_type: 'task', priority: 1, status: 'open' },

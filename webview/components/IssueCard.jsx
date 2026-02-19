@@ -250,6 +250,16 @@ const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, on
           <span className={`issue-card__status issue-card__status--${issue.status.replace('_', '-')}`}>
             ● {issue.status}
           </span>
+          {issue.parent_id && (
+            <span className="issue-card__badge issue-card__badge--parent" title={`Parent ${issue.parent_id}`}>
+              ⬆ {issue.parent_id}
+            </span>
+          )}
+          {issue.child_count > 0 && (
+            <span className="issue-card__badge issue-card__badge--children" title="Child issues">
+              🌿 {issue.child_count}
+            </span>
+          )}
           {issue.isBlocked && (
             <span className="issue-card__badge issue-card__badge--blocked" title="Blocked by open dependencies">
               🚫 blocked
