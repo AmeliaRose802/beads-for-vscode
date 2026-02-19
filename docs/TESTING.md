@@ -43,7 +43,7 @@ The test suite covers:
 - ✅ Message passing (extension ↔️ webview)
 - ✅ Command execution with `bd` CLI
 - ✅ Working directory detection
-- ✅ Environment variable handling (BEADS_DB)
+- ✅ Environment variable handling (BEADS_DIR)
 - ✅ Error handling (timeouts, ENOENT, buffer overflow)
 - ✅ Output formatting and trimming
 - ✅ Successful and failed command scenarios
@@ -51,18 +51,24 @@ The test suite covers:
 
 ## Writing New Tests
 
-Add new tests to `test/suite/extension.test.js`:
+Add new test files to `test/suite/` with the naming convention `<feature>.test.js`,
+then add the file to the `test:unit` script in `package.json`:
 
 ```javascript
-test('Should do something', () => {
-  // Arrange
-  const expected = 'value';
-  
-  // Act
-  const result = someFunction();
-  
-  // Assert
-  assert.strictEqual(result, expected);
+// test/suite/my-feature.test.js
+const assert = require('assert');
+
+suite('My Feature', function() {
+  test('Should do something', function() {
+    // Arrange
+    const expected = 'value';
+
+    // Act
+    const result = someFunction();
+
+    // Assert
+    assert.strictEqual(result, expected);
+  });
 });
 ```
 
