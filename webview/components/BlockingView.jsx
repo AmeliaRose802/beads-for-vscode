@@ -31,6 +31,7 @@ const BlockingView = ({
   onShowHierarchy,
   onPokePoke,
   onConvertToGitHub,
+  onDispatchPhase,
   pokepokeInstances,
   vscode
 }) => {
@@ -342,6 +343,7 @@ const BlockingView = ({
             onNodeClick={handleNodeClick}
             onEdgeClick={handleEdgeClick}
             onTogglePhase={togglePhaseExpanded}
+            onDispatchPhase={onDispatchPhase}
             renderEdgeMenu={renderEdgeMenu}
             getPhasePreview={getPhasePreview}
             blocksCount={blocksCount}

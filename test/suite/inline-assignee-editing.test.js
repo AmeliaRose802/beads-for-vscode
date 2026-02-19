@@ -8,6 +8,7 @@ suite('Inline Assignee Editing', () => {
   const issueCardPath = path.join(ROOT, 'webview', 'components', 'IssueCard.jsx');
   const outputDisplayPath = path.join(ROOT, 'webview', 'components', 'OutputDisplay.jsx');
   const appPath = path.join(ROOT, 'webview', 'App.jsx');
+  const assigneeHandlerPath = path.join(ROOT, 'webview', 'hooks', 'createAssigneeChangeHandler.js');
   const stylesPath = path.join(ROOT, 'webview', 'styles.css');
   const hierarchyViewPath = path.join(ROOT, 'webview', 'components', 'HierarchyView.jsx');
 
@@ -109,55 +110,40 @@ suite('Inline Assignee Editing', () => {
       'should pass existingAssignees prop to IssueCard');
   });
 
-  test('App.jsx has handleAssigneeChange function', () => {
+  test('App.jsx wires handleAssigneeChange handler', () => {
     const source = fs.readFileSync(appPath, 'utf8');
-    assert.ok(source.includes('handleAssigneeChange'), 'should have handleAssigneeChange function');
-    assert.ok(source.includes('new Promise'), 'should return a Promise');
+    assert.ok(source.includes('handleAssigneeChange'), 'should have handleAssigneeChange handler');
+    assert.ok(source.includes('createAssigneeChangeHandler'), 'should use createAssigneeChangeHandler helper');
   });
 
   test('handleAssigneeChange uses bd update command', () => {
-    const source = fs.readFileSync(appPath, 'utf8');
-    const funcMatch = source.match(/const handleAssigneeChange[\s\S]*?^\s\s};/m);
-    assert.ok(funcMatch, 'should find handleAssigneeChange function');
-    const funcBody = funcMatch[0];
-    assert.ok(funcBody.includes('update ${issueId}'), 'should use bd update command');
-    assert.ok(funcBody.includes('--assignee'), 'should use --assignee flag');
+    const source = fs.readFileSync(assigneeHandlerPath, 'utf8');
+    assert.ok(source.includes('update ${issueId}'), 'should use bd update command');
+    assert.ok(source.includes('--assignee'), 'should use --assignee flag');
   });
 
   test('handleAssigneeChange handles empty assignee (clear)', () => {
-    const source = fs.readFileSync(appPath, 'utf8');
-    const funcMatch = source.match(/const handleAssigneeChange[\s\S]*?^\s\s};/m);
-    assert.ok(funcMatch, 'should find handleAssigneeChange function');
-    const funcBody = funcMatch[0];
-    assert.ok(funcBody.includes('newAssignee.trim()'), 'should check if assignee is empty');
-    assert.ok(funcBody.includes('--assignee ""'), 'should support clearing assignee');
+    const source = fs.readFileSync(assigneeHandlerPath, 'utf8');
+    assert.ok(source.includes('newAssignee.trim()'), 'should check if assignee is empty');
+    assert.ok(source.includes('--assignee ""'), 'should support clearing assignee');
   });
 
   test('handleAssigneeChange resolves promise on success', () => {
-    const source = fs.readFileSync(appPath, 'utf8');
-    const funcMatch = source.match(/const handleAssigneeChange[\s\S]*?^\s\s};/m);
-    assert.ok(funcMatch, 'should find handleAssigneeChange function');
-    const funcBody = funcMatch[0];
-    assert.ok(funcBody.includes('resolve()'), 'should resolve promise on success');
-    assert.ok(funcBody.includes('message.success'), 'should check for success in response');
+    const source = fs.readFileSync(assigneeHandlerPath, 'utf8');
+    assert.ok(source.includes('resolve()'), 'should resolve promise on success');
+    assert.ok(source.includes('message.success'), 'should check for success in response');
   });
 
   test('handleAssigneeChange rejects promise on error', () => {
-    const source = fs.readFileSync(appPath, 'utf8');
-    const funcMatch = source.match(/const handleAssigneeChange[\s\S]*?^\s\s};/m);
-    assert.ok(funcMatch, 'should find handleAssigneeChange function');
-    const funcBody = funcMatch[0];
-    assert.ok(funcBody.includes('reject'), 'should reject promise on error');
-    assert.ok(funcBody.includes('new Error'), 'should create Error object');
+    const source = fs.readFileSync(assigneeHandlerPath, 'utf8');
+    assert.ok(source.includes('reject'), 'should reject promise on error');
+    assert.ok(source.includes('new Error'), 'should create Error object');
   });
 
   test('handleAssigneeChange has timeout for safety', () => {
-    const source = fs.readFileSync(appPath, 'utf8');
-    const funcMatch = source.match(/const handleAssigneeChange[\s\S]*?^\s\s};/m);
-    assert.ok(funcMatch, 'should find handleAssigneeChange function');
-    const funcBody = funcMatch[0];
-    assert.ok(funcBody.includes('setTimeout'), 'should have timeout');
-    assert.ok(funcBody.includes('Timeout updating assignee'), 'should reject with timeout message');
+    const source = fs.readFileSync(assigneeHandlerPath, 'utf8');
+    assert.ok(source.includes('setTimeout'), 'should have timeout');
+    assert.ok(source.includes('Timeout updating assignee'), 'should reject with timeout message');
   });
 
   test('App.jsx passes onAssigneeChange to OutputDisplay', () => {

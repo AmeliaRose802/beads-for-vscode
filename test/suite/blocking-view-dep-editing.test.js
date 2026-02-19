@@ -140,6 +140,13 @@ suite('BlockingView inline dependency editing', () => {
       );
     });
 
+    test('phases include dispatch to Copilot control', () => {
+      assert.ok(
+        blockingGraphTabSrc.includes('blocking-view__layer-action'),
+        'BlockingView hierarchy phases should include dispatch action button'
+      );
+    });
+
     test('renders expanded IssueCard details panel', () => {
       assert.ok(
         blockingViewSrc.includes('blocking-view__details'),

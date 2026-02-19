@@ -206,6 +206,19 @@ suite('GitHub Converter', () => {
       assert.ok(labelValue.includes('backend'));
     });
 
+    test('should include assignee when provided', async () => {
+      execFileStub.callsArgWith(2, null, 'https://github.com/owner/repo/issues/101\n', '');
+
+      const item = { id: 'test-123', title: 'Test' };
+
+      await convertBeadsItemToGitHubIssue(item, undefined, { assignee: 'github-copilot' });
+
+      const [, args] = execFileStub.firstCall.args;
+      const assigneeIndex = args.indexOf('--assignee');
+      assert.ok(assigneeIndex >= 0);
+      assert.strictEqual(args[assigneeIndex + 1], 'github-copilot');
+    });
+
     test('should provide helpful error for missing gh CLI', async () => {
       execFileStub.callsArgWith(2, { code: 'ENOENT', message: 'not found' });
 
