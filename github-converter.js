@@ -86,13 +86,16 @@ function collectLabels(item) {
  * @param {string} [cwd] - Working directory for repo context
  * @returns {Promise<{number: number, url: string}>} GitHub issue number and URL
  */
-async function convertBeadsItemToGitHubIssue(item, cwd) {
+async function convertBeadsItemToGitHubIssue(item, cwd, options = {}) {
   if (!item || !item.title) {
     throw new Error('Invalid beads item: title is required');
   }
 
   const body = buildIssueBody(item);
   const labels = collectLabels(item);
+  const assignee = options && typeof options.assignee === 'string' && options.assignee.trim()
+    ? options.assignee.trim()
+    : null;
 
   const args = [
     'issue', 'create',
@@ -102,6 +105,10 @@ async function convertBeadsItemToGitHubIssue(item, cwd) {
 
   if (labels.length > 0) {
     args.push('--label', labels.join(','));
+  }
+
+  if (assignee) {
+    args.push('--assignee', assignee);
   }
 
   return new Promise((resolve, reject) => {

@@ -8,7 +8,10 @@ import BlockingView from './components/BlockingView';
 import CommandProgress from './components/CommandProgress';
 import BeadsInitWarning from './components/BeadsInitWarning';
 import PokePokeStatus from './components/PokePokeStatus';
+import ParallelPhaseDispatchDialog from './components/ParallelPhaseDispatchDialog';
 import { useCommandProgress } from './hooks/useCommandProgress';
+import { useParallelPhaseDispatch } from './hooks/useParallelPhaseDispatch';
+import { createAssigneeChangeHandler } from './hooks/createAssigneeChangeHandler';
 const { parseListJSON, parseStatsOutput } = require('./parse-utils');
 const { buildCreateCommand, buildUpdateCommand, safeShellArg } = require('./form-handlers');
 const { buildHierarchyModel } = require('./hierarchy-utils');
@@ -59,6 +62,15 @@ const App = () => {
   const [loadingDetails, setLoadingDetails] = useState({}); // Map of issueId -> boolean
   // PokePoke state
   const [pokepokeInstances, setPokepokeInstances] = useState([]);
+  // GitHub state
+  const [gitHubInfo, setGitHubInfo] = useState({
+    authenticated: false,
+    account: null,
+    repo: null,
+    copilotAssignees: ['github-copilot']
+  });
+  const { parallelPhaseDispatch, openParallelPhaseDispatch, startParallelPhaseDispatch, cancelParallelPhaseDispatch, closeParallelPhaseDispatch, handleParallelPhaseDispatchMessage } =
+    useParallelPhaseDispatch({ vscode, gitHubInfo });
   // Relationship form state
   const [sourceBead, setSourceBead] = useState('');
   const [targetBead, setTargetBead] = useState('');
@@ -112,6 +124,7 @@ const App = () => {
     vscode.postMessage({ type: 'getCwd' });
     vscode.postMessage({ type: 'getCurrentFile' });
     vscode.postMessage({ type: 'getBeadsStatus' });
+    vscode.postMessage({ type: 'getGitHubInfo', silent: true });
 
     const messageHandler = (event) => {
       processMessage(event.data, {
@@ -144,6 +157,8 @@ const App = () => {
         setBlockingModel,
         setShowBlockingView,
         setPokepokeInstances,
+        setGitHubInfo,
+        handleParallelPhaseDispatch: handleParallelPhaseDispatchMessage,
         vscode,
         completeCommandProgress,
         buildHierarchyModel,
@@ -161,43 +176,13 @@ const App = () => {
     runInlineAction(`update ${issueId} --type ${newType}`, `Updated ${issueId} type to ${newType}`);
   const handleQuickPriorityChange = (issueId, newPriority) =>
     runInlineAction(`update ${issueId} --priority ${newPriority}`, `Updated ${issueId} priority to P${newPriority}`);
-  const handleAssigneeChange = (issueId, newAssignee) => new Promise((resolve, reject) => {
-    const trimmedAssignee = newAssignee.trim();
-    const assigneeArg = trimmedAssignee ? `--assignee ${safeShellArg(newAssignee)}` : '--assignee ""';
-    const command = `update ${issueId} ${assigneeArg}`;
-    const successMsg = trimmedAssignee
-      ? `Assigned ${issueId} to ${newAssignee}`
-      : `Cleared assignee for ${issueId}`;
-    beginCommandProgress(command, 'inline');
-    const messageHandler = (event) => {
-      const message = event.data;
-      if (message.type === 'inlineActionResult' && message.command === command) {
-        window.removeEventListener('message', messageHandler);
-        if (message.success) {
-          resolve();
-          setTimeout(() => {
-            const currentOutput = outputRef.current;
-            if (typeof currentOutput === 'object' && currentOutput.command) {
-              runCommand(currentOutput.command);
-            }
-          }, 500);
-        } else {
-          reject(new Error(message.output || 'Failed to update assignee'));
-        }
-      }
-    };
-    window.addEventListener('message', messageHandler);
-    vscode.postMessage({
-      type: 'executeCommand',
-      command,
-      isInlineAction: true,
-      successMessage: successMsg
-    });
-    setTimeout(() => {
-      window.removeEventListener('message', messageHandler);
-      completeCommandProgress(command);
-      reject(new Error('Timeout updating assignee'));
-    }, 5000);
+  const handleAssigneeChange = createAssigneeChangeHandler({
+    safeShellArg,
+    beginCommandProgress,
+    completeCommandProgress,
+    outputRef,
+    runCommand,
+    vscode
   });
   const handleCreateIssue = () => {
     let command;
@@ -272,6 +257,7 @@ const App = () => {
     setIsSuccess(false);
     vscode.postMessage({ type: 'convertToGitHub', issueId, commandKey: commandId });
   };
+
   const handleDepAction = (action) => {
     if (!sourceBead.trim() || !targetBead.trim()) { setOutput('Error: Please provide both source and target bead IDs'); setIsError(true); return; }
     const beadIdPattern = /^[a-zA-Z0-9_-]+$/;
@@ -442,6 +428,7 @@ const App = () => {
               onShowHierarchy={handleShowHierarchy}
               onPokePoke={handlePokePoke}
               onConvertToGitHub={handleConvertToGitHub}
+              onDispatchPhase={openParallelPhaseDispatch}
               pokepokeInstances={pokepokeInstances}
               vscode={vscode}
               onDepAction={(action, fromId, toId) => {
@@ -487,6 +474,22 @@ const App = () => {
             />
           </div>
         )}
+
+        <ParallelPhaseDispatchDialog
+          open={parallelPhaseDispatch.open}
+          phaseIndex={parallelPhaseDispatch.phaseIndex}
+          repo={gitHubInfo.repo}
+          items={parallelPhaseDispatch.items}
+          assignments={parallelPhaseDispatch.assignments}
+          progressById={parallelPhaseDispatch.progressById}
+          running={parallelPhaseDispatch.running}
+          completed={parallelPhaseDispatch.completed}
+          summary={parallelPhaseDispatch.summary}
+          error={parallelPhaseDispatch.error}
+          onCancel={cancelParallelPhaseDispatch}
+          onStart={startParallelPhaseDispatch}
+          onClose={closeParallelPhaseDispatch}
+        />
       </div>
     </div>
   );

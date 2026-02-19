@@ -8,6 +8,7 @@ const BlockingGraphTab= ({
   onNodeClick,
   onEdgeClick,
   onTogglePhase,
+  onDispatchPhase,
   renderEdgeMenu,
   getPhasePreview,
   blocksCount = {},
@@ -32,7 +33,19 @@ const BlockingGraphTab= ({
         } = getPhasePreview(group, depth);
         return (
           <div key={depth} className="blocking-view__graph-layer">
-            <div className="blocking-view__layer-label">Phase {depth + 1}</div>
+            <div className="blocking-view__layer-header">
+              <div className="blocking-view__layer-label">Phase {depth + 1}</div>
+              {onDispatchPhase && (
+                <button
+                  type="button"
+                  className="blocking-view__layer-action"
+                  onClick={() => onDispatchPhase(group, depth)}
+                  aria-label={`Dispatch phase ${depth + 1} to Copilot`}
+                >
+                  Dispatch to Copilot
+                </button>
+              )}
+            </div>
             <div className="blocking-view__layer-items">
               {visibleItems.map(issue => {
                 const isReady = readyIds.has(issue.id);

@@ -2966,3 +2966,248 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   text-decoration: underline;
   color: var(--vscode-textLink-activeForeground);
 }
+
+/* Parallel phase dispatch */
+.blocking-view__layer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.blocking-view__layer-action {
+  background-color: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  border: 1px solid var(--vscode-button-border);
+  border-radius: 3px;
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.blocking-view__layer-action:hover {
+  background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+.ppd-dialog__overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.ppd-dialog {
+  width: min(760px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  overflow: hidden;
+  border-radius: 6px;
+  border: 1px solid var(--vscode-panel-border);
+  background-color: var(--vscode-editor-background);
+  display: flex;
+  flex-direction: column;
+}
+
+.ppd-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+  background-color: var(--vscode-sideBarSectionHeader-background);
+}
+
+.ppd-dialog__title {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ppd-dialog__close {
+  background: none;
+  border: none;
+  color: var(--vscode-foreground);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.ppd-dialog__close:hover {
+  background-color: var(--vscode-toolbar-hoverBackground);
+}
+
+.ppd-dialog__repo {
+  padding: 8px 12px 0;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.ppd-dialog__repo-name {
+  color: var(--vscode-textLink-foreground);
+  font-weight: 600;
+}
+
+.ppd-dialog__body {
+  padding: 10px 12px;
+  overflow-y: auto;
+}
+
+.ppd-dialog__hint {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  margin-bottom: 8px;
+}
+
+.ppd-dialog__error {
+  padding: 8px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--vscode-errorForeground);
+  background-color: color-mix(in srgb, var(--vscode-errorForeground) 12%, var(--vscode-editor-background));
+  color: var(--vscode-foreground);
+  font-size: 11px;
+  margin-bottom: 10px;
+}
+
+.ppd-dialog__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ppd-dialog__row {
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  background-color: var(--vscode-editorWidget-background);
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 6px 10px;
+  align-items: start;
+}
+
+.ppd-dialog__row-main {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ppd-dialog__row-id {
+  font-family: var(--vscode-editor-font-family);
+  font-weight: 700;
+  color: var(--vscode-textLink-foreground);
+  flex-shrink: 0;
+}
+
+.ppd-dialog__row-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+.ppd-dialog__row-assignee {
+  font-size: 10px;
+  color: var(--vscode-descriptionForeground);
+  flex-shrink: 0;
+}
+
+.ppd-dialog__row-status {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--vscode-panel-border);
+  white-space: nowrap;
+}
+
+.ppd-dialog__row-status--created {
+  border-color: var(--vscode-terminal-ansiGreen);
+  color: var(--vscode-terminal-ansiGreen);
+}
+
+.ppd-dialog__row-status--failed {
+  border-color: var(--vscode-errorForeground);
+  color: var(--vscode-errorForeground);
+}
+
+.ppd-dialog__row-status--creating {
+  border-color: var(--vscode-terminal-ansiYellow);
+  color: var(--vscode-terminal-ansiYellow);
+}
+
+.ppd-dialog__row-link {
+  font-size: 10px;
+  color: var(--vscode-textLink-foreground);
+  text-decoration: none;
+  padding: 2px 0;
+}
+
+.ppd-dialog__row-link:hover {
+  text-decoration: underline;
+}
+
+.ppd-dialog__row-warning {
+  grid-column: 1 / -1;
+  font-size: 10px;
+  color: var(--vscode-terminal-ansiYellow);
+}
+
+.ppd-dialog__row-error {
+  grid-column: 1 / -1;
+  font-size: 10px;
+  color: var(--vscode-errorForeground);
+}
+
+.ppd-dialog__summary {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 11px;
+}
+
+.ppd-dialog__summary-item {
+  color: var(--vscode-foreground);
+  font-weight: 600;
+}
+
+.ppd-dialog__footer {
+  padding: 10px 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid var(--vscode-panel-border);
+  background-color: var(--vscode-sideBarSectionHeader-background);
+}
+
+.ppd-dialog__btn {
+  background-color: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  border: 1px solid var(--vscode-button-border);
+  border-radius: 3px;
+  padding: 6px 10px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.ppd-dialog__btn:hover {
+  background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+.ppd-dialog__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ppd-dialog__btn--primary {
+  background-color: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+
+.ppd-dialog__btn--primary:hover {
+  background-color: var(--vscode-button-hoverBackground);
+}

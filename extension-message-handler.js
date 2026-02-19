@@ -212,11 +212,145 @@ async function handleWebviewMessage(data, context, vscode) {
           workspacePath ? detectGitHubRepo(workspacePath) : Promise.resolve(null)
         ]);
 
+        const copilotAssigneesRaw = vscode.workspace.getConfiguration('beads-ui.github').get('copilotAssignees', ['github-copilot']);
+        const copilotAssignees = Array.isArray(copilotAssigneesRaw)
+          ? copilotAssigneesRaw.map(String).map(s => s.trim()).filter(Boolean)
+          : ['github-copilot'];
+
         webviewView.webview.postMessage({
           type: 'githubInfo',
           authenticated: !!session,
           account: session ? session.account : null,
-          repo: repo ? { owner: repo.owner, repo: repo.repo, remote: repo.remote } : null
+          repo: repo ? { owner: repo.owner, repo: repo.repo, remote: repo.remote } : null,
+          copilotAssignees
+        });
+        break;
+      }
+      case 'dispatchParallelPhase': {
+        const wsFolders = vscode.workspace.workspaceFolders;
+        if (!wsFolders || wsFolders.length === 0) {
+          webviewView.webview.postMessage({
+            type: 'parallelPhaseDispatchError',
+            success: false,
+            error: 'An open workspace is required to dispatch a phase to GitHub Copilot.'
+          });
+          break;
+        }
+
+        const workspacePath = wsFolders[0].uri.fsPath;
+        const phaseIndex = Number.isFinite(data.phaseIndex) ? data.phaseIndex : null;
+        const issueIds = Array.isArray(data.issueIds)
+          ? data.issueIds.map(String).map(s => s.trim()).filter(Boolean)
+          : [];
+        const uniqueIssueIds = [...new Set(issueIds)];
+
+        const copilotAssigneesRaw = vscode.workspace.getConfiguration('beads-ui.github').get('copilotAssignees', ['github-copilot']);
+        const copilotAssignees = Array.isArray(copilotAssigneesRaw)
+          ? copilotAssigneesRaw.map(String).map(s => s.trim()).filter(Boolean)
+          : ['github-copilot'];
+
+        const plannedAssignments = uniqueIssueIds.map((id, idx) => {
+          const assignee = copilotAssignees.length > 0 ? copilotAssignees[idx % copilotAssignees.length] : null;
+          return { issueId: id, assignee };
+        });
+
+        webviewView.webview.postMessage({
+          type: 'parallelPhaseDispatchStarted',
+          phaseIndex,
+          total: plannedAssignments.length,
+          assignments: plannedAssignments
+        });
+
+        const results = [];
+        for (let idx = 0; idx < plannedAssignments.length; idx++) {
+          const { issueId, assignee } = plannedAssignments[idx];
+          webviewView.webview.postMessage({
+            type: 'parallelPhaseDispatchProgress',
+            phaseIndex,
+            issueId,
+            assignee,
+            index: idx,
+            total: plannedAssignments.length,
+            state: 'creating'
+          });
+
+          try {
+            const bdResult = await provider._executeBdCommand(`list --id ${issueId} --json`);
+            if (!bdResult.success) {
+              throw new Error(`Failed to fetch issue: ${bdResult.output}`);
+            }
+
+            const issues = JSON.parse(bdResult.output);
+            if (!issues || issues.length === 0) {
+              throw new Error(`Issue ${issueId} not found`);
+            }
+
+            const item = issues[0];
+
+            let ghResult;
+            let assigned = !!assignee;
+            let warning = null;
+            try {
+              ghResult = await convertBeadsItemToGitHubIssue(item, workspacePath, assignee ? { assignee } : undefined);
+            } catch (error) {
+              const message = error && error.message ? error.message : String(error);
+              if (assignee && /assignee|Could not resolve|Invalid assignee/i.test(message)) {
+                warning = `Created issue without assigning ${assignee}: ${message}`;
+                assigned = false;
+                ghResult = await convertBeadsItemToGitHubIssue(item, workspacePath);
+              } else {
+                throw error;
+              }
+            }
+
+            results.push({
+              issueId,
+              assignee,
+              url: ghResult.url,
+              number: ghResult.number,
+              assigned,
+              warning,
+              success: true
+            });
+
+            webviewView.webview.postMessage({
+              type: 'parallelPhaseDispatchProgress',
+              phaseIndex,
+              issueId,
+              assignee,
+              index: idx,
+              total: plannedAssignments.length,
+              state: 'created',
+              url: ghResult.url,
+              number: ghResult.number,
+              assigned,
+              warning
+            });
+          } catch (error) {
+            const message = error && error.message ? error.message : String(error);
+            results.push({ issueId, assignee, success: false, error: message });
+            webviewView.webview.postMessage({
+              type: 'parallelPhaseDispatchProgress',
+              phaseIndex,
+              issueId,
+              assignee,
+              index: idx,
+              total: plannedAssignments.length,
+              state: 'failed',
+              error: message
+            });
+          }
+        }
+
+        const successCount = results.filter(r => r.success).length;
+        const failureCount = results.length - successCount;
+
+        webviewView.webview.postMessage({
+          type: 'parallelPhaseDispatchComplete',
+          phaseIndex,
+          successCount,
+          failureCount,
+          results
         });
         break;
       }

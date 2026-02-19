@@ -45,7 +45,8 @@ suite('message-handler', () => {
       completeCommandProgress: sinon.stub(),
       vscode: { postMessage: sinon.stub() },
       setPokepokeInstances: sinon.stub(),
-      setGitHubInfo: sinon.stub()
+      setGitHubInfo: sinon.stub(),
+      handleParallelPhaseDispatch: sinon.stub()
     };
   }
 
@@ -511,7 +512,8 @@ suite('message-handler', () => {
         type: 'githubInfo',
         authenticated: true,
         account: { label: 'user', id: '123' },
-        repo: { owner: 'owner', repo: 'repo', remote: 'origin' }
+        repo: { owner: 'owner', repo: 'repo', remote: 'origin' },
+        copilotAssignees: ['github-copilot', 'octo-bot']
       }, ctx);
 
       assert.ok(ctx.setGitHubInfo.calledOnce);
@@ -519,6 +521,7 @@ suite('message-handler', () => {
       assert.strictEqual(arg.authenticated, true);
       assert.strictEqual(arg.account.label, 'user');
       assert.strictEqual(arg.repo.owner, 'owner');
+      assert.deepStrictEqual(arg.copilotAssignees, ['github-copilot', 'octo-bot']);
     });
 
     test('handles missing repo gracefully', () => {
@@ -534,6 +537,36 @@ suite('message-handler', () => {
       assert.strictEqual(arg.authenticated, false);
       assert.strictEqual(arg.account, null);
       assert.strictEqual(arg.repo, null);
+    });
+  });
+
+  suite('parallelPhaseDispatch', () => {
+    test('forwards dispatch started to handler', () => {
+      const ctx = buildCtx();
+      const msg = { type: 'parallelPhaseDispatchStarted', assignments: [] };
+      processMessage(msg, ctx);
+      assert.ok(ctx.handleParallelPhaseDispatch.calledWith(msg));
+    });
+
+    test('forwards dispatch progress to handler', () => {
+      const ctx = buildCtx();
+      const msg = { type: 'parallelPhaseDispatchProgress', issueId: 'bd-1', state: 'creating' };
+      processMessage(msg, ctx);
+      assert.ok(ctx.handleParallelPhaseDispatch.calledWith(msg));
+    });
+
+    test('forwards dispatch complete to handler', () => {
+      const ctx = buildCtx();
+      const msg = { type: 'parallelPhaseDispatchComplete', successCount: 1, failureCount: 0 };
+      processMessage(msg, ctx);
+      assert.ok(ctx.handleParallelPhaseDispatch.calledWith(msg));
+    });
+
+    test('forwards dispatch error to handler', () => {
+      const ctx = buildCtx();
+      const msg = { type: 'parallelPhaseDispatchError', error: 'failed' };
+      processMessage(msg, ctx);
+      assert.ok(ctx.handleParallelPhaseDispatch.calledWith(msg));
     });
   });
 

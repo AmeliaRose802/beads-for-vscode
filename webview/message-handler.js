@@ -201,8 +201,17 @@ function processMessage(message, ctx) {
         ctx.setGitHubInfo({
           authenticated: message.authenticated,
           account: message.account || null,
-          repo: message.repo || null
+          repo: message.repo || null,
+          copilotAssignees: Array.isArray(message.copilotAssignees) ? message.copilotAssignees : undefined
         });
+      }
+      break;
+    case 'parallelPhaseDispatchStarted':
+    case 'parallelPhaseDispatchProgress':
+    case 'parallelPhaseDispatchComplete':
+    case 'parallelPhaseDispatchError':
+      if (ctx.handleParallelPhaseDispatch) {
+        ctx.handleParallelPhaseDispatch(message);
       }
       break;
     case 'githubConversionResult': {
