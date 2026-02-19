@@ -270,7 +270,7 @@ const App = () => {
     setOutput(`🐙 Converting ${issueId} to a GitHub issue...`);
     setIsError(false);
     setIsSuccess(false);
-    vscode.postMessage({ type: 'convertToGitHub', issueId, commandKey });
+    vscode.postMessage({ type: 'convertToGitHub', issueId, commandKey: commandId });
   };
   const handleDepAction = (action) => {
     if (!sourceBead.trim() || !targetBead.trim()) { setOutput('Error: Please provide both source and target bead IDs'); setIsError(true); return; }
