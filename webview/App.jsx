@@ -334,7 +334,7 @@ const App = () => {
             <button className="action-btn" onClick={() => runCommand('dep cycles')} title="Detect blocking dependency cycles">🔄 Cycles</button>
             <button className="action-btn" onClick={() => { clearOutput(); closeAllPanels(); setShowCreatePanel(!showCreatePanel); }} title="Create a new issue">➕ Create</button>
             <button className="action-btn" onClick={() => { clearOutput(); closeAllPanels(); setShowRelationshipPanel(!showRelationshipPanel); }} title="Manage dependencies between issues">🔗 Add Links</button>
-            <button className="action-btn" onClick={() => handleOpenDependencies('graph')} title="Visualize dependency relationships as a graph within Dependencies">🔀 Graph</button>
+            <button className="action-btn" onClick={() => handleOpenDependencies('task-graph')} title="Visualize dependency relationships as a graph within Dependencies">🔀 Graph</button>
             <button className="action-btn" onClick={() => handleOpenDependencies('list')} title="View dependency chains and completion order">🔗 Dependencies</button>
           </div>
         </div>

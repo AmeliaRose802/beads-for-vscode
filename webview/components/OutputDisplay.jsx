@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import IssueCard from './IssueCard';
 import StatsDisplay from './StatsDisplay';
 import PaginationControls from './PaginationControls';
@@ -291,27 +291,55 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
     setStatusFilter('');
     setPriorityFilter('');
   };
-  
+
+  // Unconditionally compute list-specific derived data to satisfy React hooks rules.
+  // These must run on every render regardless of output type.
+  const isListOutput = typeof output === 'object' && output.type === 'list';
+  const listOpenIssues = isListOutput ? output.openIssues : [];
+  const listClosedIssues = isListOutput ? output.closedIssues : [];
+  const listHierarchy = isListOutput ? output.hierarchy : null;
+  const hierarchyRoots = (listHierarchy && listHierarchy.length > 0)
+    ? listHierarchy
+    : listOpenIssues.map(issue => ({ issue, children: [] }));
+  const hasActiveFilters = searchFilter || assigneeFilter || labelFilter || statusFilter || priorityFilter;
+
+  const filterFn = useCallback((issue) =>
+    matchesSearch(issue, searchFilter) &&
+    matchesAssignee(issue, assigneeFilter) &&
+    matchesLabel(issue, labelFilter) &&
+    matchesStatus(issue, statusFilter) &&
+    matchesPriority(issue, priorityFilter),
+  [searchFilter, assigneeFilter, labelFilter, statusFilter, priorityFilter]);
+
+  const filteredRoots = useMemo(() => {
+    if (!hasActiveFilters) return hierarchyRoots;
+    const filtered = [];
+    for (const root of hierarchyRoots) {
+      const filteredNode = filterHierarchyNode(root, filterFn);
+      if (filteredNode) {
+        filtered.push(filteredNode);
+      }
+    }
+    return filtered;
+  }, [hierarchyRoots, hasActiveFilters, filterFn]);
+
+  const filteredClosedIssues = useMemo(() => {
+    if (!hasActiveFilters) return listClosedIssues;
+    return listClosedIssues.filter(filterFn);
+  }, [listClosedIssues, hasActiveFilters, filterFn]);
+
   if (typeof output === 'object' && output.type === 'stats') {
     return <StatsDisplay stats={output.stats} header={output.header} command={output.command} />;
   }
-  
-  if (typeof output === 'object' && output.type === 'list') {
+
+  if (isListOutput) {
     // All issues for filter options extraction
-    const allIssues = [...output.openIssues, ...output.closedIssues];
+    const allIssues = [...listOpenIssues, ...listClosedIssues];
 
     // Extract existing assignees from all issues
     const existingAssignees = [...new Set(
       allIssues.map(issue => issue.assignee).filter(Boolean)
     )];
-
-    // Create filter function
-    const filterFn = (issue) =>
-      matchesSearch(issue, searchFilter) &&
-      matchesAssignee(issue, assigneeFilter) &&
-      matchesLabel(issue, labelFilter) &&
-      matchesStatus(issue, statusFilter) &&
-      matchesPriority(issue, priorityFilter);
 
     const handleDragStart = (issue) => {
       setDraggedIssue(issue);
@@ -323,30 +351,6 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
       }
       setDraggedIssue(null);
     };
-
-    const hierarchyRoots = (output.hierarchy && output.hierarchy.length > 0)
-      ? output.hierarchy
-      : output.openIssues.map(issue => ({ issue, children: [] }));
-
-    // Apply filtering to hierarchy
-    const hasActiveFilters = searchFilter || assigneeFilter || labelFilter || statusFilter || priorityFilter;
-    const filteredRoots = useMemo(() => {
-      if (!hasActiveFilters) return hierarchyRoots;
-      const filtered = [];
-      for (const root of hierarchyRoots) {
-        const filteredNode = filterHierarchyNode(root, filterFn);
-        if (filteredNode) {
-          filtered.push(filteredNode);
-        }
-      }
-      return filtered;
-    }, [hierarchyRoots, searchFilter, assigneeFilter, labelFilter, statusFilter, priorityFilter]);
-
-    // Filter closed issues as well
-    const filteredClosedIssues = useMemo(() => {
-      if (!hasActiveFilters) return output.closedIssues;
-      return output.closedIssues.filter(filterFn);
-    }, [output.closedIssues, searchFilter, assigneeFilter, labelFilter, statusFilter, priorityFilter]);
 
     const totalUnfilteredItems = hierarchyRoots.length;
     const totalFilteredItems = filteredRoots.length;
