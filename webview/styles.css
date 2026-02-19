@@ -1012,61 +1012,73 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   stroke: var(--vscode-textLink-foreground);
   color: var(--vscode-textLink-foreground);
   stroke-width: 2;
-  opacity: 0.6;
+  opacity: 0.4;
   transition: all 0.3s ease;
   will-change: opacity, stroke-width;
+}
+
+/* Dimmed state for non-related edges during hover */
+.dependency-graph__edge--dimmed {
+  opacity: 0.15;
+  stroke-width: 1.5;
 }
 
 /* Relationship type styling */
 .dependency-graph__edge--blocked-by {
   stroke: var(--vscode-terminal-ansiYellow);
   color: var(--vscode-terminal-ansiYellow);
-  opacity: 0.75;
+  opacity: 0.6;
 }
 
 .dependency-graph__edge--blocks {
   stroke: var(--vscode-errorForeground);
   color: var(--vscode-errorForeground);
-  opacity: 0.8;
+  opacity: 0.65;
 }
 
 .dependency-graph__edge--parent-child {
   stroke: var(--vscode-textLink-foreground);
   color: var(--vscode-textLink-foreground);
-  opacity: 0.65;
+  opacity: 0.5;
 }
 
 .dependency-graph__edge--related {
   stroke: var(--vscode-descriptionForeground);
   color: var(--vscode-descriptionForeground);
   stroke-dasharray: 4, 3;
-  opacity: 0.5;
+  opacity: 0.35;
 }
 
 .dependency-graph__edge--high-priority {
   stroke: var(--vscode-errorForeground);
-  stroke-width: 3;
-  opacity: 0.8;
+  stroke-width: 2.5;
+  opacity: 0.7;
 }
 
 .dependency-graph__edge--highlighted {
-  opacity: 1;
-  stroke-width: 3;
+  opacity: 1 !important;
+  stroke-width: 3.5;
   transition: all 0.2s ease;
+  filter: drop-shadow(0 0 2px currentColor);
 }
 
 .dependency-graph__edge--highlighted.dependency-graph__edge--high-priority {
-  stroke-width: 4;
+  stroke-width: 4.5;
+  filter: drop-shadow(0 0 3px currentColor);
 }
 
 .dependency-graph__edge--completed {
-  opacity: 0.3;
+  opacity: 0.2;
   stroke-dasharray: 5, 5;
   transition: all 0.3s ease;
 }
 
 .dependency-graph__edge--completed.dependency-graph__edge--highlighted {
-  opacity: 0.6;
+  opacity: 0.6 !important;
+}
+
+.dependency-graph__edge--completed.dependency-graph__edge--dimmed {
+  opacity: 0.08;
 }
 
 .dependency-graph__node {
