@@ -196,6 +196,15 @@ function processMessage(message, ctx) {
       }
       break;
     }
+    case 'githubInfo':
+      if (ctx.setGitHubInfo) {
+        ctx.setGitHubInfo({
+          authenticated: message.authenticated,
+          account: message.account || null,
+          repo: message.repo || null
+        });
+      }
+      break;
     case 'githubConversionResult': {
       if (message.commandKey && ctx.completeCommandProgress) {
         ctx.completeCommandProgress(message.commandKey);

@@ -44,7 +44,8 @@ suite('message-handler', () => {
       cachePageResult: sinon.stub(),
       completeCommandProgress: sinon.stub(),
       vscode: { postMessage: sinon.stub() },
-      setPokepokeInstances: sinon.stub()
+      setPokepokeInstances: sinon.stub(),
+      setGitHubInfo: sinon.stub()
     };
   }
 
@@ -500,6 +501,39 @@ suite('message-handler', () => {
       }, ctx);
 
       assert.ok(ctx.setIsError.calledWith(true));
+    });
+  });
+
+  suite('githubInfo', () => {
+    test('stores GitHub info when handler available', () => {
+      const ctx = buildCtx();
+      processMessage({
+        type: 'githubInfo',
+        authenticated: true,
+        account: { label: 'user', id: '123' },
+        repo: { owner: 'owner', repo: 'repo', remote: 'origin' }
+      }, ctx);
+
+      assert.ok(ctx.setGitHubInfo.calledOnce);
+      const arg = ctx.setGitHubInfo.firstCall.args[0];
+      assert.strictEqual(arg.authenticated, true);
+      assert.strictEqual(arg.account.label, 'user');
+      assert.strictEqual(arg.repo.owner, 'owner');
+    });
+
+    test('handles missing repo gracefully', () => {
+      const ctx = buildCtx();
+      processMessage({
+        type: 'githubInfo',
+        authenticated: false,
+        account: null,
+        repo: null
+      }, ctx);
+
+      const arg = ctx.setGitHubInfo.firstCall.args[0];
+      assert.strictEqual(arg.authenticated, false);
+      assert.strictEqual(arg.account, null);
+      assert.strictEqual(arg.repo, null);
     });
   });
 
