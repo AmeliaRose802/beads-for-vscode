@@ -90,10 +90,10 @@ suite('List filtering controls', function() {
       assert.ok(content.includes('matchesLabel'), 'Should have matchesLabel function');
     });
 
-    test('OutputDisplay filters hierarchy nodes', function() {
+    test('OutputDisplay filters open issues', function() {
       const content = fs.readFileSync(outputDisplayPath, 'utf-8');
-      assert.ok(content.includes('filterHierarchyNode'), 'Should have filterHierarchyNode function');
-      assert.ok(content.includes('filteredRoots'), 'Should compute filteredRoots');
+      assert.ok(content.includes('filteredOpenIssues'), 'Should compute filteredOpenIssues');
+      assert.ok(content.includes('.filter(filterFn)'), 'Should filter open issues with filterFn');
     });
 
     test('OutputDisplay filters closed issues', function() {
@@ -172,13 +172,10 @@ suite('List filtering controls', function() {
       assert.ok(fnContent.includes('toLowerCase'), 'Should be case-insensitive');
     });
 
-    test('filterHierarchyNode recursively filters tree', function() {
+    test('filters open issues with filterFn', function() {
       const content = fs.readFileSync(outputDisplayPath, 'utf-8');
-      const filterFn = content.match(/function filterHierarchyNode[\s\S]*?^}/m);
-      assert.ok(filterFn, 'Should have filterHierarchyNode function');
-      const fnContent = filterFn[0];
-      assert.ok(fnContent.includes('node.children'), 'Should handle children');
-      assert.ok(fnContent.includes('filterHierarchyNode'), 'Should recurse');
+      assert.ok(content.includes('filteredOpenIssues'), 'Should compute filteredOpenIssues');
+      assert.ok(content.includes('listOpenIssues.filter(filterFn)'), 'Should apply filterFn to open issues');
     });
   });
 });

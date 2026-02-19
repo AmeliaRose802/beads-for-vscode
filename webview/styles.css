@@ -364,6 +364,8 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 .issue-card__badge--type-bug { background-color: var(--vscode-errorForeground); }
 .issue-card__badge--type-feature { background-color: var(--vscode-terminal-ansiCyan); }
 .issue-card__badge--type-task { background-color: var(--vscode-terminal-ansiBlue); }
+.issue-card__badge--parent { background-color: var(--vscode-terminal-ansiBlue); color: var(--vscode-editor-background); }
+.issue-card__badge--children { background-color: var(--vscode-terminal-ansiGreen); color: var(--vscode-editor-background); }
 .issue-card__badge--blocked { background-color: var(--vscode-errorForeground); font-weight: 600; }
 .issue-card__status { font-size: 10px; font-weight: 500; }
 .issue-card__status--open { color: var(--vscode-terminal-ansiBlue); }
@@ -688,6 +690,7 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 
 /* Issue Tree */
 .issue-tree { display: flex; flex-direction: column; gap: 8px; }
+.issue-tree--flat { padding-left: 0; }
 .issue-tree__node { margin-bottom: 4px; }
 .issue-tree__node-header { display: flex; align-items: flex-start; gap: 6px; }
 .issue-tree__toggle, .issue-tree__toggle-spacer {

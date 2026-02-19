@@ -140,6 +140,20 @@ function buildParentLookup(graphComponents) {
 }
 
 /**
+ * Build a map of parent IDs to child counts.
+ * @param {Record<string, string>} parentLookup - Map of child -> parent.
+ * @returns {Record<string, number>} Map of parent ID -> number of children.
+ */
+function buildChildCounts(parentLookup) {
+  const counts = {};
+  Object.values(parentLookup || {}).forEach(parentId => {
+    if (typeof parentId !== 'string' || !parentId.trim()) return;
+    counts[parentId] = (counts[parentId] || 0) + 1;
+  });
+  return counts;
+}
+
+/**
  * Build a hierarchy tree from open issues and graph dependency data.
  * @param {Array} openIssues - Array of normalized open issues
  * @param {string|Array} graphData - Raw graph data for parent-child relationships
@@ -190,7 +204,10 @@ function parseListJSON(jsonOutput, command, graphData) {
     const issues = JSON.parse(jsonOutput);
     const openIssues = [];
     const closedIssues = [];
-    const blockedSet = buildBlockedSet(graphData);
+    const graphComponents = parseGraphComponents(graphData);
+    const parentLookup = buildParentLookup(graphComponents);
+    const childCounts = buildChildCounts(parentLookup);
+    const blockedSet = buildBlockedSet(graphComponents);
     const isBlockedCommand =
       typeof command === 'string' &&
       command.trim().split(/\s+/)[0] === 'blocked';
@@ -198,6 +215,14 @@ function parseListJSON(jsonOutput, command, graphData) {
     issues.forEach(issue => {
       const normalizedIssue = normalizeIssue(issue);
       if (!normalizedIssue) return;
+
+      const parentId = parentLookup[normalizedIssue.id] || issue.parent_id || issue.parentId || null;
+      const parsedChildCount = Number(issue.child_count);
+      const childCount = Number.isFinite(parsedChildCount)
+        ? parsedChildCount
+        : childCounts[normalizedIssue.id] || 0;
+      normalizedIssue.parent_id = parentId;
+      normalizedIssue.child_count = childCount;
 
       if (normalizedIssue.status === 'closed') {
         closedIssues.push(normalizedIssue);
@@ -215,7 +240,7 @@ function parseListJSON(jsonOutput, command, graphData) {
       return 0;
     });
 
-    const hierarchy = buildHierarchyFromGraph(openIssues, graphData);
+    const hierarchy = buildHierarchyFromGraph(openIssues, graphComponents);
     const totalCount = openIssues.length + closedIssues.length;
     const blockedCount = openIssues.filter(i => i.isBlocked).length;
     const details = [];
