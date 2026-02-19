@@ -3,6 +3,7 @@ const fs = require('fs');
 const { getAISuggestions } = require('./ai-suggestions');
 const { detectBeadsBackend } = require('./beads-backend');
 const { convertBeadsItemToGitHubIssue } = require('./github-converter');
+const { getGitHubSession, detectGitHubRepo } = require('./github-auth');
 
 /**
  * Handle messages from the webview.
@@ -199,6 +200,24 @@ async function handleWebviewMessage(data, context, vscode) {
         const mgr = provider._getPokePokeManager();
         mgr.remove(data.itemId);
         webviewView.webview.postMessage({ type: 'pokepokeStatus', instances: mgr.getInstances() });
+        break;
+      }
+      case 'getGitHubInfo': {
+        const wsFolders = vscode.workspace.workspaceFolders;
+        const workspacePath = wsFolders ? wsFolders[0].uri.fsPath : '';
+        const silent = data.silent !== false;
+
+        const [session, repo] = await Promise.all([
+          getGitHubSession(vscode, { createIfNone: !silent, silent }),
+          workspacePath ? detectGitHubRepo(workspacePath) : Promise.resolve(null)
+        ]);
+
+        webviewView.webview.postMessage({
+          type: 'githubInfo',
+          authenticated: !!session,
+          account: session ? session.account : null,
+          repo: repo ? { owner: repo.owner, repo: repo.repo, remote: repo.remote } : null
+        });
         break;
       }
       case 'convertToGitHub': {
