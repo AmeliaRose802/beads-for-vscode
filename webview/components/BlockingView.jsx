@@ -30,6 +30,7 @@ const BlockingView = ({
   onAssigneeChange,
   onShowHierarchy,
   onPokePoke,
+  onConvertToGitHub,
   pokepokeInstances,
   vscode
 }) => {
@@ -396,6 +397,7 @@ const BlockingView = ({
               onAssigneeChange={onAssigneeChange}
               onShowHierarchy={onShowHierarchy}
               onPokePoke={onPokePoke}
+              onConvertToGitHub={onConvertToGitHub}
               pokepokeRunning={pokepokeInstances?.some(
                 (instance) =>
                   instance.itemId === selectedCardIssue.id &&

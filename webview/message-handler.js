@@ -184,7 +184,7 @@ function processMessage(message, ctx) {
         flashSuccess();
       }
       break;
-    case 'pokepokeStopResult':
+    case 'pokepokeStopResult': {
       if (ctx.setOutput) {
         if (message.success) {
           ctx.setOutput(`🛑 PokePoke stopping for ${message.itemId}`);
@@ -195,6 +195,25 @@ function processMessage(message, ctx) {
         }
       }
       break;
+    }
+    case 'githubConversionResult': {
+      if (message.commandKey && ctx.completeCommandProgress) {
+        ctx.completeCommandProgress(message.commandKey);
+      }
+      if (!ctx.setOutput) {
+        break;
+      }
+      if (message.success) {
+        const issueDetails = message.url ? ` ${message.url}` : '';
+        ctx.setOutput(`✅ GitHub issue created for ${message.issueId}.${issueDetails}`);
+        ctx.setIsError(false);
+        flashSuccess();
+      } else {
+        ctx.setOutput(`❌ GitHub conversion failed: ${message.error || 'Unknown error'}`);
+        ctx.setIsError(true);
+      }
+      break;
+    }
     default:
       break;
   }

@@ -172,6 +172,7 @@ const IssueTreeNode = ({
   onAssigneeChange,
   onShowHierarchy,
   onPokePoke,
+  onConvertToGitHub,
   pokepokeInstances,
   onDragStart,
   onDrop,
@@ -206,6 +207,7 @@ const IssueTreeNode = ({
             onAssigneeChange={onAssigneeChange}
             onShowHierarchy={onShowHierarchy}
             onPokePoke={onPokePoke}
+            onConvertToGitHub={onConvertToGitHub}
             pokepokeRunning={pokepokeInstances && pokepokeInstances.some(i => i.itemId === node.issue.id && (i.state === 'running' || i.state === 'starting'))}
             existingAssignees={existingAssignees}
             detailedData={issueDetails[node.issue.id]}
@@ -236,6 +238,7 @@ const IssueTreeNode = ({
               onAssigneeChange={onAssigneeChange}
               onShowHierarchy={onShowHierarchy}
               onPokePoke={onPokePoke}
+              onConvertToGitHub={onConvertToGitHub}
               pokepokeInstances={pokepokeInstances}
               onDragStart={onDragStart}
               onDrop={onDrop}
@@ -249,7 +252,7 @@ const IssueTreeNode = ({
   );
 };
 
-const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, onReopenIssue, onEditIssue, onLinkParent, onTypeChange, onPriorityChange, onAssigneeChange, onShowHierarchy, onPokePoke, pokepokeInstances, issueDetails = {}, loadingDetails = {}, vscode }) => {
+const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, onReopenIssue, onEditIssue, onLinkParent, onTypeChange, onPriorityChange, onAssigneeChange, onShowHierarchy, onPokePoke, onConvertToGitHub, pokepokeInstances, issueDetails = {}, loadingDetails = {}, vscode }) => {
   const [draggedIssue, setDraggedIssue] = useState(null);
   const [pageSize, setPageSize] = useState(getStoredPageSize);
   const [currentPage, setCurrentPage] = useState(1);
@@ -400,6 +403,7 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
                 onAssigneeChange={onAssigneeChange}
                 onShowHierarchy={onShowHierarchy}
                 onPokePoke={onPokePoke}
+                onConvertToGitHub={onConvertToGitHub}
                 pokepokeInstances={pokepokeInstances}
                 onDragStart={handleDragStart}
                 onDrop={handleDrop}
@@ -426,6 +430,7 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
                   onEdit={() => onEditIssue(issue.id)}
                   onShowHierarchy={onShowHierarchy}
                   onAssigneeChange={onAssigneeChange}
+                  onConvertToGitHub={onConvertToGitHub}
                   existingAssignees={existingAssignees}
                   detailedData={issueDetails[issue.id]}
                   isLoadingDetails={loadingDetails[issue.id]}

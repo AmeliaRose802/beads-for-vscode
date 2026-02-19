@@ -503,6 +503,40 @@ suite('message-handler', () => {
     });
   });
 
+  suite('githubConversionResult', () => {
+    test('shows success message with URL', () => {
+      const ctx = buildCtx();
+      const clock = sinon.useFakeTimers();
+      processMessage({
+        type: 'githubConversionResult',
+        success: true,
+        issueId: 'bd-42',
+        url: 'https://github.com/owner/repo/issues/42',
+        commandKey: 'convertToGitHub:bd-42'
+      }, ctx);
+      assert.ok(ctx.setOutput.called);
+      const output = ctx.setOutput.firstCall.args[0];
+      assert.ok(output.includes('https://github.com/owner/repo/issues/42'));
+      assert.ok(ctx.completeCommandProgress.calledWith('convertToGitHub:bd-42'));
+      assert.ok(ctx.setIsError.calledWith(false));
+      clock.restore();
+    });
+
+    test('shows error message on failure', () => {
+      const ctx = buildCtx();
+      processMessage({
+        type: 'githubConversionResult',
+        success: false,
+        error: 'gh auth login required',
+        issueId: 'bd-42',
+        commandKey: 'convertToGitHub:bd-42'
+      }, ctx);
+      assert.ok(ctx.setOutput.called);
+      assert.ok(ctx.setIsError.calledWith(true));
+      assert.ok(ctx.completeCommandProgress.calledWith('convertToGitHub:bd-42'));
+    });
+  });
+
   suite('unknown message type', () => {
     test('does nothing for unknown types', () => {
       const ctx = buildCtx();

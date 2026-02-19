@@ -261,6 +261,17 @@ const App = () => {
     vscode.postMessage({ type: 'pokepokeLaunch', itemId, title, isTree });
   const handlePokePokeStop = (itemId) =>
     vscode.postMessage({ type: 'pokepokeStop', itemId });
+  const handleConvertToGitHub = (issueId) => {
+    if (!issueId) {
+      return;
+    }
+    const commandId = `convertToGitHub:${issueId}`;
+    beginCommandProgress(commandId, 'inline');
+    setOutput(`🐙 Converting ${issueId} to a GitHub issue...`);
+    setIsError(false);
+    setIsSuccess(false);
+    vscode.postMessage({ type: 'convertToGitHub', issueId, commandKey });
+  };
   const handleDepAction = (action) => {
     if (!sourceBead.trim() || !targetBead.trim()) { setOutput('Error: Please provide both source and target bead IDs'); setIsError(true); return; }
     const beadIdPattern = /^[a-zA-Z0-9_-]+$/;
@@ -430,6 +441,7 @@ const App = () => {
               onAssigneeChange={handleAssigneeChange}
               onShowHierarchy={handleShowHierarchy}
               onPokePoke={handlePokePoke}
+              onConvertToGitHub={handleConvertToGitHub}
               pokepokeInstances={pokepokeInstances}
               vscode={vscode}
               onDepAction={(action, fromId, toId) => {
@@ -467,6 +479,7 @@ const App = () => {
               onAssigneeChange={handleAssigneeChange}
               onShowHierarchy={handleShowHierarchy}
               onPokePoke={handlePokePoke}
+              onConvertToGitHub={handleConvertToGitHub}
               pokepokeInstances={pokepokeInstances}
               issueDetails={issueDetails}
               loadingDetails={loadingDetails}

@@ -458,6 +458,13 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   font-weight: 500;
 }
 .issue-card__action-btn:hover { background: var(--vscode-button-secondaryHoverBackground); }
+.issue-card__action-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.issue-card__action-btn:disabled:hover {
+  background: var(--vscode-button-secondaryBackground);
+}
 .issue-card__action-btn--active { 
   background: var(--vscode-button-background); 
   color: var(--vscode-button-foreground); 
@@ -2768,6 +2775,11 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 
 .issue-card__action-btn--pokepoke-running {
   animation: pokepoke-pulse 1.5s ease-in-out infinite;
+}
+
+.issue-card__action-btn--github {
+  font-size: 14px;
+  line-height: 1;
 }
 
 @keyframes pokepoke-pulse {

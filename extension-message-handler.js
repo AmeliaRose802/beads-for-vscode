@@ -2,6 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const { getAISuggestions } = require('./ai-suggestions');
 const { detectBeadsBackend } = require('./beads-backend');
+const { convertBeadsItemToGitHubIssue } = require('./github-converter');
 
 /**
  * Handle messages from the webview.
@@ -198,6 +199,63 @@ async function handleWebviewMessage(data, context, vscode) {
         const mgr = provider._getPokePokeManager();
         mgr.remove(data.itemId);
         webviewView.webview.postMessage({ type: 'pokepokeStatus', instances: mgr.getInstances() });
+        break;
+      }
+      case 'convertToGitHub': {
+        const wsFolders = vscode.workspace.workspaceFolders;
+        if (!wsFolders || wsFolders.length === 0) {
+           webviewView.webview.postMessage({
+              type: 'githubConversionResult',
+              success: false,
+              error: 'An open workspace is required to convert items to GitHub issues.',
+              commandKey: data.commandKey
+            });
+          break;
+        }
+
+        const workspacePath = wsFolders[0].uri.fsPath;
+        try {
+          const result = await provider._executeBdCommand(`list --id ${data.issueId} --json`);
+          if (!result.success) {
+             webviewView.webview.postMessage({
+               type: 'githubConversionResult',
+               success: false,
+               error: `Failed to fetch issue: ${result.output}`,
+               commandKey: data.commandKey
+             });
+            break;
+          }
+
+          const issues = JSON.parse(result.output);
+          if (!issues || issues.length === 0) {
+             webviewView.webview.postMessage({
+               type: 'githubConversionResult',
+               success: false,
+               error: `Issue ${data.issueId} not found`,
+               commandKey: data.commandKey
+             });
+            break;
+          }
+
+          const issue = issues[0];
+          const ghResult = await convertBeadsItemToGitHubIssue(issue, workspacePath);
+
+           webviewView.webview.postMessage({
+              type: 'githubConversionResult',
+              success: true,
+              url: ghResult.url,
+              number: ghResult.number,
+              issueId: data.issueId,
+              commandKey: data.commandKey
+            });
+        } catch (error) {
+           webviewView.webview.postMessage({
+              type: 'githubConversionResult',
+              success: false,
+              error: error.message || 'Unknown error occurred',
+              commandKey: data.commandKey
+            });
+        }
         break;
       }
     }
