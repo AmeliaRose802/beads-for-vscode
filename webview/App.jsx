@@ -12,6 +12,10 @@ import ParallelPhaseDispatchDialog from './components/ParallelPhaseDispatchDialo
 import { useCommandProgress } from './hooks/useCommandProgress';
 import { useParallelPhaseDispatch } from './hooks/useParallelPhaseDispatch';
 import { createAssigneeChangeHandler } from './hooks/createAssigneeChangeHandler';
+import { useEditFormState } from './hooks/useEditFormState';
+import { useCreateFormState } from './hooks/useCreateFormState';
+import { useRelationshipFormState } from './hooks/useRelationshipFormState';
+import { usePanelVisibility } from './hooks/usePanelVisibility';
 const { parseListJSON, parseStatsOutput } = require('./parse-utils');
 const { buildCreateCommand, buildUpdateCommand, safeShellArg } = require('./form-handlers');
 const { buildHierarchyModel } = require('./hierarchy-utils');
@@ -26,55 +30,26 @@ const App = () => {
   const [output, setOutput] = useState('Ready to execute commands...');
   const [isError, setIsError] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [showRelationshipPanel, setShowRelationshipPanel] = useState(false);
-  const [showCreatePanel, setShowCreatePanel] = useState(false);
-  const [showEditPanel, setShowEditPanel] = useState(false);
-  const [showHierarchyView, setShowHierarchyView] = useState(false);
-  const [showBlockingView, setShowBlockingView] = useState(false);
-  const [activeBlockingTab, setActiveBlockingTab] = useState('list');
   const [blockingModel, setBlockingModel] = useState(null);
   const [graphData, setGraphData] = useState(null);
   const [hierarchyModel, setHierarchyModel] = useState(null);
-  const graphPurposeRef = useRef(null);
-  const hierarchyIssueRef = useRef(null);
   const outputRef = useRef(output);
-  const updateGraphPurpose = (purpose) => { graphPurposeRef.current = purpose; };
-  const updateHierarchyIssue = (issueId) => { hierarchyIssueRef.current = issueId; };
-  // Edit issue form state
-  const [editIssueId, setEditIssueId] = useState('');
-  const [editTitle, setEditTitle] = useState('');
-  const [editType, setEditType] = useState('task');
-  const [editPriority, setEditPriority] = useState('2');
-  const [editDescription, setEditDescription] = useState('');
-  const [editStatus, setEditStatus] = useState('open');
-  // Create issue form state
-  const [createTitle, setCreateTitle] = useState('');
-  const [createType, setCreateType] = useState('task');
-  const [createPriority, setCreatePriority] = useState('2');
-  const [createDescription, setCreateDescription] = useState('');
-  const [createParentId, setCreateParentId] = useState('');
-  const [createBlocksId, setCreateBlocksId] = useState('');
-  const [createRelatedId, setCreateRelatedId] = useState('');
   const [isAILoading, setIsAILoading] = useState(false);
   const [currentFile, setCurrentFile] = useState('');
-  // Issue details state (for inline expansion)
-  const [issueDetails, setIssueDetails] = useState({}); // Map of issueId -> details
-  const [loadingDetails, setLoadingDetails] = useState({}); // Map of issueId -> boolean
-  // PokePoke state
+  const [issueDetails, setIssueDetails] = useState({});
+  const [loadingDetails, setLoadingDetails] = useState({});
   const [pokepokeInstances, setPokepokeInstances] = useState([]);
-  // GitHub state
   const [gitHubInfo, setGitHubInfo] = useState({
-    authenticated: false,
-    account: null,
-    repo: null,
-    copilotAssignees: ['github-copilot']
+    authenticated: false, account: null, repo: null, copilotAssignees: ['github-copilot']
   });
-  const { parallelPhaseDispatch, openParallelPhaseDispatch, startParallelPhaseDispatch, cancelParallelPhaseDispatch, closeParallelPhaseDispatch, handleParallelPhaseDispatchMessage } =
+  // Custom hooks for form and panel state
+  const editForm = useEditFormState();
+  const createForm = useCreateFormState();
+  const relationshipForm = useRelationshipFormState();
+  const panels = usePanelVisibility();
+  const { parallelPhaseDispatch, openParallelPhaseDispatch, startParallelPhaseDispatch,
+    cancelParallelPhaseDispatch, closeParallelPhaseDispatch, handleParallelPhaseDispatchMessage } =
     useParallelPhaseDispatch({ vscode, gitHubInfo });
-  // Relationship form state
-  const [sourceBead, setSourceBead] = useState('');
-  const [targetBead, setTargetBead] = useState('');
-  const [relationType, setRelationType] = useState('parent');
   const {
     pendingOperations,
     beginCommandProgress,
@@ -89,7 +64,6 @@ const App = () => {
     handleInlineActionResult,
     clearOutput,
     runInlineAction,
-    closeAllPanels,
     cachePageResult
   } = createAppActions({
     parseListJSON,
@@ -97,21 +71,21 @@ const App = () => {
     setOutput,
     setIsError,
     setIsSuccess,
-    setShowRelationshipPanel,
-    setShowCreatePanel,
-    setShowEditPanel,
-    setShowHierarchyView,
-    setShowBlockingView,
+    setShowRelationshipPanel: panels.setShowRelationshipPanel,
+    setShowCreatePanel: panels.setShowCreatePanel,
+    setShowEditPanel: panels.setShowEditPanel,
+    setShowHierarchyView: panels.setShowHierarchyView,
+    setShowBlockingView: panels.setShowBlockingView,
     setHierarchyModel,
     setBlockingModel,
-    setCreateTitle,
-    setCreateDescription,
-    setCreateParentId,
-    setCreateBlocksId,
-    setCreateRelatedId,
-    setCreateType,
-    setCreatePriority,
-    updateGraphPurpose,
+    setCreateTitle: createForm.setCreateTitle,
+    setCreateDescription: createForm.setCreateDescription,
+    setCreateParentId: createForm.setCreateParentId,
+    setCreateBlocksId: createForm.setCreateBlocksId,
+    setCreateRelatedId: createForm.setCreateRelatedId,
+    setCreateType: createForm.setCreateType,
+    setCreatePriority: createForm.setCreatePriority,
+    updateGraphPurpose: panels.updateGraphPurpose,
     vscode,
     outputRef,
     beginCommandProgress,
@@ -137,25 +111,25 @@ const App = () => {
         setCwd,
         setBeadsStatus,
         setCurrentFile,
-        setEditTitle,
-        setEditType,
-        setEditPriority,
-        setEditDescription,
-        setEditStatus,
+        setEditTitle: editForm.setEditTitle,
+        setEditType: editForm.setEditType,
+        setEditPriority: editForm.setEditPriority,
+        setEditDescription: editForm.setEditDescription,
+        setEditStatus: editForm.setEditStatus,
         setIsAILoading,
-        setCreateType,
-        setCreatePriority,
-        setCreateParentId,
-        setCreateBlocksId,
-        setCreateRelatedId,
+        setCreateType: createForm.setCreateType,
+        setCreatePriority: createForm.setCreatePriority,
+        setCreateParentId: createForm.setCreateParentId,
+        setCreateBlocksId: createForm.setCreateBlocksId,
+        setCreateRelatedId: createForm.setCreateRelatedId,
         setIsSuccess,
         setIssueDetails,
         setLoadingDetails,
         setGraphData,
         setHierarchyModel,
-        setShowHierarchyView,
+        setShowHierarchyView: panels.setShowHierarchyView,
         setBlockingModel,
-        setShowBlockingView,
+        setShowBlockingView: panels.setShowBlockingView,
         setPokepokeInstances,
         setGitHubInfo,
         handleParallelPhaseDispatch: handleParallelPhaseDispatchMessage,
@@ -163,9 +137,9 @@ const App = () => {
         completeCommandProgress,
         buildHierarchyModel,
         buildBlockingModel,
-        updateGraphPurpose,
-        graphPurposeRef,
-        hierarchyIssueRef
+        updateGraphPurpose: panels.updateGraphPurpose,
+        graphPurposeRef: panels.graphPurposeRef,
+        hierarchyIssueRef: panels.hierarchyIssueRef
       });
     };
     window.addEventListener('message', messageHandler);
@@ -188,9 +162,9 @@ const App = () => {
     let command;
     try {
       command = buildCreateCommand({
-        title: createTitle, type: createType, priority: createPriority,
-        description: createDescription, parentId: createParentId,
-        blocksId: createBlocksId, relatedId: createRelatedId, currentFile
+        title: createForm.createTitle, type: createForm.createType, priority: createForm.createPriority,
+        description: createForm.createDescription, parentId: createForm.createParentId,
+        blocksId: createForm.createBlocksId, relatedId: createForm.createRelatedId, currentFile
       });
     } catch (error) {
       setOutput(`❌ Error: ${error.message}`);
@@ -202,10 +176,10 @@ const App = () => {
       setIsError(true);
       return;
     }
-    runInlineAction(command, `Created new ${createType}`);
+    runInlineAction(command, `Created new ${createForm.createType}`);
   };
   const handleAISuggest = async () => {
-    if (!createTitle.trim()) {
+    if (!createForm.createTitle.trim()) {
       setOutput('Error: Title is required for AI suggestions');
       setIsError(true);
       return;
@@ -214,11 +188,10 @@ const App = () => {
     setOutput('🤖 Analyzing issue with AI...');
     setIsError(false);
     setIsSuccess(false);
-    // Request AI suggestions from extension
     vscode.postMessage({
       type: 'getAISuggestions',
-      title: createTitle,
-      currentDescription: createDescription
+      title: createForm.createTitle,
+      currentDescription: createForm.createDescription
     });
   };
   const handleShowIssueInline = (issueId) => {
@@ -227,13 +200,13 @@ const App = () => {
     vscode.postMessage({ type: 'getIssueDetails', issueId });
   };
   const handleShowHierarchy = (issueId) => {
-    updateHierarchyIssue(issueId);
-    closeAllPanels();
+    panels.updateHierarchyIssue(issueId);
+    panels.closeAllPanels();
     if (graphData) {
       try {
         const model = buildHierarchyModel(issueId, graphData);
         setHierarchyModel(model);
-        setShowHierarchyView(true);
+        panels.setShowHierarchyView(true);
       } catch (error) {
         setOutput(`Hierarchy Error: ${error.message}`);
         setIsError(true);
@@ -259,18 +232,18 @@ const App = () => {
   };
 
   const handleDepAction = (action) => {
+    const { sourceBead, targetBead, relationType } = relationshipForm;
     if (!sourceBead.trim() || !targetBead.trim()) { setOutput('Error: Please provide both source and target bead IDs'); setIsError(true); return; }
     const beadIdPattern = /^[a-zA-Z0-9_-]+$/;
     if (!beadIdPattern.test(sourceBead.trim()) || !beadIdPattern.test(targetBead.trim())) { setOutput('Error: Bead IDs may only contain letters, numbers, hyphens, and underscores'); setIsError(true); return; }
     const verb = action === 'add' ? 'Linked' : 'Unlinked';
     const arrow = action === 'add' ? '→' : '⇸';
     runInlineAction(`dep ${action} ${sourceBead.trim()} --${relationType} ${targetBead.trim()}`, `${verb} ${sourceBead} ${arrow} ${targetBead}`);
-    setSourceBead('');
-    setTargetBead('');
+    relationshipForm.resetRelationshipForm();
   };
 
   const handleOpenDependencies = (tab = 'list') => {
-    setActiveBlockingTab(tab);
+    panels.setActiveBlockingTab(tab);
     requestBlockingData();
   };
 
@@ -278,8 +251,8 @@ const App = () => {
     let command;
     try {
       command = buildUpdateCommand({
-        issueId: editIssueId, title: editTitle, type: editType,
-        priority: editPriority, description: editDescription, status: editStatus
+        issueId: editForm.editIssueId, title: editForm.editTitle, type: editForm.editType,
+        priority: editForm.editPriority, description: editForm.editDescription, status: editForm.editStatus
       });
     } catch (error) {
       setOutput(`Error: ${error.message}`);
@@ -291,30 +264,24 @@ const App = () => {
       setIsError(true);
       return;
     }
-    runInlineAction(command, `Updated ${editIssueId}`);
-    setShowEditPanel(false);
-    setEditIssueId('');
-    setEditTitle('');
-    setEditDescription('');
-    setEditType('task');
-    setEditPriority('2');
-    setEditStatus('open');
+    runInlineAction(command, `Updated ${editForm.editIssueId}`);
+    panels.setShowEditPanel(false);
+    editForm.resetEditForm();
   };
   const handleEditIssue = (id) => {
-    closeAllPanels();
-    // Request issue details from extension using list command with --json
+    panels.closeAllPanels();
     vscode.postMessage({
       type: 'executeCommand',
       command: `list --id ${id} --json`
     });
-    setEditIssueId(id);
-    setShowEditPanel(true);
+    editForm.setEditIssueId(id);
+    panels.setShowEditPanel(true);
   };
   const handleCloseIssue = (id) =>
     runInlineAction(`close ${id} -r "Closed from UI"`, `Closed ${id}`);
   const handleReopenIssue = (id) =>
     runInlineAction(`reopen ${id} -r "Reopened from UI"`, `Reopened ${id}`);
-  const shouldShowResultsPanel = !showHierarchyView && !showBlockingView;
+  const shouldShowResultsPanel = !panels.showHierarchyView && !panels.showBlockingView;
   return (
     <div className="container">
       <div className="header">
@@ -332,70 +299,70 @@ const App = () => {
             <button className="action-btn" onClick={() => runCommand('blocked')} title="Show issues blocked by dependencies">🚫 Blocked</button>
             <button className="action-btn" onClick={() => runCommand('stats')} title="Show project statistics">📊 Stats</button>
             <button className="action-btn" onClick={() => runCommand('dep cycles')} title="Detect blocking dependency cycles">🔄 Cycles</button>
-            <button className="action-btn" onClick={() => { clearOutput(); closeAllPanels(); setShowCreatePanel(!showCreatePanel); }} title="Create a new issue">➕ Create</button>
-            <button className="action-btn" onClick={() => { clearOutput(); closeAllPanels(); setShowRelationshipPanel(!showRelationshipPanel); }} title="Manage dependencies between issues">🔗 Add Links</button>
+            <button className="action-btn" onClick={() => { clearOutput(); panels.closeAllPanels(); panels.setShowCreatePanel(!panels.showCreatePanel); }} title="Create a new issue">➕ Create</button>
+            <button className="action-btn" onClick={() => { clearOutput(); panels.closeAllPanels(); panels.setShowRelationshipPanel(!panels.showRelationshipPanel); }} title="Manage dependencies between issues">🔗 Add Links</button>
             <button className="action-btn" onClick={() => handleOpenDependencies('task-graph')} title="Visualize dependency relationships as a graph within Dependencies">🔀 Graph</button>
             <button className="action-btn" onClick={() => handleOpenDependencies('list')} title="View dependency chains and completion order">🔗 Dependencies</button>
           </div>
         </div>
         <PokePokeStatus instances={pokepokeInstances} onStop={handlePokePokeStop} vscode={vscode} />
-        {showCreatePanel && (
+        {panels.showCreatePanel && (
           <CreatePanel
-            title={createTitle}
-            type={createType}
-            priority={createPriority}
-            description={createDescription}
-            parentId={createParentId}
-            blocksId={createBlocksId}
-            relatedId={createRelatedId}
+            title={createForm.createTitle}
+            type={createForm.createType}
+            priority={createForm.createPriority}
+            description={createForm.createDescription}
+            parentId={createForm.createParentId}
+            blocksId={createForm.createBlocksId}
+            relatedId={createForm.createRelatedId}
             currentFile={currentFile}
-            onTitleChange={setCreateTitle}
-            onTypeChange={setCreateType}
-            onPriorityChange={setCreatePriority}
-            onDescriptionChange={setCreateDescription}
-            onParentIdChange={setCreateParentId}
-            onBlocksIdChange={setCreateBlocksId}
-            onRelatedIdChange={setCreateRelatedId}
+            onTitleChange={createForm.setCreateTitle}
+            onTypeChange={createForm.setCreateType}
+            onPriorityChange={createForm.setCreatePriority}
+            onDescriptionChange={createForm.setCreateDescription}
+            onParentIdChange={createForm.setCreateParentId}
+            onBlocksIdChange={createForm.setCreateBlocksId}
+            onRelatedIdChange={createForm.setCreateRelatedId}
             onCreate={handleCreateIssue}
-            onCancel={() => setShowCreatePanel(false)}
+            onCancel={() => panels.setShowCreatePanel(false)}
             onAISuggest={handleAISuggest}
             isAILoading={isAILoading}
           />
         )}
 
-        {showRelationshipPanel && (
+        {panels.showRelationshipPanel && (
           <RelationshipPanel
-            sourceBead={sourceBead}
-            targetBead={targetBead}
-            relationType={relationType}
-            onSourceChange={setSourceBead}
-            onTargetChange={setTargetBead}
-            onTypeChange={setRelationType}
+            sourceBead={relationshipForm.sourceBead}
+            targetBead={relationshipForm.targetBead}
+            relationType={relationshipForm.relationType}
+            onSourceChange={relationshipForm.setSourceBead}
+            onTargetChange={relationshipForm.setTargetBead}
+            onTypeChange={relationshipForm.setRelationType}
             onLink={() => handleDepAction('add')}
             onUnlink={() => handleDepAction('remove')}
-            onCancel={() => setShowRelationshipPanel(false)}
+            onCancel={() => panels.setShowRelationshipPanel(false)}
           />
         )}
 
-        {showEditPanel && (
+        {panels.showEditPanel && (
           <EditPanel
-            issueId={editIssueId}
-            title={editTitle}
-            type={editType}
-            priority={editPriority}
-            description={editDescription}
-            status={editStatus}
-            onTitleChange={setEditTitle}
-            onTypeChange={setEditType}
-            onPriorityChange={setEditPriority}
-            onDescriptionChange={setEditDescription}
-            onStatusChange={setEditStatus}
+            issueId={editForm.editIssueId}
+            title={editForm.editTitle}
+            type={editForm.editType}
+            priority={editForm.editPriority}
+            description={editForm.editDescription}
+            status={editForm.editStatus}
+            onTitleChange={editForm.setEditTitle}
+            onTypeChange={editForm.setEditType}
+            onPriorityChange={editForm.setEditPriority}
+            onDescriptionChange={editForm.setEditDescription}
+            onStatusChange={editForm.setEditStatus}
             onUpdate={handleUpdateIssue}
-            onCancel={() => setShowEditPanel(false)}
+            onCancel={() => panels.setShowEditPanel(false)}
           />
         )}
 
-        {showHierarchyView && (
+        {panels.showHierarchyView && (
           <div className="section">
             <HierarchyView
               hierarchy={hierarchyModel}
@@ -403,20 +370,20 @@ const App = () => {
                 handleShowIssueInline(id);
                 handleShowHierarchy(id);
               }}
-              onClose={() => setShowHierarchyView(false)}
+              onClose={() => panels.setShowHierarchyView(false)}
             />
           </div>
         )}
 
-        {showBlockingView && (
+        {panels.showBlockingView && (
           <div className="section">
             <BlockingView
               blockingModel={blockingModel}
               graphData={graphData}
-              activeTab={activeBlockingTab}
-              onTabChange={setActiveBlockingTab}
+              activeTab={panels.activeBlockingTab}
+              onTabChange={panels.setActiveBlockingTab}
               onIssueClick={(issue) => handleShowIssueInline(issue.id)}
-              onClose={() => setShowBlockingView(false)}
+              onClose={() => panels.setShowBlockingView(false)}
               issueDetails={issueDetails}
               loadingDetails={loadingDetails}
               onCloseIssue={handleCloseIssue}
