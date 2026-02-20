@@ -9,6 +9,7 @@ import CommandProgress from './components/CommandProgress';
 import BeadsInitWarning from './components/BeadsInitWarning';
 import PokePokeStatus from './components/PokePokeStatus';
 import ParallelPhaseDispatchDialog from './components/ParallelPhaseDispatchDialog';
+import BulkUnblockConfirmDialog from './components/BulkUnblockConfirmDialog';
 import { useCommandProgress } from './hooks/useCommandProgress';
 import { useParallelPhaseDispatch } from './hooks/useParallelPhaseDispatch';
 import { createAssigneeChangeHandler } from './hooks/createAssigneeChangeHandler';
@@ -16,6 +17,7 @@ import { useEditFormState } from './hooks/useEditFormState';
 import { useCreateFormState } from './hooks/useCreateFormState';
 import { useRelationshipFormState } from './hooks/useRelationshipFormState';
 import { usePanelVisibility } from './hooks/usePanelVisibility';
+import { useBulkUnblockEpics } from './hooks/useBulkUnblockEpics';
 const { parseListJSON, parseStatsOutput } = require('./parse-utils');
 const { buildCreateCommand, buildUpdateCommand, safeShellArg } = require('./form-handlers');
 const { buildHierarchyModel } = require('./hierarchy-utils');
@@ -55,6 +57,19 @@ const App = () => {
     beginCommandProgress,
     completeCommandProgress
   } = useCommandProgress();
+  const {
+    bulkUnblockDialog,
+    handleBulkUnblockEpics,
+    confirmBulkUnblock,
+    cancelBulkUnblock
+  } = useBulkUnblockEpics({
+    graphData,
+    vscode,
+    setOutput,
+    setIsError,
+    setIsSuccess,
+    requestBlockingData
+  });
   const {
     displayResult,
     runCommand,
@@ -133,6 +148,7 @@ const App = () => {
         setPokepokeInstances,
         setGitHubInfo,
         handleParallelPhaseDispatch: handleParallelPhaseDispatchMessage,
+        handleEpicUnblockComplete: () => requestBlockingData(),
         vscode,
         completeCommandProgress,
         buildHierarchyModel,
@@ -399,10 +415,14 @@ const App = () => {
               pokepokeInstances={pokepokeInstances}
               vscode={vscode}
               onDepAction={(action, fromId, toId) => {
-                runInlineAction(
-                  `dep ${action} ${fromId} --blocks ${toId}`,
-                  `${action === 'add' ? 'Linked' : 'Unlinked'} ${fromId} → ${toId}`
-                );
+                if (action === 'bulkUnblock') {
+                  handleBulkUnblockEpics(fromId, toId);
+                } else {
+                  runInlineAction(
+                    `dep ${action} ${fromId} --blocks ${toId}`,
+                    `${action === 'add' ? 'Linked' : 'Unlinked'} ${fromId} → ${toId}`
+                  );
+                }
               }}
             />
           </div>
@@ -457,6 +477,17 @@ const App = () => {
           onStart={startParallelPhaseDispatch}
           onClose={closeParallelPhaseDispatch}
         />
+
+        {bulkUnblockDialog && (
+          <BulkUnblockConfirmDialog
+            fromId={bulkUnblockDialog.fromId}
+            toId={bulkUnblockDialog.toId}
+            cascadedCount={bulkUnblockDialog.cascadedCount}
+            childrenPreview={bulkUnblockDialog.childrenPreview}
+            onConfirm={confirmBulkUnblock}
+            onCancel={cancelBulkUnblock}
+          />
+        )}
       </div>
     </div>
   );

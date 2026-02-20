@@ -5,14 +5,21 @@ import React, { useState } from 'react';
  * Extracted from BlockingView.jsx to reduce file length.
  * 
  * Provides actions for removing, retargeting, and adding dependency links.
+ * For epic-to-epic edges, also provides bulk unblock option.
  */
-const EdgeMenu = ({ fromId, toId, onRemove, onRetarget, onAddLink, onClose }) => {
+const EdgeMenu = ({ fromId, toId, isEpicToEpic, onRemove, onRetarget, onAddLink, onBulkUnblock, onClose }) => {
   const [retargetState, setRetargetState] = useState(null);
   const [addLinkState, setAddLinkState] = useState(null);
 
   const handleRemoveClick = () => {
     if (onRemove) {
       onRemove(fromId, toId);
+    }
+  };
+
+  const handleBulkUnblockClick = () => {
+    if (onBulkUnblock) {
+      onBulkUnblock(fromId, toId);
     }
   };
 
@@ -52,6 +59,14 @@ const EdgeMenu = ({ fromId, toId, onRemove, onRetarget, onAddLink, onClose }) =>
           type="button"
           onClick={handleRemoveClick}
         >🗑 Remove link</button>
+        
+        {isEpicToEpic && onBulkUnblock && (
+          <button
+            className="blocking-view__edge-menu-btn blocking-view__edge-menu-btn--bulk"
+            type="button"
+            onClick={handleBulkUnblockClick}
+          >🗑✨ Bulk unblock epic children</button>
+        )}
         
         {retargetState ? (
           <div className="blocking-view__edge-menu-input-row">

@@ -354,6 +354,54 @@ async function handleWebviewMessage(data, context, vscode) {
         });
         break;
       }
+      case 'epicUnblock': {
+        const epicA = data.epicA;
+        const epicB = data.epicB;
+        const cascadedDeps = Array.isArray(data.cascadedDeps) ? data.cascadedDeps : [];
+
+        try {
+          // Remove the direct epic-to-epic blocking relationship
+          const directResult = await provider._executeBdCommand(
+            `dep remove ${epicA} --blocks ${epicB}`
+          );
+          if (!directResult.success) {
+            await provider._executeBdCommand(
+              `dep remove ${epicB} --blocks ${epicA}`
+            );
+          }
+
+          // Remove all cascaded child blocking relationships
+          const errors = [];
+          for (const dep of cascadedDeps) {
+            const removeResult = await provider._executeBdCommand(
+              `dep remove ${dep.from} --blocks ${dep.to}`
+            );
+            if (!removeResult.success) {
+              errors.push(`${dep.from} → ${dep.to}`);
+            }
+          }
+
+          provider._invalidateCache();
+          const removedCount = cascadedDeps.length - errors.length + 1;
+          webviewView.webview.postMessage({
+            type: 'epicUnblockResult',
+            success: true,
+            epicA,
+            epicB,
+            removedCount,
+            errors
+          });
+        } catch (error) {
+          webviewView.webview.postMessage({
+            type: 'epicUnblockResult',
+            success: false,
+            epicA,
+            epicB,
+            error: error.message || 'Unknown error during epic unblock'
+          });
+        }
+        break;
+      }
       case 'convertToGitHub': {
         const wsFolders = vscode.workspace.workspaceFolders;
         if (!wsFolders || wsFolders.length === 0) {

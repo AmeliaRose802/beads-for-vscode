@@ -1033,6 +1033,16 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   stroke-width: 1.5;
 }
 
+.dependency-graph__edge--clickable {
+  cursor: pointer;
+  pointer-events: stroke;
+}
+
+.dependency-graph__edge--clickable:hover {
+  stroke-width: 4;
+  opacity: 1;
+}
+
 /* Relationship type styling */
 .dependency-graph__edge--blocked-by {
   stroke: var(--vscode-terminal-ansiYellow);
@@ -3213,4 +3223,182 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 
 .ppd-dialog__btn--primary:hover {
   background-color: var(--vscode-button-hoverBackground);
+}
+
+/* Bulk Unblock Confirmation Dialog */
+.bulk-unblock-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.bulk-unblock-dialog {
+  background-color: var(--vscode-editorWidget-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 6px;
+  min-width: 400px;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.bulk-unblock-dialog__header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.bulk-unblock-dialog__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--vscode-foreground);
+}
+
+.bulk-unblock-dialog__close {
+  background: none;
+  border: none;
+  color: var(--vscode-foreground);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px 8px;
+  line-height: 1;
+}
+
+.bulk-unblock-dialog__close:hover {
+  background-color: var(--vscode-toolbar-hoverBackground);
+  border-radius: 3px;
+}
+
+.bulk-unblock-dialog__content {
+  padding: 16px;
+}
+
+.bulk-unblock-dialog__message {
+  margin-bottom: 12px;
+  color: var(--vscode-foreground);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.bulk-unblock-dialog__epic-info {
+  background-color: var(--vscode-editor-background);
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+
+.bulk-unblock-dialog__epic {
+  margin: 4px 0;
+  font-size: 12px;
+  font-family: var(--vscode-editor-font-family);
+}
+
+.bulk-unblock-dialog__stats {
+  padding: 10px;
+  background-color: var(--vscode-inputValidation-infoBackground);
+  border-left: 3px solid var(--vscode-inputValidation-infoBorder);
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+
+.bulk-unblock-dialog__stats p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--vscode-foreground);
+}
+
+.bulk-unblock-dialog__preview {
+  margin-bottom: 12px;
+}
+
+.bulk-unblock-dialog__preview-label {
+  font-size: 12px;
+  color: var(--vscode-descriptionForeground);
+  margin-bottom: 6px;
+}
+
+.bulk-unblock-dialog__preview-list {
+  list-style: none;
+  padding: 8px;
+  background-color: var(--vscode-editor-background);
+  border-radius: 4px;
+  margin: 0;
+  font-size: 11px;
+  font-family: var(--vscode-editor-font-family);
+}
+
+.bulk-unblock-dialog__preview-item {
+  padding: 3px 0;
+  color: var(--vscode-foreground);
+}
+
+.bulk-unblock-dialog__preview-more {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  margin-top: 6px;
+  font-style: italic;
+}
+
+.bulk-unblock-dialog__warning {
+  padding: 10px;
+  background-color: var(--vscode-inputValidation-warningBackground);
+  border-left: 3px solid var(--vscode-inputValidation-warningBorder);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--vscode-foreground);
+}
+
+.bulk-unblock-dialog__actions {
+  padding: 12px 16px;
+  border-top: 1px solid var(--vscode-panel-border);
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.bulk-unblock-dialog__btn {
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  border: none;
+  font-family: var(--vscode-font-family);
+}
+
+.bulk-unblock-dialog__btn--cancel {
+  background-color: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+}
+
+.bulk-unblock-dialog__btn--cancel:hover {
+  background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+.bulk-unblock-dialog__btn--confirm {
+  background-color: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+
+.bulk-unblock-dialog__btn--confirm:hover {
+  background-color: var(--vscode-button-hoverBackground);
+}
+
+.blocking-view__edge-menu-btn--bulk {
+  background-color: var(--vscode-inputValidation-infoBackground);
+  border-left: 3px solid var(--vscode-inputValidation-infoBorder);
+}
+
+.blocking-view__edge-menu-btn--bulk:hover {
+  background-color: var(--vscode-button-hoverBackground);
+  border-left-color: var(--vscode-inputValidation-infoBorder);
 }
