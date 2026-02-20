@@ -10,19 +10,7 @@
  * cascaded deps so the UI can confirm and remove them in bulk.
  */
 
-const { getField, DEP_FROM_KEYS, DEP_TO_KEYS, DEP_TYPE_KEYS } = require('./field-utils');
-
-/**
- * Normalise a raw dependency type string.
- * @param {string|undefined} raw - Raw type value.
- * @returns {string}
- */
-function normalizeType(raw) {
-  const value = String(raw || 'related').toLowerCase();
-  if (value === 'parent') return 'parent-child';
-  if (value === 'relates-to') return 'related';
-  return value;
-}
+const { getField, normalizeRelationshipType, DEP_FROM_KEYS, DEP_TO_KEYS, DEP_TYPE_KEYS } = require('./field-utils');
 
 /**
  * Return the set of direct child issue IDs for a given epic.
@@ -38,7 +26,7 @@ function findEpicChildren(graphData, epicId) {
   graphData.forEach(component => {
     const deps = component.Dependencies || [];
     deps.forEach(dep => {
-      const type = normalizeType(getField(dep, DEP_TYPE_KEYS));
+      const type = normalizeRelationshipType(getField(dep, DEP_TYPE_KEYS));
       if (type !== 'parent-child') return;
 
       // In beads graph data: issue_id = child, depends_on_id = parent
@@ -79,7 +67,7 @@ function findCascadedBlocks(graphData, epicA, epicB) {
   graphData.forEach(component => {
     const deps = component.Dependencies || [];
     deps.forEach(dep => {
-      const type = normalizeType(getField(dep, DEP_TYPE_KEYS));
+      const type = normalizeRelationshipType(getField(dep, DEP_TYPE_KEYS));
       if (type !== 'blocks' && type !== 'blocked-by') return;
 
       const fromId = getField(dep, DEP_FROM_KEYS);
@@ -120,7 +108,7 @@ function hasDirectEpicBlock(graphData, epicA, epicB) {
   return graphData.some(component => {
     const deps = component.Dependencies || [];
     return deps.some(dep => {
-      const type = normalizeType(getField(dep, DEP_TYPE_KEYS));
+      const type = normalizeRelationshipType(getField(dep, DEP_TYPE_KEYS));
       if (type !== 'blocks' && type !== 'blocked-by') return false;
 
       const fromId = getField(dep, DEP_FROM_KEYS);

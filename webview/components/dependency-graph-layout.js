@@ -6,19 +6,13 @@ import fieldUtils from '../field-utils.js';
 
 const {
   getField,
+  normalizeRelationshipType,
   DEP_TYPE_KEYS,
   DEP_ISSUE_KEYS,
   DEP_TARGET_KEYS,
   DEP_FROM_KEYS,
   DEP_TO_KEYS
 } = fieldUtils;
-
-const normalizeRelationshipType = (rawType) => {
-  const value = String(rawType || 'related').toLowerCase();
-  if (value === 'parent') return 'parent-child';
-  if (value === 'relates-to') return 'related';
-  return value;
-};
 
 /**
  * Calculates node positions using a layered layout algorithm.

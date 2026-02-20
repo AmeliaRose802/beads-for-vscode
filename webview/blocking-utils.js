@@ -2,7 +2,7 @@
  * Blocking view utilities: topological sort, critical path, and completion order.
  */
 
-const { getField, buildIssueMap, isClosedStatus, DEP_FROM_KEYS, DEP_TO_KEYS, DEP_TYPE_KEYS } = require('./field-utils');
+const { getField, buildIssueMap, isClosedStatus, normalizeRelationshipType, DEP_FROM_KEYS, DEP_TO_KEYS, DEP_TYPE_KEYS } = require('./field-utils');
 const { topologicalSort, findCriticalPaths, calculateFanOut } = require('./blocking-utils-algorithms');
 
 /** Build blocking model from graph components. */
@@ -59,18 +59,6 @@ function emptyModel() {
     blocksCount: {},
     blockedByCount: {}
   };
-}
-
-/**
- * Normalize a dependency relationship type into a canonical value.
- * @param {string|undefined|null} rawType - Raw relationship type from bd output.
- * @returns {string} Canonicalized relationship type string.
- */
-function normalizeRelationshipType(rawType) {
-  const value = String(rawType || 'related').toLowerCase();
-  if (value === 'parent') return 'parent-child';
-  if (value === 'relates-to') return 'related';
-  return value;
 }
 
 /** Extract issues and blocking edges from graph components. */
