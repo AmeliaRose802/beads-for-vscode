@@ -128,6 +128,12 @@ function findReadyItems(nodeIds, edges, issueMap) {
 function findParallelGroups(nodeIds, edges, issueMap) {
   if (nodeIds.length === 0) return [];
 
+  // Epics are organizational containers, not actionable work items
+  if (issueMap) {
+    nodeIds = nodeIds.filter(id => issueMap[id]?.issue_type !== 'epic');
+    if (nodeIds.length === 0) return [];
+  }
+
   const inDegree = {};
   const outEdges = {};
   nodeIds.forEach(id => {

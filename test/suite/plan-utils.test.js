@@ -186,5 +186,28 @@ suite('plan-utils', () => {
       const result = buildPlanSchedule(issues, edges, null, 1);
       assert.ok(result.cycleIds.includes('a'));
     });
+
+    test('excludes epics from scheduled waves', () => {
+      const issues = [
+        { id: 'epic1', status: 'open', issue_type: 'epic' },
+        { id: 'a', status: 'open', issue_type: 'task' },
+        { id: 'b', status: 'open', issue_type: 'bug' }
+      ];
+      const result = buildPlanSchedule(issues, [], null, 3);
+      const allScheduled = result.waves.flat();
+      assert.ok(!allScheduled.some(i => i.id === 'epic1'), 'Epic should not appear in waves');
+      assert.strictEqual(result.totalItems, 2);
+    });
+
+    test('items blocked only by epics are not stuck', () => {
+      const issues = [
+        { id: 'epic1', status: 'open', issue_type: 'epic' },
+        { id: 'a', status: 'open', issue_type: 'task' }
+      ];
+      const edges = [{ from: 'epic1', to: 'a' }];
+      const result = buildPlanSchedule(issues, edges, null, 2);
+      assert.strictEqual(result.totalWaves, 1);
+      assert.strictEqual(result.waves[0][0].id, 'a');
+    });
   });
 });

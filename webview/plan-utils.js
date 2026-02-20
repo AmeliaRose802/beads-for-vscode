@@ -58,7 +58,8 @@ function buildPlanSchedule(issues, edges, completionOrder, maxParallel) {
   });
 
   const completed = new Set(nodeIds.filter(id => isClosedStatus(issueMap[id]?.status)));
-  const remaining = new Set(nodeIds.filter(id => !completed.has(id)));
+  // Epics are organizational containers, not actionable work items
+  const remaining = new Set(nodeIds.filter(id => !completed.has(id) && issueMap[id]?.issue_type !== 'epic'));
   const openNodeIds = Array.from(remaining);
   const cycleGroups = findCycleGroups(openNodeIds, edges)
     .map(group => group.map(id => issueMap[id]).filter(Boolean));

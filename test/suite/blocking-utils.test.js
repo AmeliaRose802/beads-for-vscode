@@ -341,6 +341,31 @@ suite('blocking-utils', () => {
       const groups = findParallelGroups([], []);
       assert.deepStrictEqual(groups, []);
     });
+
+    test('excludes epics from parallel groups', () => {
+      const issueMap = {
+        epic1: { id: 'epic1', status: 'open', issue_type: 'epic' },
+        a: { id: 'a', status: 'open', issue_type: 'task' },
+        b: { id: 'b', status: 'open', issue_type: 'bug' }
+      };
+      const edges = [{ from: 'epic1', to: 'a' }];
+      const groups = findParallelGroups(['epic1', 'a', 'b'], edges, issueMap);
+      const allIds = groups.flat();
+      assert.ok(!allIds.includes('epic1'), 'Epic should not appear in parallel groups');
+      assert.ok(allIds.includes('a'));
+      assert.ok(allIds.includes('b'));
+    });
+
+    test('items blocked only by epics appear in first phase', () => {
+      const issueMap = {
+        epic1: { id: 'epic1', status: 'open', issue_type: 'epic' },
+        a: { id: 'a', status: 'open', issue_type: 'task' }
+      };
+      const edges = [{ from: 'epic1', to: 'a' }];
+      const groups = findParallelGroups(['epic1', 'a'], edges, issueMap);
+      assert.strictEqual(groups.length, 1);
+      assert.deepStrictEqual(groups[0], ['a']);
+    });
   });
 
   suite('buildPlanSchedule', () => {
