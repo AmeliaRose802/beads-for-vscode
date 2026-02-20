@@ -59,7 +59,7 @@ const calculateBezierPath = (fromX, fromY, toX, toY) => {
  * Renders a graph showing issues as nodes and dependencies as edges.
  * Supports pan/zoom, node selection, and displays dependency flow.
  */
-const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = true }) => {
+const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = true, onEdgeClick }) => {
   const containerRef = useRef(null);
   const [selectedNode, setSelectedNode] = useState(null);
   const [hoveredNode, setHoveredNode] = useState(null);
@@ -389,12 +389,14 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
               // Use bezier curves for smoother, more distinguishable paths
               const pathData = calculateBezierPath(fromX, fromY, toX, toY);
 
+              const edgeClickable = typeof onEdgeClick === 'function';
               return (
                 <path
                   key={idx}
-                  className={`dependency-graph__edge ${isHighlighted ? 'dependency-graph__edge--highlighted' : ''} ${priorityClass} ${completedClass} ${typeClass} ${dimmedClass}`}
+                  className={`dependency-graph__edge ${isHighlighted ? 'dependency-graph__edge--highlighted' : ''} ${priorityClass} ${completedClass} ${typeClass} ${dimmedClass} ${edgeClickable ? 'dependency-graph__edge--clickable' : ''}`}
                   d={pathData}
                   markerEnd={edgePriority <= 1 ? "url(#arrowhead-high-priority)" : "url(#arrowhead)"}
+                  onClick={edgeClickable ? (e) => onEdgeClick(fromId, toId, e) : undefined}
                 >
                   <title>{depType || 'related'}</title>
                 </path>

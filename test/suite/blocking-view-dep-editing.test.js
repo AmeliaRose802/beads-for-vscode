@@ -30,6 +30,17 @@ suite('BlockingView inline dependency editing', () => {
       );
     });
 
+    test('supports bulk unblock for epic-to-epic edges', () => {
+      assert.ok(
+        blockingViewSrc.includes('bulkUnblock'),
+        'BlockingView should support bulkUnblock action'
+      );
+      assert.ok(
+        blockingViewSrc.includes('isEpicToEpic'),
+        'BlockingView should detect epic-to-epic edges'
+      );
+    });
+
     test('has activeEdgeMenu state', () => {
       assert.ok(
         blockingViewSrc.includes('activeEdgeMenu'),
@@ -183,6 +194,17 @@ suite('BlockingView inline dependency editing', () => {
       );
     });
 
+    test('edge menu has bulk unblock option for epics', () => {
+      assert.ok(
+        edgeMenuSrc.includes('Bulk unblock epic children'),
+        'Edge menu should have bulk unblock option for epic edges'
+      );
+      assert.ok(
+        edgeMenuSrc.includes('isEpicToEpic'),
+        'Edge menu should accept isEpicToEpic prop'
+      );
+    });
+
     test('edge menu has close button', () => {
       assert.ok(
         edgeMenuSrc.includes('blocking-view__edge-menu-close'),
@@ -258,6 +280,17 @@ suite('BlockingView inline dependency editing', () => {
       );
     });
 
+    test('onDepAction handles bulkUnblock action', () => {
+      assert.ok(
+        appSrc.includes('bulkUnblock'),
+        'onDepAction should handle bulkUnblock action'
+      );
+      assert.ok(
+        appSrc.includes('handleBulkUnblockEpics'),
+        'App.jsx should have handleBulkUnblockEpics function'
+      );
+    });
+
     test('onDepAction uses dep add/remove commands', () => {
       assert.ok(
         appSrc.includes('dep ${action}'),
@@ -269,6 +302,17 @@ suite('BlockingView inline dependency editing', () => {
       assert.ok(
         appSrc.includes('--blocks'),
         'onDepAction should use --blocks flag for blocking deps'
+      );
+    });
+
+    test('imports and renders BulkUnblockConfirmDialog', () => {
+      assert.ok(
+        appSrc.includes('BulkUnblockConfirmDialog'),
+        'App.jsx should import and render BulkUnblockConfirmDialog'
+      );
+      assert.ok(
+        appSrc.includes('bulkUnblockDialog'),
+        'App.jsx should have bulkUnblockDialog state'
       );
     });
 
@@ -293,6 +337,21 @@ suite('BlockingView inline dependency editing', () => {
       assert.ok(
         stylesSrc.includes('.dependency-graph__close-btn'),
         'CSS should style the dependency graph close button'
+      );
+    });
+
+    test('defines bulk unblock dialog styles', () => {
+      assert.ok(
+        stylesSrc.includes('.bulk-unblock-dialog'),
+        'CSS should define bulk unblock dialog styles'
+      );
+      assert.ok(
+        stylesSrc.includes('.bulk-unblock-dialog-overlay'),
+        'CSS should define bulk unblock dialog overlay'
+      );
+      assert.ok(
+        stylesSrc.includes('.blocking-view__edge-menu-btn--bulk'),
+        'CSS should style bulk unblock button distinctly'
       );
     });
 

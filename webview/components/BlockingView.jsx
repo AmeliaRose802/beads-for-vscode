@@ -243,17 +243,34 @@ const BlockingView = ({
     if (onDepAction && toId.trim()) onDepAction('add', fromId, toId.trim());
     closeEdgeMenu();
   };
+  const handleEpicEdgeClick = (fromId, toId, event) => {
+    event.stopPropagation();
+    if (onDepAction) onDepAction('bulkUnblock', fromId, toId);
+  };
+  const handleBulkUnblockEpics = (fromId, toId) => {
+    if (onDepAction) onDepAction('bulkUnblock', fromId, toId);
+    closeEdgeMenu();
+  };
+  const getIssueType = (issueId) => {
+    const issue = issues.find(i => i.id === issueId);
+    return issue ? (issue.type || issue.issue_type || 'task') : 'task';
+  };
   const renderEdgeMenu = (fromId, toId) => {
     if (!activeEdgeMenu || activeEdgeMenu.fromId !== fromId || activeEdgeMenu.toId !== toId) {
       return null;
     }
+    const fromType = getIssueType(fromId);
+    const toType = getIssueType(toId);
+    const isEpicToEpic = fromType === 'feature' && toType === 'feature';
     return (
       <EdgeMenu
         fromId={fromId}
         toId={toId}
+        isEpicToEpic={isEpicToEpic}
         onRemove={handleRemoveLink}
         onRetarget={handleRetarget}
         onAddLink={handleAddLink}
+        onBulkUnblock={isEpicToEpic ? handleBulkUnblockEpics : null}
         onClose={closeEdgeMenu}
       />
     );
@@ -355,6 +372,7 @@ const BlockingView = ({
             graphData={epicGraphData}
             onIssueClick={handleNodeClick}
             showCloseButton={false}
+            onEdgeClick={handleEpicEdgeClick}
           />
         )}
         {activeTab === 'task-graph' && (
