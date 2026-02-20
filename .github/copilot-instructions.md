@@ -1,12 +1,12 @@
-# GitHub Copilot Instructions for Enhanced ADO MCP Server
+# GitHub Copilot Instructions for Beads UI
 
-This project is an **Azure DevOps Model Context Protocol (MCP) Server** that enables AI-powered work item management.
+This project is a **VS Code Extension** providing a user interface for the beads (bd) command-line issue tracker.
 
 ## Project Overview
 
-**Repository:** enhanced-ado-mcp  
-**Language:** TypeScript (Node.js)  
-**Purpose:** MCP server for Azure DevOps integration with AI agents
+**Repository:** beads-for-vscode  
+**Language:** JavaScript (Node.js)  
+**Purpose:** VS Code sidebar extension for managing beads issues with React-based UI
 
 ## Custom Instructions
 
