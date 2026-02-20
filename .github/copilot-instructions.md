@@ -119,52 +119,6 @@ If a pre-commit check fails:
 
 ---
 
-## Enhanced ADO MCP Server
-
-This workspace has the **Enhanced ADO MCP Server** available, which provides AI-powered tools for Azure DevOps work item operations.
-
-**Always check to see if the Enhanced ADO MCP server has a tool relevant to the user's request.**
-
-## Available Tool Categories
-
-**25 MCP Tools** organized into 8 categories:
-
-1. **Work Item Creation (4 tools)** - Create, clone, assign to Copilot
-2. **Work Item Context (2 tools)** - Retrieve comprehensive work item details
-3. **Query Tools (3 tools)** - WIQL/OData queries with AI generation, hierarchy validation
-4. **Query Handle Management (4 tools)** - Handle lifecycle, validation, inspection
-5. **Bulk Operations (4 tools)** - Unified bulk operations, linking, undo
-6. **AI Analysis (6 tools)** - Intelligence, assignment, workload, sprint planning
-7. **Configuration (2 tools)** - Server configuration and prompt templates
-
-**Key Changes:**
-- Unified bulk operations tool consolidates 10+ separate tools into one
-- Query handle pattern prevents ID hallucination
-- AI-powered tools require VS Code + GitHub Copilot
-- Natural language query generation built into WIQL/OData tools
-
-## Best Practices
-
-- Use the discovery tools to find valid area paths, iteration paths, and repositories before creating work items
-- Leverage AI-powered tools for analyzing work items and decomposing features
-- Use the query handle pattern for safe bulk operations (prevents ID hallucination)
-- Use the configuration tools to understand the current setup
-- Check the security items analyzer for compliance and security work items
-
-## Example Requests
-
-- "Create a new Product Backlog Item for implementing authentication"
-- "Analyze work item 12345 for AI assignment suitability"
-- "Show my current MCP server configuration"
-- "Find all active bugs created in the last week" (uses AI-powered WIQL generation)
-- "Extract security findings from work item 67890"
-- "Bulk update all items in this sprint to add a tag" (uses unified bulk operations)
-- "Clone work item 123 with modifications"
-- "Find the best parent for these orphaned tasks" (AI-powered parent finder)
-- "Analyze my team's sprint capacity and suggest assignments"
-
----
-
 ## 🔗 TASK TRACKING WITH BEADS
 
 ### Overview
@@ -382,15 +336,12 @@ Changes to document:
 
 ### ✅ ONLY ACCEPTABLE DOCUMENTATION:
 - Updating existing `/docs` files with essential user info
-- Adding `/mcp_server/resources` quick reference guides for agents
 - Code comments for implementation details
 - Git commit messages for change history
 - **bd issues** for task tracking and work discovery
 
 ### Documentation Organization:
 - `/docs` - Only essential user-facing documentation (update existing only)
-- `/mcp_server/resources` - Quick reference guides for agents (functional, not summaries)
-- `/tasklist` - **DEPRECATED: DO NOT USE** (use `bd` instead)
 - `.beads/` - Beads issue tracker database (auto-managed by bd)
 - Code should be self-documenting with clear naming
 
