@@ -6,6 +6,18 @@ const { convertBeadsItemToGitHubIssue } = require('./github-converter');
 const { getGitHubSession, detectGitHubRepo } = require('./github-auth');
 
 /**
+ * Read and validate the copilotAssignees setting.
+ * @param {import('vscode')} vscode - VS Code API
+ * @returns {string[]}
+ */
+function getCopilotAssignees(vscode) {
+  const raw = vscode.workspace.getConfiguration('beads-ui.github').get('copilotAssignees', ['github-copilot']);
+  return Array.isArray(raw)
+    ? raw.map(String).map(s => s.trim()).filter(Boolean)
+    : ['github-copilot'];
+}
+
+/**
  * Handle messages from the webview.
  * This module contains the message handler switch statement extracted from extension.js
  * to reduce file length and improve maintainability.
@@ -212,10 +224,7 @@ async function handleWebviewMessage(data, context, vscode) {
           workspacePath ? detectGitHubRepo(workspacePath) : Promise.resolve(null)
         ]);
 
-        const copilotAssigneesRaw = vscode.workspace.getConfiguration('beads-ui.github').get('copilotAssignees', ['github-copilot']);
-        const copilotAssignees = Array.isArray(copilotAssigneesRaw)
-          ? copilotAssigneesRaw.map(String).map(s => s.trim()).filter(Boolean)
-          : ['github-copilot'];
+        const copilotAssignees = getCopilotAssignees(vscode);
 
         webviewView.webview.postMessage({
           type: 'githubInfo',
@@ -244,10 +253,7 @@ async function handleWebviewMessage(data, context, vscode) {
           : [];
         const uniqueIssueIds = [...new Set(issueIds)];
 
-        const copilotAssigneesRaw = vscode.workspace.getConfiguration('beads-ui.github').get('copilotAssignees', ['github-copilot']);
-        const copilotAssignees = Array.isArray(copilotAssigneesRaw)
-          ? copilotAssigneesRaw.map(String).map(s => s.trim()).filter(Boolean)
-          : ['github-copilot'];
+        const copilotAssignees = getCopilotAssignees(vscode);
 
         const plannedAssignments = uniqueIssueIds.map((id, idx) => {
           const assignee = copilotAssignees.length > 0 ? copilotAssignees[idx % copilotAssignees.length] : null;
