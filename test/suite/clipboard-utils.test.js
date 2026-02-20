@@ -1,7 +1,8 @@
 const assert = require('assert');
 const {
   formatIssuesForClipboard,
-  buildPhasedClipboardText
+  buildPhasedClipboardText,
+  buildMermaidChartText
 } = require('../../webview/clipboard-utils');
 
 suite('clipboard-utils', () => {
@@ -69,6 +70,107 @@ suite('clipboard-utils', () => {
     test('returns empty string when no groups provided', () => {
       assert.strictEqual(buildPhasedClipboardText([]), '');
       assert.strictEqual(buildPhasedClipboardText(null), '');
+    });
+  });
+
+  suite('buildMermaidChartText', () => {
+    test('returns empty string for empty or invalid input', () => {
+      assert.strictEqual(buildMermaidChartText([]), '');
+      assert.strictEqual(buildMermaidChartText(null), '');
+      assert.strictEqual(buildMermaidChartText(undefined), '');
+    });
+
+    test('generates node definitions from issues', () => {
+      const result = buildMermaidChartText([{
+        Issues: [
+          { id: 'bd-1', title: 'Fix login' },
+          { id: 'bd-2', title: 'Add tests' }
+        ],
+        Dependencies: []
+      }]);
+
+      assert.ok(result.startsWith('graph LR'));
+      assert.ok(result.includes('bd-1["bd-1: Fix login"]'));
+      assert.ok(result.includes('bd-2["bd-2: Add tests"]'));
+    });
+
+    test('generates edges from dependencies', () => {
+      const result = buildMermaidChartText([{
+        Issues: [
+          { id: 'bd-1', title: 'A' },
+          { id: 'bd-2', title: 'B' }
+        ],
+        Dependencies: [{
+          depends_on_id: 'bd-1',
+          issue_id: 'bd-2',
+          type: 'blocks'
+        }]
+      }]);
+
+      assert.ok(result.includes('bd-1 -->|"blocks"| bd-2'));
+    });
+
+    test('deduplicates nodes across components', () => {
+      const result = buildMermaidChartText([
+        { Issues: [{ id: 'bd-1', title: 'A' }], Dependencies: [] },
+        { Issues: [{ id: 'bd-1', title: 'A' }], Dependencies: [] }
+      ]);
+
+      const count = (result.match(/bd-1\[/g) || []).length;
+      assert.strictEqual(count, 1);
+    });
+
+    test('deduplicates edges', () => {
+      const result = buildMermaidChartText([{
+        Issues: [
+          { id: 'bd-1', title: 'A' },
+          { id: 'bd-2', title: 'B' }
+        ],
+        Dependencies: [
+          { depends_on_id: 'bd-1', issue_id: 'bd-2', type: 'blocks' },
+          { depends_on_id: 'bd-1', issue_id: 'bd-2', type: 'blocks' }
+        ]
+      }]);
+
+      const count = (result.match(/bd-1 -->/g) || []).length;
+      assert.strictEqual(count, 1);
+    });
+
+    test('handles missing titles', () => {
+      const result = buildMermaidChartText([{
+        Issues: [{ id: 'bd-1' }],
+        Dependencies: []
+      }]);
+
+      assert.ok(result.includes('bd-1["bd-1: (untitled)"]'));
+    });
+
+    test('escapes quotes in titles', () => {
+      const result = buildMermaidChartText([{
+        Issues: [{ id: 'bd-1', title: 'Fix "bug"' }],
+        Dependencies: []
+      }]);
+
+      assert.ok(result.includes('#quot;'));
+      assert.ok(!result.includes('""'));
+    });
+
+    test('sanitizes special characters in IDs', () => {
+      const result = buildMermaidChartText([{
+        Issues: [{ id: 'ns/id.1', title: 'Test' }],
+        Dependencies: []
+      }]);
+
+      assert.ok(result.includes('ns_id_1["ns/id.1: Test"]'));
+    });
+
+    test('skips deps with missing from or to IDs', () => {
+      const result = buildMermaidChartText([{
+        Issues: [{ id: 'bd-1', title: 'A' }],
+        Dependencies: [{ depends_on_id: 'bd-1' }]
+      }]);
+
+      assert.ok(!result.includes('-->'));
     });
   });
 });

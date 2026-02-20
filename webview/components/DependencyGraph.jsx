@@ -8,6 +8,7 @@ import { shouldShowNode, shouldShowEdge, calculateBlockingCounts } from './depen
 import { calculateLayout } from './dependency-graph-layout';
 import usePanZoom from '../hooks/usePanZoom';
 const { getField, normalizeRelationshipType, DEP_TYPE_KEYS, DEP_ISSUE_KEYS, DEP_TARGET_KEYS } = require('../field-utils');
+const { copyTextToClipboard, buildMermaidChartText } = require('../clipboard-utils');
 
 /**
  * Calculate a smooth bezier curve path for edges.
@@ -57,6 +58,7 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
   const [selectedNode, setSelectedNode] = useState(null);
   const [hoveredNode, setHoveredNode] = useState(null);
   const [nodePositions, setNodePositions] = useState({});
+  const [mermaidCopied, setMermaidCopied] = useState(false);
   const [filters, setFilters] = useState({
     showCompleted: true,
     showBlocked: true,
@@ -109,6 +111,18 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
       onIssueClick(issue);
     }
   };
+
+  const handleCopyMermaid = useCallback(async () => {
+    const mermaidText = buildMermaidChartText(graphData);
+    if (!mermaidText) return;
+    try {
+      await copyTextToClipboard(mermaidText);
+      setMermaidCopied(true);
+      setTimeout(() => setMermaidCopied(false), 2000);
+    } catch {
+      // Clipboard write failed silently
+    }
+  }, [graphData]);
 
   if (!graphData) {
     return (
@@ -296,6 +310,9 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
           <button className="dependency-graph__control-btn" onClick={zoomOut} title="Zoom out">−</button>
           <button className="dependency-graph__control-btn" onClick={resetView} title="Reset view">⟲</button>
           <span className="dependency-graph__zoom-level">{Math.round(transform.scale * 100)}%</span>
+          <button className="dependency-graph__control-btn dependency-graph__mermaid-btn" onClick={handleCopyMermaid} title="Copy as Mermaid chart">
+            {mermaidCopied ? '✓' : '⎘'}
+          </button>
         </div>
         {renderCloseButton()}
       </div>
