@@ -12,10 +12,6 @@ This project is a **VS Code Extension** providing a user interface for the beads
 
 This repository uses directory-specific custom instructions to provide context-aware guidance:
 
-- **`AGENTS.md`** (root) - General project structure, build commands, and development workflow
-- **`.github/instructions/prompts.instructions.md`** - Guidelines for working with AI prompt templates
-- **`.github/instructions/services.instructions.md`** - Service layer, handlers, and configuration patterns
-- **`.github/instructions/tests.instructions.md`** - Testing standards and patterns
 - **`.github/instructions/documentation.instructions.md`** - Documentation requirements and style guide
 - **`.github/instructions/react-ui.instructions.md`** - React UI development guidelines (NO INLINE STYLES!)
 
