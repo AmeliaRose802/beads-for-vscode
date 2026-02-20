@@ -465,6 +465,14 @@ async function handleWebviewMessage(data, context, vscode) {
         }
         break;
       }
+      case 'logError': {
+        const ch = vscode.window.createOutputChannel('Beads UI Errors');
+        ch.appendLine(`[${new Date().toISOString()}] ${data.boundaryName}: ${data.error?.message || 'No message'}`);
+        if (data.error?.stack) ch.appendLine(`Stack:\n${data.error.stack}`);
+        if (data.error?.componentStack) ch.appendLine(`Component:\n${data.error.componentStack}`);
+        ch.appendLine('---');
+        break;
+      }
     }
   } catch (err) {
     console.error('Unhandled error in message handler:', err);

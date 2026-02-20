@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import ErrorBoundary from './ErrorBoundary';
 import BlockingOrderTab from './BlockingOrderTab';
 import BlockingGraphTab from './BlockingGraphTab';
 import BlockingPlanView from './BlockingPlanView';

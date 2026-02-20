@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ErrorBoundary from './components/ErrorBoundary';
 import OutputDisplay from './components/OutputDisplay';
 import CreatePanel from './components/CreatePanel';
 import RelationshipPanel from './components/RelationshipPanel';
@@ -258,10 +259,7 @@ const App = () => {
     relationshipForm.resetRelationshipForm();
   };
 
-  const handleOpenDependencies = (tab = 'list') => {
-    panels.setActiveBlockingTab(tab);
-    requestBlockingData();
-  };
+  const handleOpenDependencies = (tab = 'list') => { panels.setActiveBlockingTab(tab); requestBlockingData(); };
 
   const handleUpdateIssue = () => {
     let command;
@@ -293,10 +291,8 @@ const App = () => {
     editForm.setEditIssueId(id);
     panels.setShowEditPanel(true);
   };
-  const handleCloseIssue = (id) =>
-    runInlineAction(`close ${id} -r "Closed from UI"`, `Closed ${id}`);
-  const handleReopenIssue = (id) =>
-    runInlineAction(`reopen ${id} -r "Reopened from UI"`, `Reopened ${id}`);
+  const handleCloseIssue = (id) => runInlineAction(`close ${id} -r "Closed from UI"`, `Closed ${id}`);
+  const handleReopenIssue = (id) => runInlineAction(`reopen ${id} -r "Reopened from UI"`, `Reopened ${id}`);
   const shouldShowResultsPanel = !panels.showHierarchyView && !panels.showBlockingView;
   return (
     <div className="container">
@@ -322,111 +318,115 @@ const App = () => {
           </div>
         </div>
         <PokePokeStatus instances={pokepokeInstances} onStop={handlePokePokeStop} vscode={vscode} />
-        {panels.showCreatePanel && (
-          <CreatePanel
-            title={createForm.createTitle}
-            type={createForm.createType}
-            priority={createForm.createPriority}
-            description={createForm.createDescription}
-            parentId={createForm.createParentId}
-            blocksId={createForm.createBlocksId}
-            relatedId={createForm.createRelatedId}
-            currentFile={currentFile}
-            onTitleChange={createForm.setCreateTitle}
-            onTypeChange={createForm.setCreateType}
-            onPriorityChange={createForm.setCreatePriority}
-            onDescriptionChange={createForm.setCreateDescription}
-            onParentIdChange={createForm.setCreateParentId}
-            onBlocksIdChange={createForm.setCreateBlocksId}
-            onRelatedIdChange={createForm.setCreateRelatedId}
-            onCreate={handleCreateIssue}
-            onCancel={() => panels.setShowCreatePanel(false)}
-            onAISuggest={handleAISuggest}
-            isAILoading={isAILoading}
-          />
-        )}
-
-        {panels.showRelationshipPanel && (
-          <RelationshipPanel
-            sourceBead={relationshipForm.sourceBead}
-            targetBead={relationshipForm.targetBead}
-            relationType={relationshipForm.relationType}
-            onSourceChange={relationshipForm.setSourceBead}
-            onTargetChange={relationshipForm.setTargetBead}
-            onTypeChange={relationshipForm.setRelationType}
-            onLink={() => handleDepAction('add')}
-            onUnlink={() => handleDepAction('remove')}
-            onCancel={() => panels.setShowRelationshipPanel(false)}
-          />
-        )}
-
-        {panels.showEditPanel && (
-          <EditPanel
-            issueId={editForm.editIssueId}
-            title={editForm.editTitle}
-            type={editForm.editType}
-            priority={editForm.editPriority}
-            description={editForm.editDescription}
-            status={editForm.editStatus}
-            onTitleChange={editForm.setEditTitle}
-            onTypeChange={editForm.setEditType}
-            onPriorityChange={editForm.setEditPriority}
-            onDescriptionChange={editForm.setEditDescription}
-            onStatusChange={editForm.setEditStatus}
-            onUpdate={handleUpdateIssue}
-            onCancel={() => panels.setShowEditPanel(false)}
-          />
-        )}
-
-        {panels.showHierarchyView && (
-          <div className="section">
-            <HierarchyView
-              hierarchy={hierarchyModel}
-              onSelectIssue={(id) => {
-                handleShowIssueInline(id);
-                handleShowHierarchy(id);
-              }}
-              onClose={() => panels.setShowHierarchyView(false)}
+        <ErrorBoundary name="Form Panels">
+          {panels.showCreatePanel && (
+            <CreatePanel
+              title={createForm.createTitle}
+              type={createForm.createType}
+              priority={createForm.createPriority}
+              description={createForm.createDescription}
+              parentId={createForm.createParentId}
+              blocksId={createForm.createBlocksId}
+              relatedId={createForm.createRelatedId}
+              currentFile={currentFile}
+              onTitleChange={createForm.setCreateTitle}
+              onTypeChange={createForm.setCreateType}
+              onPriorityChange={createForm.setCreatePriority}
+              onDescriptionChange={createForm.setCreateDescription}
+              onParentIdChange={createForm.setCreateParentId}
+              onBlocksIdChange={createForm.setCreateBlocksId}
+              onRelatedIdChange={createForm.setCreateRelatedId}
+              onCreate={handleCreateIssue}
+              onCancel={() => panels.setShowCreatePanel(false)}
+              onAISuggest={handleAISuggest}
+              isAILoading={isAILoading}
             />
-          </div>
-        )}
+          )}
 
-        {panels.showBlockingView && (
-          <div className="section">
-            <BlockingView
-              blockingModel={blockingModel}
-              graphData={graphData}
-              activeTab={panels.activeBlockingTab}
-              onTabChange={panels.setActiveBlockingTab}
-              onIssueClick={(issue) => handleShowIssueInline(issue.id)}
-              onClose={() => panels.setShowBlockingView(false)}
-              issueDetails={issueDetails}
-              loadingDetails={loadingDetails}
-              onCloseIssue={handleCloseIssue}
-              onReopenIssue={handleReopenIssue}
-              onEditIssue={handleEditIssue}
-              onTypeChange={handleQuickTypeChange}
-              onPriorityChange={handleQuickPriorityChange}
-              onAssigneeChange={handleAssigneeChange}
-              onShowHierarchy={handleShowHierarchy}
-              onPokePoke={handlePokePoke}
-              onConvertToGitHub={handleConvertToGitHub}
-              onDispatchPhase={openParallelPhaseDispatch}
-              pokepokeInstances={pokepokeInstances}
-              vscode={vscode}
-              onDepAction={(action, fromId, toId) => {
-                if (action === 'bulkUnblock') {
-                  handleBulkUnblockEpics(fromId, toId);
-                } else {
-                  runInlineAction(
-                    `dep ${action} ${fromId} --blocks ${toId}`,
-                    `${action === 'add' ? 'Linked' : 'Unlinked'} ${fromId} → ${toId}`
-                  );
-                }
-              }}
+          {panels.showRelationshipPanel && (
+            <RelationshipPanel
+              sourceBead={relationshipForm.sourceBead}
+              targetBead={relationshipForm.targetBead}
+              relationType={relationshipForm.relationType}
+              onSourceChange={relationshipForm.setSourceBead}
+              onTargetChange={relationshipForm.setTargetBead}
+              onTypeChange={relationshipForm.setRelationType}
+              onLink={() => handleDepAction('add')}
+              onUnlink={() => handleDepAction('remove')}
+              onCancel={() => panels.setShowRelationshipPanel(false)}
             />
-          </div>
-        )}
+          )}
+
+          {panels.showEditPanel && (
+            <EditPanel
+              issueId={editForm.editIssueId}
+              title={editForm.editTitle}
+              type={editForm.editType}
+              priority={editForm.editPriority}
+              description={editForm.editDescription}
+              status={editForm.editStatus}
+              onTitleChange={editForm.setEditTitle}
+              onTypeChange={editForm.setEditType}
+              onPriorityChange={editForm.setEditPriority}
+              onDescriptionChange={editForm.setEditDescription}
+              onStatusChange={editForm.setEditStatus}
+              onUpdate={handleUpdateIssue}
+              onCancel={() => panels.setShowEditPanel(false)}
+            />
+          )}
+        </ErrorBoundary>
+
+        <ErrorBoundary name="Views">
+          {panels.showHierarchyView && (
+            <div className="section">
+              <HierarchyView
+                hierarchy={hierarchyModel}
+                onSelectIssue={(id) => {
+                  handleShowIssueInline(id);
+                  handleShowHierarchy(id);
+                }}
+                onClose={() => panels.setShowHierarchyView(false)}
+              />
+            </div>
+          )}
+
+          {panels.showBlockingView && (
+            <div className="section">
+              <BlockingView
+                blockingModel={blockingModel}
+                graphData={graphData}
+                activeTab={panels.activeBlockingTab}
+                onTabChange={panels.setActiveBlockingTab}
+                onIssueClick={(issue) => handleShowIssueInline(issue.id)}
+                onClose={() => panels.setShowBlockingView(false)}
+                issueDetails={issueDetails}
+                loadingDetails={loadingDetails}
+                onCloseIssue={handleCloseIssue}
+                onReopenIssue={handleReopenIssue}
+                onEditIssue={handleEditIssue}
+                onTypeChange={handleQuickTypeChange}
+                onPriorityChange={handleQuickPriorityChange}
+                onAssigneeChange={handleAssigneeChange}
+                onShowHierarchy={handleShowHierarchy}
+                onPokePoke={handlePokePoke}
+                onConvertToGitHub={handleConvertToGitHub}
+                onDispatchPhase={openParallelPhaseDispatch}
+                pokepokeInstances={pokepokeInstances}
+                vscode={vscode}
+                onDepAction={(action, fromId, toId) => {
+                  if (action === 'bulkUnblock') {
+                    handleBulkUnblockEpics(fromId, toId);
+                  } else {
+                    runInlineAction(
+                      `dep ${action} ${fromId} --blocks ${toId}`,
+                      `${action === 'add' ? 'Linked' : 'Unlinked'} ${fromId} → ${toId}`
+                    );
+                  }
+                }}
+              />
+            </div>
+          )}
+        </ErrorBoundary>
 
         {shouldShowResultsPanel && (
           <div className="section output-section">
@@ -439,26 +439,28 @@ const App = () => {
                 <button className="clear-btn" onClick={clearOutput}>Clear</button>
               </div>
             </div>
-            <OutputDisplay 
-              output={output} 
-              isError={isError} 
-              isSuccess={isSuccess}
-              onShowIssue={handleShowIssueInline}
-              onCloseIssue={handleCloseIssue}
-              onReopenIssue={handleReopenIssue}
-              onEditIssue={handleEditIssue}
-              onLinkParent={(childId, parentId) => runInlineAction(`dep add ${childId} --parent ${parentId}`, `Linked ${childId} → ${parentId}`)}
-              onTypeChange={handleQuickTypeChange}
-              onPriorityChange={handleQuickPriorityChange}
-              onAssigneeChange={handleAssigneeChange}
-              onShowHierarchy={handleShowHierarchy}
-              onPokePoke={handlePokePoke}
-              onConvertToGitHub={handleConvertToGitHub}
-              pokepokeInstances={pokepokeInstances}
-              issueDetails={issueDetails}
-              loadingDetails={loadingDetails}
-              vscode={vscode}
-            />
+            <ErrorBoundary name="Output Display">
+              <OutputDisplay 
+                output={output} 
+                isError={isError} 
+                isSuccess={isSuccess}
+                onShowIssue={handleShowIssueInline}
+                onCloseIssue={handleCloseIssue}
+                onReopenIssue={handleReopenIssue}
+                onEditIssue={handleEditIssue}
+                onLinkParent={(childId, parentId) => runInlineAction(`dep add ${childId} --parent ${parentId}`, `Linked ${childId} → ${parentId}`)}
+                onTypeChange={handleQuickTypeChange}
+                onPriorityChange={handleQuickPriorityChange}
+                onAssigneeChange={handleAssigneeChange}
+                onShowHierarchy={handleShowHierarchy}
+                onPokePoke={handlePokePoke}
+                onConvertToGitHub={handleConvertToGitHub}
+                pokepokeInstances={pokepokeInstances}
+                issueDetails={issueDetails}
+                loadingDetails={loadingDetails}
+                vscode={vscode}
+              />
+            </ErrorBoundary>
           </div>
         )}
 
