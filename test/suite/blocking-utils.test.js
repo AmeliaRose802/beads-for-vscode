@@ -46,6 +46,22 @@ suite('blocking-utils', () => {
     }
   ];
 
+  const parentChildComponents = [
+    {
+      Issues: [
+        { id: 'parent', title: 'Parent', status: 'open', priority: 2, issue_type: 'feature' },
+        { id: 'child-1', title: 'Child 1', status: 'open', priority: 2, issue_type: 'task' },
+        { id: 'child-2', title: 'Child 2', status: 'open', priority: 2, issue_type: 'task' }
+      ],
+      Dependencies: [
+        { issue_id: 'child-1', depends_on_id: 'parent', type: 'parent' },
+        { issue_id: 'child-2', depends_on_id: 'parent', type: 'parent-child' }
+      ]
+    }
+  ];
+
+  const cloneComponents = (components) => JSON.parse(JSON.stringify(components));
+
   suite('topologicalSort', () => {
     test('sorts linear chain in dependency order', () => {
       const edges = [
@@ -365,6 +381,46 @@ suite('blocking-utils', () => {
       const groups = findParallelGroups(['epic1', 'a'], edges, issueMap);
       assert.strictEqual(groups.length, 1);
       assert.deepStrictEqual(groups[0], ['a']);
+    });
+  });
+
+  suite('parent-child blocking', () => {
+    test('children block their parent until closed', () => {
+      const model = buildBlockingModel(cloneComponents(parentChildComponents));
+      const readyIds = new Set(model.readyItems.map(issue => issue.id));
+
+      assert.ok(model.edges.some(edge => edge.from === 'child-1' && edge.to === 'parent'));
+      assert.ok(model.edges.some(edge => edge.from === 'child-2' && edge.to === 'parent'));
+      assert.strictEqual(readyIds.has('parent'), false, 'parent should not be ready while children are open');
+      assert.strictEqual(readyIds.has('child-1'), true);
+      assert.strictEqual(readyIds.has('child-2'), true);
+    });
+
+    test('parent becomes ready only after every child closes', () => {
+      const components = cloneComponents(parentChildComponents);
+      components[0].Issues = components[0].Issues.map(issue => {
+        if (issue.id === 'child-1') {
+          return { ...issue, status: 'open' };
+        }
+        if (issue.id === 'child-2') {
+          return { ...issue, status: 'closed' };
+        }
+        return issue;
+      });
+
+      // Still blocked because child-1 is open.
+      let model = buildBlockingModel(cloneComponents(components));
+      let readyIds = new Set(model.readyItems.map(issue => issue.id));
+      assert.strictEqual(readyIds.has('parent'), false);
+
+      // Close remaining child.
+      components[0].Issues = components[0].Issues.map(issue => (
+        issue.id.startsWith('child') ? { ...issue, status: 'closed' } : issue
+      ));
+
+      model = buildBlockingModel(components);
+      readyIds = new Set(model.readyItems.map(issue => issue.id));
+      assert.strictEqual(readyIds.has('parent'), true, 'parent should be ready after all children close');
     });
   });
 
@@ -782,11 +838,16 @@ suite('blocking-utils', () => {
         }
       ];
       const model = buildBlockingModel(components);
-      // Only blocks edges should appear, not parent-child
-      assert.strictEqual(model.edges.length, 2);
+      assert.strictEqual(model.edges.length, 5);
+      const parentBlockers = model.edges
+        .filter(edge => edge.to === 'epic')
+        .map(edge => edge.from)
+        .sort();
+      assert.deepStrictEqual(parentBlockers, ['a', 'b', 'c']);
       const orderIds = model.completionOrder.map(i => i.id);
       assert.strictEqual(orderIds.indexOf('a') < orderIds.indexOf('b'), true);
       assert.strictEqual(orderIds.indexOf('b') < orderIds.indexOf('c'), true);
+      assert.strictEqual(orderIds.indexOf('c') < orderIds.indexOf('epic'), true);
     });
 
     test('closed blockers do not push items into later phases', () => {

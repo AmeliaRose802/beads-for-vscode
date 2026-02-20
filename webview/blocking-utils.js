@@ -61,6 +61,18 @@ function emptyModel() {
   };
 }
 
+/**
+ * Normalize a dependency relationship type into a canonical value.
+ * @param {string|undefined|null} rawType - Raw relationship type from bd output.
+ * @returns {string} Canonicalized relationship type string.
+ */
+function normalizeRelationshipType(rawType) {
+  const value = String(rawType || 'related').toLowerCase();
+  if (value === 'parent') return 'parent-child';
+  if (value === 'relates-to') return 'related';
+  return value;
+}
+
 /** Extract issues and blocking edges from graph components. */
 function extractBlockingGraph(components) {
   const issueMap = buildIssueMap(components);
@@ -70,17 +82,32 @@ function extractBlockingGraph(components) {
     (component?.Dependencies || []).forEach(dep => {
       const fromId = getField(dep, DEP_FROM_KEYS);
       const toId = getField(dep, DEP_TO_KEYS);
-      const type = getField(dep, DEP_TYPE_KEYS) || 'related';
+      const type = normalizeRelationshipType(getField(dep, DEP_TYPE_KEYS));
 
-      if (fromId && toId && (type === 'blocks' || type === 'blocked-by')) {
-        const hasBeadsIssueKey = Object.prototype.hasOwnProperty.call(dep, 'issue_id')
-          || Object.prototype.hasOwnProperty.call(dep, 'IssueID')
-          || Object.prototype.hasOwnProperty.call(dep, 'issueId');
-        const hasBeadsDependsOnKey = Object.prototype.hasOwnProperty.call(dep, 'depends_on_id')
-          || Object.prototype.hasOwnProperty.call(dep, 'DependsOnID')
-          || Object.prototype.hasOwnProperty.call(dep, 'dependsOnId');
-        const isBeadsOrientation = hasBeadsIssueKey || hasBeadsDependsOnKey;
+      if (!fromId || !toId) {
+        return;
+      }
 
+      const hasBeadsIssueKey = Object.prototype.hasOwnProperty.call(dep, 'issue_id')
+        || Object.prototype.hasOwnProperty.call(dep, 'IssueID')
+        || Object.prototype.hasOwnProperty.call(dep, 'issueId');
+      const hasBeadsDependsOnKey = Object.prototype.hasOwnProperty.call(dep, 'depends_on_id')
+        || Object.prototype.hasOwnProperty.call(dep, 'DependsOnID')
+        || Object.prototype.hasOwnProperty.call(dep, 'dependsOnId');
+      const isBeadsOrientation = hasBeadsIssueKey || hasBeadsDependsOnKey;
+
+      if (type === 'parent-child') {
+        if (isBeadsOrientation) {
+          // Child (issue_id) must complete before parent (depends_on_id).
+          edges.push({ from: fromId, to: toId });
+        } else {
+          // Legacy format where from = parent, to = child. Child blocks parent.
+          edges.push({ from: toId, to: fromId });
+        }
+        return;
+      }
+
+      if (type === 'blocks' || type === 'blocked-by') {
         if (isBeadsOrientation) {
           // Beads graph data uses issue -> depends_on orientation.
           // Normalize to edges from blocker to blocked: depends_on (blocker) -> issue (blocked).
