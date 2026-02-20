@@ -1,0 +1,75 @@
+/* List Filter Controls */
+.list-filter-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  margin-bottom: 8px;
+  background-color: var(--vscode-sideBarSectionHeader-background);
+  border-radius: 4px;
+  flex-wrap: wrap;
+}
+
+.list-filter-controls__search {
+  position: relative;
+  flex: 1;
+  min-width: 150px;
+  max-width: 250px;
+}
+
+.list-filter-controls__search-input {
+  width: 100%;
+  background-color: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border);
+  border-radius: 3px;
+  padding: 4px 24px 4px 8px;
+  font-size: 11px;
+}
+
+.list-filter-controls__search-input:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.list-filter-controls__search-input::placeholder {
+  color: var(--vscode-input-placeholderForeground);
+}
+
+.list-filter-controls__clear-btn {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--vscode-descriptionForeground);
+  cursor: pointer;
+  font-size: 10px;
+  padding: 2px;
+  line-height: 1;
+}
+
+.list-filter-controls__clear-btn:hover {
+  color: var(--vscode-foreground);
+}
+
+.list-filter-controls__filter {
+  min-width: 100px;
+  max-width: 150px;
+}
+
+.list-filter-controls__clear-all {
+  background-color: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  border: none;
+  border-radius: 3px;
+  padding: 4px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.list-filter-controls__clear-all:hover {
+  background-color: var(--vscode-button-secondaryHoverBackground);
+}

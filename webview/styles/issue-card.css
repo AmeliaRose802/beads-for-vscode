@@ -1,0 +1,351 @@
+/* Issue Cards */
+.issue-card {
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  background-color: var(--vscode-editor-background);
+  border-left: 3px solid currentColor;
+  border-radius: 4px;
+  border: 1px solid var(--vscode-panel-border);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.issue-card:hover { background-color: var(--vscode-list-hoverBackground); border-color: var(--vscode-focusBorder); }
+.issue-card--not-clickable { cursor: default; }
+.issue-card--not-clickable:hover { background-color: var(--vscode-editor-background); border-color: var(--vscode-panel-border); }
+.issue-card--priority-p0 { border-left-color: var(--vscode-errorForeground); }
+.issue-card--priority-p1 { border-left-color: var(--vscode-textLink-foreground); }
+.issue-card--priority-p2, .issue-card--priority-p3, .issue-card--priority-p4 { border-left-color: var(--vscode-descriptionForeground); }
+
+/* Drag and Drop Styles */
+.issue-card--dragging {
+  opacity: 0.5;
+  cursor: move;
+}
+.issue-card--drop-target {
+  border: 2px dashed var(--vscode-textLink-foreground);
+  background-color: var(--vscode-list-hoverBackground);
+}
+.issue-card__drag-handle {
+  cursor: grab;
+  color: var(--vscode-descriptionForeground);
+  font-size: 10px;
+  margin-right: 4px;
+}
+.issue-card__drag-handle:active {
+  cursor: grabbing;
+}
+
+.issue-card__header { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 6px; }
+.issue-card__badges { display: flex; align-items: center; gap: 6px; }
+.issue-card__id { font-family: var(--vscode-editor-font-family); font-weight: 600; font-size: 11px; color: var(--vscode-textLink-foreground); }
+.issue-card__badge { padding: 2px 5px; border-radius: 3px; font-size: 10px; color: var(--vscode-badge-foreground); }
+.issue-card__badge--priority { font-weight: 600; }
+.issue-card__badge--priority-p0 { background-color: var(--vscode-errorForeground); }
+.issue-card__badge--priority-p1 { background-color: var(--vscode-textLink-foreground); color: #ffffff; }
+.issue-card__badge--priority-p2, .issue-card__badge--priority-p3, .issue-card__badge--priority-p4 { background-color: var(--vscode-descriptionForeground); }
+.issue-card__badge--type-bug { background-color: var(--vscode-errorForeground); }
+.issue-card__badge--type-feature { background-color: var(--vscode-terminal-ansiCyan); }
+.issue-card__badge--type-task { background-color: var(--vscode-terminal-ansiBlue); }
+.issue-card__badge--parent { background-color: var(--vscode-terminal-ansiBlue); color: var(--vscode-editor-background); }
+.issue-card__badge--children { background-color: var(--vscode-terminal-ansiGreen); color: var(--vscode-editor-background); }
+.issue-card__badge--blocked { background-color: var(--vscode-errorForeground); font-weight: 600; }
+.issue-card__status { font-size: 10px; font-weight: 500; }
+.issue-card__status--open { color: var(--vscode-terminal-ansiBlue); }
+.issue-card__status--in-progress { color: var(--vscode-terminal-ansiYellow); }
+.issue-card__status--closed { color: var(--vscode-terminal-ansiGreen); }
+.issue-card__status--blocked { color: var(--vscode-errorForeground); }
+
+/* Agent Status Badge */
+.agent-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background-color: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+  white-space: nowrap;
+}
+
+.agent-badge--dispatched { opacity: 0.8; }
+.agent-badge--open { background-color: var(--vscode-terminal-ansiBlue); color: var(--vscode-editor-background); }
+.agent-badge--pr-open { background-color: var(--vscode-terminal-ansiGreen); color: var(--vscode-editor-background); }
+.agent-badge--merged { background-color: var(--vscode-terminal-ansiMagenta); color: var(--vscode-editor-background); }
+.agent-badge--closed { opacity: 0.7; }
+
+.agent-badge__link,
+.agent-badge__pr-link {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.agent-badge__link:hover,
+.agent-badge__pr-link:hover {
+  text-decoration: underline;
+}
+
+.agent-badge__refresh {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  font-size: 10px;
+  line-height: 1;
+  opacity: 0.6;
+}
+
+.agent-badge__refresh:hover {
+  opacity: 1;
+}
+
+/* Inline Assignee Editor */
+.issue-card__assignee-editor {
+  position: relative;
+  min-width: 100px;
+  max-width: 200px;
+}
+
+.issue-card__assignee-display {
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  background-color: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.issue-card__assignee-display:hover {
+  background-color: var(--vscode-list-hoverBackground);
+}
+
+.issue-card__assignee-editor--active .issue-card__assignee-display {
+  display: none;
+}
+
+.issue-card__assignee-input-wrapper {
+  position: absolute;
+  top: -4px;
+  left: 0;
+  z-index: 100;
+  min-width: 180px;
+  background-color: var(--vscode-dropdown-background);
+  border: 1px solid var(--vscode-focusBorder);
+  border-radius: 3px;
+  padding: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.issue-card__assignee-input-wrapper .assignee-dropdown {
+  width: 100%;
+}
+
+.issue-card__assignee-input-wrapper .assignee-dropdown__input {
+  font-size: 11px;
+  padding: 4px 6px;
+}
+
+.issue-card__relationships-badge {
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  background-color: var(--vscode-textLink-foreground);
+  color: white;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.issue-card__actions { display: flex; gap: 4px; }
+.issue-card__action-btn {
+  background: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  border: 1px solid var(--vscode-button-border);
+  border-radius: 3px;
+  padding: 2px 6px;
+  font-size: 10px;
+  cursor: pointer;
+  font-weight: 500;
+}
+.issue-card__action-btn:hover { background: var(--vscode-button-secondaryHoverBackground); }
+.issue-card__action-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.issue-card__action-btn:disabled:hover {
+  background: var(--vscode-button-secondaryBackground);
+}
+.issue-card__action-btn--active { 
+  background: var(--vscode-button-background); 
+  color: var(--vscode-button-foreground); 
+}
+.issue-card__title { color: var(--vscode-foreground); font-size: 12px; line-height: 1.4; }
+
+.issue-card__tags {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.issue-card__tag {
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 10px;
+  line-height: 1.4;
+  background-color: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+  border: 1px solid var(--vscode-panel-border);
+  max-width: 100%;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+/* Quick Edit Dropdowns */
+.issue-card__quick-edit {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  padding: 8px;
+  background-color: var(--vscode-input-background);
+  border-radius: 4px;
+  border: 1px solid var(--vscode-input-border);
+  animation: expandDetails 0.15s ease-out;
+}
+
+.issue-card__quick-edit-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.issue-card__quick-edit-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--vscode-descriptionForeground);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.issue-card__quick-edit-select {
+  background-color: var(--vscode-dropdown-background);
+  color: var(--vscode-dropdown-foreground);
+  border: 1px solid var(--vscode-dropdown-border);
+  border-radius: 3px;
+  padding: 4px 6px;
+  font-size: 11px;
+  cursor: pointer;
+  font-family: var(--vscode-font-family);
+}
+
+.issue-card__quick-edit-select:hover {
+  border-color: var(--vscode-focusBorder);
+}
+
+.issue-card__quick-edit-select:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+/* Accordion Details */
+.issue-card__details {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--vscode-panel-border);
+  font-size: 11px;
+  animation: expandDetails 0.2s ease-out;
+}
+@keyframes expandDetails { from { opacity: 0; max-height: 0; } to { opacity: 1; max-height: 500px; } }
+.issue-card__description { margin-bottom: 8px; color: var(--vscode-descriptionForeground); }
+.issue-card__description strong { display: block; margin-bottom: 4px; color: var(--vscode-foreground); }
+.issue-card__acceptance, .issue-card__design, .issue-card__notes, .issue-card__assignee { 
+  margin-bottom: 8px; 
+  color: var(--vscode-descriptionForeground); 
+}
+.issue-card__acceptance strong, .issue-card__design strong, .issue-card__notes strong, .issue-card__assignee strong { 
+  display: block; 
+  margin-bottom: 4px; 
+  color: var(--vscode-foreground); 
+}
+.issue-card__loading {
+  padding: 8px;
+  text-align: center;
+  color: var(--vscode-descriptionForeground);
+  font-style: italic;
+}
+.issue-card__metadata { font-size: 10px; color: var(--vscode-descriptionForeground); }
+.issue-card__metadata div { margin-bottom: 2px; }
+.issue-card__metadata strong { font-weight: 600; }
+
+/* Relationships in expanded details */
+.issue-card__relationships {
+  margin-bottom: 8px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.issue-card__relationships strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--vscode-foreground);
+}
+
+.issue-card__relationships-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.issue-card__relationship-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.issue-card__relationship-label {
+  font-size: 10px;
+  color: var(--vscode-descriptionForeground);
+  font-weight: 500;
+}
+
+.issue-card__relationship-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.issue-card__relationship-item {
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-family: var(--vscode-editor-font-family);
+  cursor: pointer;
+}
+
+.issue-card__relationship-item--dependency {
+  background-color: var(--vscode-terminal-ansiBlue);
+  color: white;
+}
+
+.issue-card__relationship-item--dependent {
+  background-color: var(--vscode-terminal-ansiMagenta);
+  color: white;
+}
+
+.issue-card__relationship-item:hover {
+  opacity: 0.8;
+}
+
+.issue-card__relationship-empty {
+  font-size: 10px;
+  font-style: italic;
+  color: var(--vscode-descriptionForeground);
+}

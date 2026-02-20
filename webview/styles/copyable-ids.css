@@ -1,0 +1,44 @@
+/* Copyable issue IDs */
+.copyable-issue-id {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  line-height: inherit;
+}
+
+.copyable-issue-id:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.copyable-issue-id::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  transform: translate(-50%, -6px);
+  background-color: var(--vscode-editorHoverWidget-background);
+  color: var(--vscode-editorHoverWidget-foreground);
+  border: 1px solid var(--vscode-editorHoverWidget-border, var(--vscode-panel-border));
+  padding: 4px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  z-index: 20;
+}
+
+.copyable-issue-id:hover::after,
+.copyable-issue-id:focus-visible::after {
+  opacity: 1;
+}

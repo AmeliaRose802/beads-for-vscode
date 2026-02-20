@@ -1,0 +1,5 @@
+/* Issue Tree */
+.issue-tree { display: flex; flex-direction: column; gap: 8px; }
+.issue-tree--flat { padding-left: 0; }
+
+.issue-tree__empty { padding: 8px; color: var(--vscode-descriptionForeground); font-style: italic; }

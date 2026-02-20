@@ -1,0 +1,58 @@
+/* Hierarchy View */
+.hierarchy-view {
+  background-color: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.hierarchy-view__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.hierarchy-view__title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.hierarchy-view__root {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.hierarchy-view__root-id {
+  font-family: var(--vscode-editor-font-family);
+  font-weight: 600;
+  color: var(--vscode-textLink-foreground);
+}
+
+.hierarchy-view__root-title {
+  color: var(--vscode-descriptionForeground);
+  font-size: 11px;
+}
+
+.hierarchy-view__breadcrumbs {
+  margin-top: 4px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.hierarchy-view__crumb {
+  background: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  border: 1px solid var(--vscode-button-border);
+  border-radius: 3px;
+  padding: 2px 6px;
+  font-size: 11px;
+  cursor: pointer;
+}
+

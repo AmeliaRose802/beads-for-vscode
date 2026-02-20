@@ -1,0 +1,14 @@
+/* Output Display */
+.output-display { padding: 10px; }
+.output-display__command { color: var(--vscode-descriptionForeground); margin-bottom: 8px; }
+
+.output-display__closed-section { margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--vscode-panel-border); }
+.output-display__closed-summary {
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--vscode-descriptionForeground);
+  padding: 4px;
+  user-select: none;
+}
+.output-display__closed-items { margin-top: 8px; }

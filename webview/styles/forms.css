@@ -1,0 +1,9 @@
+/* Forms */
+.relationship-content { padding: 8px 4px; }
+.relationship-group { margin-bottom: 10px; }
+.relationship-label { display: block; font-size: 11px; font-weight: 500; margin-bottom: 4px; opacity: 0.9; }
+.relationship-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+.relationship-input-compact { font-size: 11px; padding: 5px 6px; }
+.relationship-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 12px; }
+.relationship-actions .action-btn:first-child:last-child { grid-column: 1 / -1; }
+.relationship-actions .clear-btn { grid-column: 1 / -1; width: 100%; margin-top: 4px; }

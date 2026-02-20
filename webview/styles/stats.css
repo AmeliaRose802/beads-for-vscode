@@ -1,0 +1,38 @@
+/* Stats Display */
+.stats-display { padding: 10px; }
+.stats-display__command { color: var(--vscode-descriptionForeground); margin-bottom: 12px; }
+.stats-display__header { color: var(--vscode-textPreformat-foreground); font-weight: 600; margin-bottom: 12px; font-size: 14px; }
+.stats-display__total {
+  padding: 12px;
+  margin-bottom: 12px;
+  background: var(--vscode-editor-background);
+  border-radius: 4px;
+  border-left: 4px solid var(--vscode-textLink-foreground);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.stats-display__total-label { color: var(--vscode-foreground); font-weight: 600; }
+.stats-display__total-value { color: var(--vscode-textLink-foreground); font-size: 20px; font-weight: 700; }
+.stats-display__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.stats-display__metric { padding: 10px; background: var(--vscode-editor-background); border-radius: 4px; margin-top: 12px; }
+.stats-display__metric-label { font-size: 10px; color: var(--vscode-descriptionForeground); margin-bottom: 4px; }
+.stats-display__metric-value { font-size: 16px; font-weight: 600; color: var(--vscode-terminal-ansiMagenta); }
+
+
+/* Stat Items */
+.stat-item { margin-bottom: 8px; padding: 8px; background: var(--vscode-editor-background); border-radius: 3px; }
+.stat-item--compact { margin-bottom: 0; padding: 6px; }
+.stat-item__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.stat-item__label { font-size: 10px; color: var(--vscode-foreground); }
+.stat-item__value { font-size: 13px; font-weight: 700; }
+.stat-item__bar { height: 3px; background: var(--vscode-input-background); border-radius: 2px; overflow: hidden; }
+.stat-item__bar-fill { height: 100%; transition: width 0.3s ease; }
+.stat-item__bar-fill.stat-item--blue { background-color: var(--vscode-terminal-ansiBlue); }
+.stat-item__bar-fill.stat-item--yellow { background-color: var(--vscode-terminal-ansiYellow); }
+.stat-item__bar-fill.stat-item--green { background-color: var(--vscode-terminal-ansiGreen); }
+.stat-item__bar-fill.stat-item--red { background-color: var(--vscode-errorForeground); }
+.stat-item--blue { color: var(--vscode-terminal-ansiBlue); }
+.stat-item--yellow { color: var(--vscode-terminal-ansiYellow); }
+.stat-item--green { color: var(--vscode-terminal-ansiGreen); }
+.stat-item--red { color: var(--vscode-errorForeground); }
