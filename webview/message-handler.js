@@ -213,7 +213,19 @@ function processMessage(message, ctx) {
       if (ctx.handleParallelPhaseDispatch) {
         ctx.handleParallelPhaseDispatch(message);
       }
+      if (message.type === 'parallelPhaseDispatchComplete' && ctx.trackBatchDispatch) {
+        ctx.trackBatchDispatch(message.results);
+      }
       break;
+    case 'agentStatusResult': {
+      if (message.success && message.beadsItemId && ctx.updateAgentStatus) {
+        ctx.updateAgentStatus(message.beadsItemId, {
+          issueState: message.issueState,
+          pr: message.pr
+        });
+      }
+      break;
+    }
     case 'epicUnblockResult': {
       if (!ctx.setOutput) break;
       if (message.success) {
@@ -235,6 +247,9 @@ function processMessage(message, ctx) {
     case 'githubConversionResult': {
       if (message.commandKey && ctx.completeCommandProgress) {
         ctx.completeCommandProgress(message.commandKey);
+      }
+      if (message.success && message.issueId && ctx.trackDispatch) {
+        ctx.trackDispatch(message.issueId, message.url, message.number, null);
       }
       if (!ctx.setOutput) {
         break;

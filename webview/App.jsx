@@ -19,6 +19,7 @@ import { useCreateFormState } from './hooks/useCreateFormState';
 import { useRelationshipFormState } from './hooks/useRelationshipFormState';
 import { usePanelVisibility } from './hooks/usePanelVisibility';
 import { useBulkUnblockEpics } from './hooks/useBulkUnblockEpics';
+import { useAgentTracking } from './hooks/useAgentTracking';
 const { parseListJSON, parseStatsOutput } = require('./parse-utils');
 const { buildCreateCommand, buildUpdateCommand, safeShellArg } = require('./form-handlers');
 const { buildHierarchyModel } = require('./hierarchy-utils');
@@ -53,6 +54,8 @@ const App = () => {
   const { parallelPhaseDispatch, openParallelPhaseDispatch, startParallelPhaseDispatch,
     cancelParallelPhaseDispatch, closeParallelPhaseDispatch, handleParallelPhaseDispatchMessage } =
     useParallelPhaseDispatch({ vscode, gitHubInfo });
+  const { agentTracking, trackDispatch, trackBatchDispatch,
+    updateAgentStatus, refreshAgentStatus } = useAgentTracking({ vscode });
   const {
     pendingOperations,
     beginCommandProgress,
@@ -150,6 +153,9 @@ const App = () => {
         setGitHubInfo,
         handleParallelPhaseDispatch: handleParallelPhaseDispatchMessage,
         handleEpicUnblockComplete: () => requestBlockingData(),
+        trackDispatch,
+        trackBatchDispatch,
+        updateAgentStatus,
         vscode,
         completeCommandProgress,
         buildHierarchyModel,
@@ -183,33 +189,14 @@ const App = () => {
         description: createForm.createDescription, parentId: createForm.createParentId,
         blocksId: createForm.createBlocksId, relatedId: createForm.createRelatedId, currentFile
       });
-    } catch (error) {
-      setOutput(`❌ Error: ${error.message}`);
-      setIsError(true);
-      return;
-    }
-    if (!command) {
-      setOutput('❌ Error: Title is required');
-      setIsError(true);
-      return;
-    }
+    } catch (error) { setOutput(`❌ Error: ${error.message}`); setIsError(true); return; }
+    if (!command) { setOutput('❌ Error: Title is required'); setIsError(true); return; }
     runInlineAction(command, `Created new ${createForm.createType}`);
   };
   const handleAISuggest = async () => {
-    if (!createForm.createTitle.trim()) {
-      setOutput('Error: Title is required for AI suggestions');
-      setIsError(true);
-      return;
-    }
-    setIsAILoading(true);
-    setOutput('🤖 Analyzing issue with AI...');
-    setIsError(false);
-    setIsSuccess(false);
-    vscode.postMessage({
-      type: 'getAISuggestions',
-      title: createForm.createTitle,
-      currentDescription: createForm.createDescription
-    });
+    if (!createForm.createTitle.trim()) { setOutput('Error: Title is required for AI suggestions'); setIsError(true); return; }
+    setIsAILoading(true); setOutput('🤖 Analyzing issue with AI...'); setIsError(false); setIsSuccess(false);
+    vscode.postMessage({ type: 'getAISuggestions', title: createForm.createTitle, currentDescription: createForm.createDescription });
   };
   const handleShowIssueInline = (issueId) => {
     if (issueDetails[issueId] || loadingDetails[issueId]) return;
@@ -237,14 +224,11 @@ const App = () => {
   const handlePokePokeStop = (itemId) =>
     vscode.postMessage({ type: 'pokepokeStop', itemId });
   const handleConvertToGitHub = (issueId) => {
-    if (!issueId) {
-      return;
-    }
+    if (!issueId) return;
     const commandId = `convertToGitHub:${issueId}`;
     beginCommandProgress(commandId, 'inline');
     setOutput(`🐙 Converting ${issueId} to a GitHub issue...`);
-    setIsError(false);
-    setIsSuccess(false);
+    setIsError(false); setIsSuccess(false);
     vscode.postMessage({ type: 'convertToGitHub', issueId, commandKey: commandId });
   };
 
@@ -458,6 +442,8 @@ const App = () => {
                 pokepokeInstances={pokepokeInstances}
                 issueDetails={issueDetails}
                 loadingDetails={loadingDetails}
+                agentTracking={agentTracking}
+                onRefreshAgentStatus={refreshAgentStatus}
                 vscode={vscode}
               />
             </ErrorBoundary>

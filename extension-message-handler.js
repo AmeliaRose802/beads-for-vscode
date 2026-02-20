@@ -2,7 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const { getAISuggestions } = require('./ai-suggestions');
 const { detectBeadsBackend } = require('./beads-backend');
-const { convertBeadsItemToGitHubIssue } = require('./github-converter');
+const { convertBeadsItemToGitHubIssue, checkGitHubIssueStatus } = require('./github-converter');
 const { getGitHubSession, detectGitHubRepo } = require('./github-auth');
 
 /**
@@ -238,23 +238,14 @@ async function handleWebviewMessage(data, context, vscode) {
       case 'dispatchParallelPhase': {
         const wsFolders = vscode.workspace.workspaceFolders;
         if (!wsFolders || wsFolders.length === 0) {
-          webviewView.webview.postMessage({
-            type: 'parallelPhaseDispatchError',
-            success: false,
-            error: 'An open workspace is required to dispatch a phase to GitHub Copilot.'
-          });
+          webviewView.webview.postMessage({ type: 'parallelPhaseDispatchError', success: false, error: 'An open workspace is required to dispatch a phase to GitHub Copilot.' });
           break;
         }
-
         const workspacePath = wsFolders[0].uri.fsPath;
         const phaseIndex = Number.isFinite(data.phaseIndex) ? data.phaseIndex : null;
-        const issueIds = Array.isArray(data.issueIds)
-          ? data.issueIds.map(String).map(s => s.trim()).filter(Boolean)
-          : [];
+        const issueIds = Array.isArray(data.issueIds) ? data.issueIds.map(String).map(s => s.trim()).filter(Boolean) : [];
         const uniqueIssueIds = [...new Set(issueIds)];
-
         const copilotAssignees = getCopilotAssignees(vscode);
-
         const plannedAssignments = uniqueIssueIds.map((id, idx) => {
           const assignee = copilotAssignees.length > 0 ? copilotAssignees[idx % copilotAssignees.length] : null;
           return { issueId: id, assignee };
@@ -389,22 +380,9 @@ async function handleWebviewMessage(data, context, vscode) {
 
           provider._invalidateCache();
           const removedCount = cascadedDeps.length - errors.length + 1;
-          webviewView.webview.postMessage({
-            type: 'epicUnblockResult',
-            success: true,
-            epicA,
-            epicB,
-            removedCount,
-            errors
-          });
+          webviewView.webview.postMessage({ type: 'epicUnblockResult', success: true, epicA, epicB, removedCount, errors });
         } catch (error) {
-          webviewView.webview.postMessage({
-            type: 'epicUnblockResult',
-            success: false,
-            epicA,
-            epicB,
-            error: error.message || 'Unknown error during epic unblock'
-          });
+          webviewView.webview.postMessage({ type: 'epicUnblockResult', success: false, epicA, epicB, error: error.message || 'Unknown error during epic unblock' });
         }
         break;
       }
@@ -462,6 +440,22 @@ async function handleWebviewMessage(data, context, vscode) {
               error: error.message || 'Unknown error occurred',
               commandKey: data.commandKey
             });
+        }
+        break;
+      }
+      case 'checkAgentStatus': {
+        const cwdPath = (vscode.workspace.workspaceFolders || [])[0]?.uri.fsPath;
+        try {
+          const statusResult = await checkGitHubIssueStatus(data.issueNumber, cwdPath);
+          webviewView.webview.postMessage({
+            type: 'agentStatusResult', beadsItemId: data.beadsItemId,
+            issueState: statusResult.issueState, pr: statusResult.pr, success: true
+          });
+        } catch (error) {
+          webviewView.webview.postMessage({
+            type: 'agentStatusResult', beadsItemId: data.beadsItemId,
+            success: false, error: error.message || 'Failed to check agent status'
+          });
         }
         break;
       }

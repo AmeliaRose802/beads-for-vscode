@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import AssigneeDropdown from './AssigneeDropdown';
 import CopyableIssueId from './CopyableIssueId';
 import IssueCardDetails from './IssueCardDetails';
+import AgentStatusBadge from './AgentStatusBadge';
 import { parseComments } from './utils';
 import { useAsyncData } from '../hooks/useAsyncData';
 
-const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, onPriorityChange, onAssigneeChange, onShowHierarchy, onPokePoke, onConvertToGitHub, pokepokeRunning, existingAssignees, detailedData, isLoadingDetails, onDragStart, onDrop, isDragging, isDropTarget, vscode, defaultExpanded = false }) => {
+const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, onPriorityChange, onAssigneeChange, onShowHierarchy, onPokePoke, onConvertToGitHub, pokepokeRunning, existingAssignees, detailedData, isLoadingDetails, onDragStart, onDrop, isDragging, isDropTarget, agentTracking, onRefreshAgentStatus, vscode, defaultExpanded = false }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [comments, setComments] = useState([]);
   const [showQuickEdit, setShowQuickEdit] = useState(false);
@@ -264,6 +265,9 @@ const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, on
             <span className="issue-card__badge issue-card__badge--blocked" title="Blocked by open dependencies">
               🚫 blocked
             </span>
+          )}
+          {agentTracking && (
+            <AgentStatusBadge tracking={agentTracking} onRefresh={onRefreshAgentStatus} />
           )}
           {totalRelationships > 0 && (
             <span className="issue-card__relationships-badge" title={`${issue.dependency_count || 0} dependencies, ${issue.dependent_count || 0} dependents`}>

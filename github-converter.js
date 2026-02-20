@@ -141,8 +141,72 @@ async function convertBeadsItemToGitHubIssue(item, cwd, options = {}) {
   });
 }
 
+/**
+ * Check the status of a GitHub issue and find linked PRs.
+ * @param {number} issueNumber - GitHub issue number
+ * @param {string} [cwd] - Working directory for repo context
+ * @returns {Promise<{issueState: string, pr: {number: number, url: string, state: string, title: string}|null}>}
+ */
+async function checkGitHubIssueStatus(issueNumber, cwd) {
+  if (!issueNumber || typeof issueNumber !== 'number') {
+    throw new Error('Valid issue number is required');
+  }
+
+  const execOpts = cwd ? { cwd, timeout: 15000 } : { timeout: 15000 };
+
+  const issueState = await new Promise((resolve, reject) => {
+    childProcess.execFile(
+      'gh', ['issue', 'view', String(issueNumber), '--json', 'state'],
+      execOpts,
+      (error, stdout) => {
+        if (error) {
+          return reject(new Error(`Failed to check issue #${issueNumber}: ${error.message}`));
+        }
+        try {
+          const data = JSON.parse(stdout);
+          resolve((data.state || 'OPEN').toUpperCase());
+        } catch {
+          resolve('UNKNOWN');
+        }
+      }
+    );
+  });
+
+  const pr = await new Promise((resolve) => {
+    childProcess.execFile(
+      'gh', ['pr', 'list', '--search', String(issueNumber), '--json', 'number,url,state,title', '--limit', '5'],
+      execOpts,
+      (error, stdout) => {
+        if (error || !stdout) {
+          resolve(null);
+          return;
+        }
+        try {
+          const prs = JSON.parse(stdout);
+          if (Array.isArray(prs) && prs.length > 0) {
+            const linked = prs[0];
+            resolve({
+              number: linked.number,
+              url: linked.url,
+              state: (linked.state || 'OPEN').toUpperCase(),
+              title: linked.title || ''
+            });
+          } else {
+            resolve(null);
+          }
+        } catch {
+          resolve(null);
+        }
+      }
+    );
+  });
+
+  return { issueState, pr };
+}
+
 module.exports = {
   convertBeadsItemToGitHubIssue,
+  checkGitHubIssueStatus,
   buildIssueBody,
   collectLabels,
   mapPriorityToLabel,
