@@ -259,9 +259,5 @@ function getEstimateMinutes(issue) {
 module.exports = {
   topologicalSort,
   calculateFanOut,
-  findCriticalPaths,
-  reconstructPath,
-  isSubpathOf,
-  getPriorityWeight,
-  getEstimateMinutes
+  findCriticalPaths
 };
