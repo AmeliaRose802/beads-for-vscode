@@ -1,4 +1,5 @@
 const assert = require('assert');
+const { loadCSSWithImports } = require('../css-loader');
 const fs = require('fs');
 const path = require('path');
 
@@ -38,7 +39,7 @@ suite('cascaded relationship indicators', () => {
   });
 
   test('styles define cascaded graph and hierarchy markers', () => {
-    const css = fs.readFileSync(path.join(__dirname, '../../webview/styles.css'), 'utf8');
+    const css = loadCSSWithImports(path.join(__dirname, '../../webview/styles/index.css'));
 
     assert.ok(
       css.includes('.dependency-graph__edge--cascaded'),

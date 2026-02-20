@@ -278,7 +278,7 @@ class BeadsViewProvider {
 
   _getHtmlForWebview(webview) {
     const htmlPath = path.join(this._extensionUri.fsPath, 'webview', 'index.html');
-    const cssPath = path.join(this._extensionUri.fsPath, 'webview', 'styles.css');
+    const cssPath = path.join(this._extensionUri.fsPath, 'webview', 'styles', 'index.css');
     const jsPath = path.join(this._extensionUri.fsPath, 'webview', 'bundle.js');
     
     const cssUri = webview.asWebviewUri(vscode.Uri.file(cssPath));

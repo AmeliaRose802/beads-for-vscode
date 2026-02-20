@@ -1,3 +1,5 @@
+/* ============================================================================ */
+
 /* Label Dropdown */
 .label-dropdown {
   position: relative;
@@ -80,3 +82,6 @@
   background-color: var(--vscode-list-activeSelectionBackground);
   color: var(--vscode-list-activeSelectionForeground);
 }
+
+
+/* ============================================================================ */

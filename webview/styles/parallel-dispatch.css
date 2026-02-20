@@ -1,3 +1,5 @@
+/* ============================================================================ */
+
 /* Parallel phase dispatch */
 .blocking-view__layer-header {
   display: flex;
@@ -71,3 +73,6 @@
   background-color: var(--vscode-toolbar-hoverBackground);
 }
 
+
+
+/* ============================================================================ */

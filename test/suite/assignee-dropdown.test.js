@@ -1,4 +1,5 @@
 const assert = require('assert');
+const { loadCSSWithImports } = require('../css-loader');
 const fs = require('fs');
 const path = require('path');
 
@@ -6,7 +7,7 @@ const ROOT = path.resolve(__dirname, '..', '..');
 
 suite('AssigneeDropdown component', () => {
   const componentPath = path.join(ROOT, 'webview', 'components', 'AssigneeDropdown.jsx');
-  const stylesPath = path.join(ROOT, 'webview', 'styles.css');
+  const stylesPath = path.join(ROOT, 'webview', 'styles/index.css');
 
   test('Component file exists', () => {
     assert.ok(fs.existsSync(componentPath), 'AssigneeDropdown.jsx should exist');
@@ -69,7 +70,7 @@ suite('AssigneeDropdown component', () => {
   });
 
   test('CSS defines assignee dropdown styles', () => {
-    const css = fs.readFileSync(stylesPath, 'utf8');
+    const css = loadCSSWithImports(stylesPath);
     assert.ok(css.includes('.assignee-dropdown'), 'CSS should define dropdown container');
     assert.ok(css.includes('.assignee-dropdown__input'), 'CSS should define input styling');
     assert.ok(css.includes('.assignee-dropdown__list'), 'CSS should define list styling');
@@ -79,7 +80,7 @@ suite('AssigneeDropdown component', () => {
   });
 
   test('CSS uses VS Code theme variables', () => {
-    const css = fs.readFileSync(stylesPath, 'utf8');
+    const css = loadCSSWithImports(stylesPath);
     // Extract assignee-dropdown section
     const startIdx = css.indexOf('.assignee-dropdown');
     const section = css.substring(startIdx);

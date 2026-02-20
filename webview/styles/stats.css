@@ -1,3 +1,5 @@
+/* ============================================================================ */
+
 /* Stats Display */
 .stats-display { padding: 10px; }
 .stats-display__command { color: var(--vscode-descriptionForeground); margin-bottom: 12px; }
@@ -36,3 +38,5 @@
 .stat-item--yellow { color: var(--vscode-terminal-ansiYellow); }
 .stat-item--green { color: var(--vscode-terminal-ansiGreen); }
 .stat-item--red { color: var(--vscode-errorForeground); }
+
+

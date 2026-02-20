@@ -1,3 +1,5 @@
+/* ============================================================================ */
+
 /* List Filter Controls */
 .list-filter-controls {
   display: flex;
@@ -73,3 +75,6 @@
 .list-filter-controls__clear-all:hover {
   background-color: var(--vscode-button-secondaryHoverBackground);
 }
+
+
+/* ============================================================================ */

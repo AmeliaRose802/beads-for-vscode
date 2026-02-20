@@ -1,3 +1,5 @@
+/* ============================================================================ */
+
 /* Inline dependency editing */
 .blocking-view__arrow-down--interactive,
 .blocking-view__critical-arrow--interactive {
@@ -148,3 +150,6 @@
 .hierarchy-view__close-btn:hover {
   color: var(--vscode-foreground);
 }
+
+
+/* ============================================================================ */

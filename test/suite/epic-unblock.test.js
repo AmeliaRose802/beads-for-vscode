@@ -1,4 +1,5 @@
 const assert = require('assert');
+const { loadCSSWithImports } = require('../css-loader');
 const fs = require('fs');
 const path = require('path');
 
@@ -238,9 +239,7 @@ suite('Epic unblock integration', () => {
   const extensionHandlerSrc = fs.readFileSync(
     path.join(__dirname, '../../extension-message-handler.js'), 'utf8'
   );
-  const stylesSrc = fs.readFileSync(
-    path.join(__dirname, '../../webview/styles.css'), 'utf8'
-  );
+  const stylesSrc = loadCSSWithImports(path.join(__dirname, '../../webview/styles/index.css'));
   const dialogSrc = fs.readFileSync(
     path.join(__dirname, '../../webview/components/BulkUnblockConfirmDialog.jsx'), 'utf8'
   );

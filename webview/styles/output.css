@@ -1,3 +1,5 @@
+/* ============================================================================ */
+
 /* Output */
 .output-section { padding: 0 4px; }
 .output-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
@@ -21,3 +23,6 @@
   padding: 2px 4px;
   border-radius: 2px;
 }
+
+
+/* ============================================================================ */

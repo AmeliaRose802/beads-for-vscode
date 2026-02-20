@@ -1,3 +1,5 @@
+/* ============================================================================ */
+
 /* Output Display */
 .output-display { padding: 10px; }
 .output-display__command { color: var(--vscode-descriptionForeground); margin-bottom: 8px; }
@@ -12,3 +14,6 @@
   user-select: none;
 }
 .output-display__closed-items { margin-top: 8px; }
+
+
+/* ============================================================================ */

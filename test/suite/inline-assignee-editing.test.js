@@ -1,4 +1,5 @@
 const assert = require('assert');
+const { loadCSSWithImports } = require('../css-loader');
 const fs = require('fs');
 const path = require('path');
 
@@ -9,7 +10,7 @@ suite('Inline Assignee Editing', () => {
   const outputDisplayPath = path.join(ROOT, 'webview', 'components', 'OutputDisplay.jsx');
   const appPath = path.join(ROOT, 'webview', 'App.jsx');
   const assigneeHandlerPath = path.join(ROOT, 'webview', 'hooks', 'createAssigneeChangeHandler.js');
-  const stylesPath = path.join(ROOT, 'webview', 'styles.css');
+  const stylesPath = path.join(ROOT, 'webview', 'styles/index.css');
   const hierarchyViewPath = path.join(ROOT, 'webview', 'components', 'HierarchyView.jsx');
 
   test('IssueCard accepts onAssigneeChange prop', () => {
@@ -153,7 +154,7 @@ suite('Inline Assignee Editing', () => {
   });
 
   test('CSS defines assignee editor styles', () => {
-    const css = fs.readFileSync(stylesPath, 'utf8');
+    const css = loadCSSWithImports(stylesPath);
     assert.ok(css.includes('.issue-card__assignee-editor'), 'should define assignee editor container');
     assert.ok(css.includes('.issue-card__assignee-display'), 'should define assignee display element');
     assert.ok(css.includes('.issue-card__assignee-input-wrapper'), 'should define input wrapper');
@@ -161,7 +162,7 @@ suite('Inline Assignee Editing', () => {
   });
 
   test('CSS styles assignee editor for inline editing', () => {
-    const css = fs.readFileSync(stylesPath, 'utf8');
+    const css = loadCSSWithImports(stylesPath);
     // Find the assignee editor section
     const startIdx = css.indexOf('.issue-card__assignee-editor');
     const section = css.substring(startIdx, startIdx + 2000);
@@ -172,7 +173,7 @@ suite('Inline Assignee Editing', () => {
   });
 
   test('CSS uses VS Code theme variables for assignee editor', () => {
-    const css = fs.readFileSync(stylesPath, 'utf8');
+    const css = loadCSSWithImports(stylesPath);
     const startIdx = css.indexOf('.issue-card__assignee-editor');
     const section = css.substring(startIdx, startIdx + 2000);
     
@@ -184,7 +185,7 @@ suite('Inline Assignee Editing', () => {
   });
 
   test('CSS has no inline styles in assignee editor', () => {
-    const css = fs.readFileSync(stylesPath, 'utf8');
+    const css = loadCSSWithImports(stylesPath);
     const startIdx = css.indexOf('.issue-card__assignee-editor');
     const section = css.substring(startIdx, startIdx + 2000);
     

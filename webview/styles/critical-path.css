@@ -1,3 +1,5 @@
+/* ============================================================================ */
+
 /* Critical Path Tree Styles */
 .blocking-view__critical-tree {
   display: flex;
@@ -307,3 +309,6 @@
   color: var(--vscode-descriptionForeground);
 }
 
+
+
+/* ============================================================================ */

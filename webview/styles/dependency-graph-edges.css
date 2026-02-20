@@ -1,3 +1,5 @@
+/* ============================================================================ */
+
 /* Dependency Graph */
 .dependency-graph {
   display: flex;
@@ -310,3 +312,6 @@
 .dependency-graph__edge--completed.dependency-graph__edge--dimmed {
   opacity: 0.08;
 }
+
+
+/* ============================================================================ */

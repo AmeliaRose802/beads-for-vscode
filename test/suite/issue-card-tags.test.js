@@ -1,4 +1,5 @@
 const assert = require('assert');
+const { loadCSSWithImports } = require('../css-loader');
 const fs = require('fs');
 const path = require('path');
 
@@ -15,8 +16,8 @@ suite('IssueCard tag rendering', () => {
   });
 
   test('Styles define tag classes with wrapping layout', () => {
-    const stylesPath = path.join(ROOT, 'webview', 'styles.css');
-    const css = fs.readFileSync(stylesPath, 'utf8');
+    const stylesPath = path.join(ROOT, 'webview', 'styles/index.css');
+    const css = loadCSSWithImports(stylesPath);
 
     assert.ok(css.includes('.issue-card__tags'), 'CSS should define container for issue-card tags');
     assert.ok(css.includes('flex-wrap: wrap'), 'Tag container should wrap on narrow views');

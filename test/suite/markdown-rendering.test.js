@@ -1,4 +1,5 @@
 const assert = require('assert');
+const { loadCSSWithImports } = require('../css-loader');
 const fs = require('fs');
 const path = require('path');
 
@@ -256,10 +257,7 @@ suite('IssueCardDetails uses MarkdownRenderer', () => {
 
 suite('Markdown CSS styles', () => {
   test('styles.css defines markdown rendering classes', () => {
-    const css = fs.readFileSync(
-      path.join(ROOT, 'webview', 'styles.css'),
-      'utf8'
-    );
+    const css = loadCSSWithImports(path.join(ROOT, 'webview', 'styles', 'index.css'));
     assert.ok(css.includes('.md-rendered'), 'CSS should define .md-rendered');
     assert.ok(css.includes('.md-code-block'), 'CSS should define .md-code-block');
     assert.ok(css.includes('.md-inline-code'), 'CSS should define .md-inline-code');

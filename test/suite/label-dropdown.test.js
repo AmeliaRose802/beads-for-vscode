@@ -1,4 +1,5 @@
 const assert = require('assert');
+const { loadCSSWithImports } = require('../css-loader');
 const fs = require('fs');
 const path = require('path');
 
@@ -6,7 +7,7 @@ const ROOT = path.resolve(__dirname, '..', '..');
 
 suite('LabelDropdown component', () => {
   const componentPath = path.join(ROOT, 'webview', 'components', 'LabelDropdown.jsx');
-  const stylesPath = path.join(ROOT, 'webview', 'styles.css');
+  const stylesPath = path.join(ROOT, 'webview', 'styles/index.css');
 
   test('Component file exists', () => {
     assert.ok(fs.existsSync(componentPath), 'LabelDropdown.jsx should exist');
@@ -55,7 +56,7 @@ suite('LabelDropdown component', () => {
   });
 
   test('CSS defines label dropdown styles', () => {
-    const css = fs.readFileSync(stylesPath, 'utf8');
+    const css = loadCSSWithImports(stylesPath);
     assert.ok(css.includes('.label-dropdown'), 'CSS should include dropdown container styles');
     assert.ok(css.includes('.label-dropdown__input'), 'CSS should include input styles');
     assert.ok(css.includes('.label-dropdown__list'), 'CSS should include list styles');
@@ -64,7 +65,7 @@ suite('LabelDropdown component', () => {
   });
 
   test('CSS uses VS Code theme variables for label dropdown', () => {
-    const css = fs.readFileSync(stylesPath, 'utf8');
+    const css = loadCSSWithImports(stylesPath);
     const start = css.indexOf('.label-dropdown');
     const section = start >= 0 ? css.substring(start, Math.min(css.length, start + 2000)) : '';
     assert.ok(section.includes('var(--vscode-input-background)'), 'should use VS Code input background');

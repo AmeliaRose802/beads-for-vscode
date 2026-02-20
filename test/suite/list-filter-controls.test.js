@@ -2,13 +2,14 @@
  * Tests for list filtering controls feature.
  */
 const assert = require('assert');
+const { loadCSSWithImports } = require('../css-loader');
 const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const componentPath = path.join(ROOT, 'webview', 'components', 'ListFilterControls.jsx');
 const outputDisplayPath = path.join(ROOT, 'webview', 'components', 'OutputDisplay.jsx');
-const stylesPath = path.join(ROOT, 'webview', 'styles.css');
+const stylesPath = path.join(ROOT, 'webview', 'styles/index.css');
 
 suite('List filtering controls', function() {
   suite('ListFilterControls component', function() {
@@ -110,30 +111,30 @@ suite('List filtering controls', function() {
 
   suite('CSS styles', function() {
     test('CSS defines list filter controls styles', function() {
-      const content = fs.readFileSync(stylesPath, 'utf-8');
+      const content = loadCSSWithImports(stylesPath);
       assert.ok(content.includes('.list-filter-controls'), 'Should have list-filter-controls class');
     });
 
     test('CSS defines search input styles', function() {
-      const content = fs.readFileSync(stylesPath, 'utf-8');
+      const content = loadCSSWithImports(stylesPath);
       assert.ok(content.includes('.list-filter-controls__search'), 'Should have search class');
       assert.ok(content.includes('.list-filter-controls__search-input'), 'Should have search input class');
     });
 
     test('CSS defines filter dropdown styles', function() {
-      const content = fs.readFileSync(stylesPath, 'utf-8');
+      const content = loadCSSWithImports(stylesPath);
       assert.ok(content.includes('.filter-dropdown'), 'Should have filter-dropdown class');
       assert.ok(content.includes('.filter-dropdown__input'), 'Should have filter dropdown input class');
       assert.ok(content.includes('.filter-dropdown__list'), 'Should have filter dropdown list class');
     });
 
     test('CSS defines clear all button styles', function() {
-      const content = fs.readFileSync(stylesPath, 'utf-8');
+      const content = loadCSSWithImports(stylesPath);
       assert.ok(content.includes('.list-filter-controls__clear-all'), 'Should have clear-all class');
     });
 
     test('CSS uses VS Code theme variables', function() {
-      const content = fs.readFileSync(stylesPath, 'utf-8');
+      const content = loadCSSWithImports(stylesPath);
       const filterSection = content.substring(
         content.indexOf('.list-filter-controls'),
         content.indexOf('.list-filter-controls') + 2000

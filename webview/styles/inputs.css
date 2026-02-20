@@ -1,3 +1,5 @@
+/* ============================================================================ */
+
 /* Input Components */
 /* Title Input Row for Create Panel */
 .title-input-row { display: flex; gap: 8px; align-items: center; }
@@ -48,3 +50,6 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   font-family: var(--vscode-editor-font-family);
   border: 1px solid var(--vscode-input-border);
 }
+
+
+/* ============================================================================ */

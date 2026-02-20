@@ -1,3 +1,5 @@
+/* ============================================================================ */
+
 /* Command progress indicator */
 .command-progress {
   margin-top: 10px;
@@ -45,3 +47,6 @@
 .command-progress__item--primary { color: var(--vscode-foreground); }
 .command-progress__item--inline { color: var(--vscode-terminal-ansiYellow); }
 .command-progress__item--background { color: var(--vscode-terminal-ansiBlue); opacity: 0.9; }
+
+
+/* ============================================================================ */

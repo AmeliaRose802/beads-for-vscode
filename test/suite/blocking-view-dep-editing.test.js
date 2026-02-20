@@ -1,4 +1,5 @@
 const assert = require('assert');
+const { loadCSSWithImports } = require('../css-loader');
 const fs = require('fs');
 const path = require('path');
 
@@ -15,9 +16,7 @@ suite('BlockingView inline dependency editing', () => {
   const dependencyGraphSrc = fs.readFileSync(
     path.join(__dirname, '../../webview/components/DependencyGraph.jsx'), 'utf8'
   );
-  const stylesSrc = fs.readFileSync(
-    path.join(__dirname, '../../webview/styles.css'), 'utf8'
-  );
+  const stylesSrc = loadCSSWithImports(path.join(__dirname, '../../webview/styles/index.css'));
   const appSrc = fs.readFileSync(
     path.join(__dirname, '../../webview/App.jsx'), 'utf8'
   );
