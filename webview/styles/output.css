@@ -1,0 +1,23 @@
+/* Output */
+.output-section { padding: 0 4px; }
+.output-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.output {
+  background-color: var(--vscode-editor-background);
+  color: var(--vscode-editor-foreground);
+  padding: 10px;
+  border-radius: 3px;
+  font-family: var(--vscode-editor-font-family);
+  font-size: 11px;
+  overflow: auto;
+  line-height: 1.5;
+  border: 1px solid var(--vscode-panel-border);
+  min-height: 200px;
+  max-height: 400px;
+}
+.output.error { color: var(--vscode-errorForeground); }
+.output.success { color: var(--vscode-terminal-ansiGreen); }
+.output code {
+  background-color: var(--vscode-textCodeBlock-background);
+  padding: 2px 4px;
+  border-radius: 2px;
+}

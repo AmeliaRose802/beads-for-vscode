@@ -1,0 +1,308 @@
+/* Dependency Graph */
+.dependency-graph {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 400px;
+  background-color: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.dependency-graph--empty {
+  min-height: 200px;
+}
+
+.dependency-graph__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background-color: var(--vscode-sideBarSectionHeader-background);
+  border-bottom: 1px solid var(--vscode-panel-border);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dependency-graph__filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.dependency-graph__filter-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--vscode-foreground);
+  cursor: pointer;
+  user-select: none;
+}
+
+.dependency-graph__filter-toggle input[type="checkbox"] {
+  width: 12px;
+  height: 12px;
+  accent-color: var(--vscode-textLink-foreground);
+}
+
+.dependency-graph__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--vscode-foreground);
+  margin: 0;
+}
+
+.dependency-graph__controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dependency-graph__control-btn {
+  background-color: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  border: none;
+  border-radius: 3px;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dependency-graph__control-btn:hover {
+  background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+.dependency-graph__zoom-level {
+  font-size: 10px;
+  color: var(--vscode-descriptionForeground);
+  min-width: 35px;
+  text-align: center;
+}
+
+.dependency-graph__close-btn {
+  background: transparent;
+  border: none;
+  color: var(--vscode-foreground);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 8px;
+  border-radius: 3px;
+}
+
+.dependency-graph__close-btn:hover {
+  background-color: var(--vscode-toolbar-hoverBackground);
+}
+
+.dependency-graph__legend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+  background-color: var(--vscode-editor-background);
+  border-bottom: 1px solid var(--vscode-panel-border);
+  font-size: 10px;
+  color: var(--vscode-descriptionForeground);
+  flex-wrap: wrap;
+}
+
+.dependency-graph__legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dependency-graph__legend-icon {
+  font-size: 12px;
+}
+
+.dependency-graph__legend-icon--open { color: var(--vscode-terminal-ansiBlue); }
+.dependency-graph__legend-icon--in-progress { color: var(--vscode-terminal-ansiYellow); }
+.dependency-graph__legend-icon--blocked { color: var(--vscode-errorForeground); }
+.dependency-graph__legend-icon--closed { color: var(--vscode-terminal-ansiGreen); }
+
+.dependency-graph__legend-line {
+  display: inline-block;
+  width: 18px;
+  height: 0;
+  border-top: 2px solid var(--vscode-textLink-foreground);
+  margin-right: 4px;
+  transform: translateY(-1px);
+}
+
+.dependency-graph__legend-line--blocked-by {
+  border-top-color: var(--vscode-terminal-ansiYellow);
+}
+
+.dependency-graph__legend-line--blocks {
+  border-top-color: var(--vscode-errorForeground);
+}
+
+.dependency-graph__legend-line--parent-child {
+  border-top-color: var(--vscode-textLink-foreground);
+}
+
+.dependency-graph__legend-line--related {
+  border-top-color: var(--vscode-descriptionForeground);
+  border-top-style: dashed;
+}
+
+.dependency-graph__legend-line--cascaded {
+  border-top-style: dashed;
+}
+
+.dependency-graph__legend-separator {
+  color: var(--vscode-panel-border);
+}
+
+.dependency-graph__container {
+  flex: 1;
+  overflow: hidden;
+  cursor: grab;
+  position: relative;
+  background-color: var(--vscode-editor-background);
+  background-image: 
+    radial-gradient(circle, var(--vscode-panel-border) 1px, transparent 1px);
+  background-size: 20px 20px;
+  contain: layout style;
+  will-change: scroll-position;
+}
+
+.dependency-graph__layer-background {
+  position: absolute;
+  z-index: -2;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  transition: background-color 0.2s ease;
+}
+
+.dependency-graph__layer-background--even {
+  background-color: color-mix(in srgb, var(--vscode-textLink-foreground) 3%, var(--vscode-editor-background));
+}
+
+.dependency-graph__layer-background--odd {
+  background-color: color-mix(in srgb, var(--vscode-terminal-ansiBlue) 2%, var(--vscode-editor-background));
+}
+
+.dependency-graph__epic-group {
+  position: absolute;
+  z-index: -1;
+  border: 2px solid color-mix(in srgb, var(--vscode-terminal-ansiMagenta) 35%, var(--vscode-panel-border));
+  border-radius: 10px;
+  background-color: color-mix(in srgb, var(--vscode-terminal-ansiMagenta) 6%, var(--vscode-editor-background));
+}
+
+.dependency-graph__container:active {
+  cursor: grabbing;
+}
+
+.dependency-graph__canvas {
+  position: relative;
+  transform-origin: 0 0;
+  min-width: 100%;
+  min-height: 100%;
+  contain: layout style paint;
+  will-change: transform;
+}
+
+.dependency-graph__edges {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.dependency-graph__edge {
+  fill: none;
+  stroke: var(--vscode-textLink-foreground);
+  color: var(--vscode-textLink-foreground);
+  stroke-width: 2;
+  opacity: 0.4;
+  transition: all 0.3s ease;
+  will-change: opacity, stroke-width;
+}
+
+/* Dimmed state for non-related edges during hover */
+.dependency-graph__edge--dimmed {
+  opacity: 0.15;
+  stroke-width: 1.5;
+}
+
+.dependency-graph__edge--clickable {
+  cursor: pointer;
+  pointer-events: stroke;
+}
+
+.dependency-graph__edge--clickable:hover {
+  stroke-width: 4;
+  opacity: 1;
+}
+
+/* Relationship type styling */
+.dependency-graph__edge--blocked-by {
+  stroke: var(--vscode-terminal-ansiYellow);
+  color: var(--vscode-terminal-ansiYellow);
+  opacity: 0.6;
+}
+
+.dependency-graph__edge--blocks {
+  stroke: var(--vscode-errorForeground);
+  color: var(--vscode-errorForeground);
+  opacity: 0.65;
+}
+
+.dependency-graph__edge--cascaded {
+  stroke-dasharray: 6, 4;
+}
+
+.dependency-graph__edge--parent-child {
+  stroke: var(--vscode-textLink-foreground);
+  color: var(--vscode-textLink-foreground);
+  opacity: 0.5;
+}
+
+.dependency-graph__edge--related {
+  stroke: var(--vscode-descriptionForeground);
+  color: var(--vscode-descriptionForeground);
+  stroke-dasharray: 4, 3;
+  opacity: 0.35;
+}
+
+.dependency-graph__edge--high-priority {
+  stroke: var(--vscode-errorForeground);
+  stroke-width: 2.5;
+  opacity: 0.7;
+}
+
+.dependency-graph__edge--highlighted {
+  opacity: 1 !important;
+  stroke-width: 3.5;
+  transition: all 0.2s ease;
+  filter: drop-shadow(0 0 2px currentColor);
+}
+
+.dependency-graph__edge--highlighted.dependency-graph__edge--high-priority {
+  stroke-width: 4.5;
+  filter: drop-shadow(0 0 3px currentColor);
+}
+
+.dependency-graph__edge--completed {
+  opacity: 0.2;
+  stroke-dasharray: 5, 5;
+  transition: all 0.3s ease;
+}
+
+.dependency-graph__edge--completed.dependency-graph__edge--highlighted {
+  opacity: 0.6 !important;
+}
+
+.dependency-graph__edge--completed.dependency-graph__edge--dimmed {
+  opacity: 0.08;
+}

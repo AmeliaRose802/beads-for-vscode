@@ -1,0 +1,40 @@
+/* Buttons */
+.button-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 0 4px; }
+.action-btn, .run-btn {
+  background-color: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border: none;
+  padding: 8px 12px;
+  border-radius: 3px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.action-btn { text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.action-btn:hover, .run-btn:hover { background-color: var(--vscode-button-hoverBackground); }
+.action-btn:active { opacity: 0.8; }
+.run-btn { padding: 6px 12px; white-space: nowrap; }
+
+.clear-btn {
+  background-color: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  border: none;
+  padding: 4px 10px;
+  border-radius: 3px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.clear-btn:hover { background-color: var(--vscode-button-secondaryHoverBackground); }
+
+/* Output header actions */
+.output-header__actions { display: flex; gap: 4px; align-items: center; }
+.refresh-btn {
+  background-color: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  border: none;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.refresh-btn:hover { background-color: var(--vscode-button-secondaryHoverBackground); }

@@ -1,0 +1,268 @@
+
+.dependency-graph__node {
+  position: absolute;
+  width: 200px;
+  padding: 8px 10px;
+  background-color: var(--vscode-editor-background);
+  border: 2px solid var(--vscode-panel-border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease, transform 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  will-change: transform, opacity, filter;
+}
+
+.dependency-graph__node:hover,
+.dependency-graph__node--hovered {
+  border-color: var(--vscode-focusBorder);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-3px) scale(1.02);
+}
+
+.dependency-graph__node--selected {
+  border-color: var(--vscode-textLink-foreground);
+  border-width: 3px;
+  box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.2);
+  transform: scale(1.05);
+}
+
+.dependency-graph__node--completed {
+  opacity: 0.5;
+  filter: grayscale(20%);
+  transition: all 0.3s ease;
+}
+
+.dependency-graph__node--completed:hover,
+.dependency-graph__node--completed.dependency-graph__node--hovered {
+  opacity: 0.8;
+  filter: grayscale(10%);
+  transform: translateY(-2px) scale(1.01);
+}
+
+.dependency-graph__node.priority-p0 {
+  border-left: 4px solid var(--vscode-errorForeground);
+}
+
+.dependency-graph__node.priority-p1 {
+  border-left: 4px solid var(--vscode-textLink-foreground);
+}
+
+.dependency-graph__node.priority-default {
+  border-left: 4px solid var(--vscode-descriptionForeground);
+}
+
+.dependency-graph__node.type-epic {
+  background-color: color-mix(in srgb, var(--vscode-terminal-ansiMagenta) 10%, var(--vscode-editor-background));
+}
+
+.dependency-graph__node--epic-child {
+  border-style: dashed;
+}
+
+.dependency-graph__node.type-feature {
+  background-color: color-mix(in srgb, var(--vscode-terminal-ansiCyan) 10%, var(--vscode-editor-background));
+}
+
+.dependency-graph__node.type-bug {
+  background-color: color-mix(in srgb, var(--vscode-errorForeground) 10%, var(--vscode-editor-background));
+}
+
+.dependency-graph__node-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.dependency-graph__node-status {
+  font-size: 12px;
+}
+
+.dependency-graph__node-status--open { color: var(--vscode-terminal-ansiBlue); }
+.dependency-graph__node-status--in_progress { color: var(--vscode-terminal-ansiYellow); }
+.dependency-graph__node-status--blocked { color: var(--vscode-errorForeground); }
+.dependency-graph__node-status--closed { color: var(--vscode-terminal-ansiGreen); }
+.dependency-graph__node-status--deferred { color: var(--vscode-terminal-ansiCyan); }
+
+.dependency-graph__node-id {
+  font-family: var(--vscode-editor-font-family);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--vscode-textLink-foreground);
+}
+
+.dependency-graph__node-priority {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 4px;
+  border-radius: 2px;
+  margin-left: auto;
+}
+
+.dependency-graph__node-priority--p0 {
+  background-color: var(--vscode-errorForeground);
+  color: white;
+}
+
+.dependency-graph__node-priority--p1 {
+  background-color: var(--vscode-textLink-foreground);
+  color: #ffffff;
+}
+
+.dependency-graph__node-priority--p2,
+.dependency-graph__node-priority--p3,
+.dependency-graph__node-priority--p4 {
+  background-color: var(--vscode-descriptionForeground);
+  color: var(--vscode-editor-background);
+}
+
+.dependency-graph__node-title {
+  font-size: 11px;
+  color: var(--vscode-foreground);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dependency-graph__node-type {
+  font-size: 9px;
+  color: var(--vscode-descriptionForeground);
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Count badges for dependency graph nodes */
+.dependency-graph__node-counts {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.dependency-graph__count-badge {
+  font-size: 8px;
+  font-weight: 600;
+  padding: 2px 4px;
+  border-radius: 3px;
+  white-space: nowrap;
+  cursor: help;
+}
+
+.dependency-graph__count-badge--blocked-by {
+  background-color: color-mix(in srgb, var(--vscode-errorForeground) 20%, var(--vscode-editor-background));
+  color: var(--vscode-errorForeground);
+  border: 1px solid color-mix(in srgb, var(--vscode-errorForeground) 30%, var(--vscode-editor-background));
+}
+
+.dependency-graph__count-badge--blocks {
+  background-color: color-mix(in srgb, var(--vscode-terminal-ansiBlue) 20%, var(--vscode-editor-background));
+  color: var(--vscode-terminal-ansiBlue);
+  border: 1px solid color-mix(in srgb, var(--vscode-terminal-ansiBlue) 30%, var(--vscode-editor-background));
+}
+
+.dependency-graph__details {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  width: 250px;
+  background-color: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 6px;
+  padding: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  z-index: 100;
+}
+
+.dependency-graph__details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.dependency-graph__details-header strong {
+  font-family: var(--vscode-editor-font-family);
+  color: var(--vscode-textLink-foreground);
+  font-size: 12px;
+}
+
+.dependency-graph__details-id {
+  font-family: var(--vscode-editor-font-family);
+  color: var(--vscode-textLink-foreground);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dependency-graph__details-close {
+  background: transparent;
+  border: none;
+  color: var(--vscode-descriptionForeground);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 4px;
+}
+
+.dependency-graph__details-close:hover {
+  color: var(--vscode-foreground);
+}
+
+.dependency-graph__details-title {
+  font-size: 12px;
+  color: var(--vscode-foreground);
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.dependency-graph__details-meta {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.dependency-graph__details-badge {
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+.dependency-graph__details-badge--epic { background-color: var(--vscode-terminal-ansiMagenta); color: white; }
+.dependency-graph__details-badge--feature { background-color: var(--vscode-terminal-ansiCyan); color: black; }
+.dependency-graph__details-badge--bug { background-color: var(--vscode-errorForeground); color: white; }
+.dependency-graph__details-badge--task { background-color: var(--vscode-terminal-ansiBlue); color: white; }
+.dependency-graph__details-badge--chore { background-color: var(--vscode-descriptionForeground); color: var(--vscode-editor-background); }
+
+.dependency-graph__details-badge--p0 { background-color: var(--vscode-errorForeground); color: white; }
+.dependency-graph__details-badge--p1 { background-color: var(--vscode-textLink-foreground); color: #ffffff; }
+.dependency-graph__details-badge--p2,
+.dependency-graph__details-badge--p3,
+.dependency-graph__details-badge--p4 { background-color: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }
+
+.dependency-graph__details-status {
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.dependency-graph__details-status--open { color: var(--vscode-terminal-ansiBlue); }
+.dependency-graph__details-status--in_progress { color: var(--vscode-terminal-ansiYellow); }
+.dependency-graph__details-status--blocked { color: var(--vscode-errorForeground); }
+.dependency-graph__details-status--closed { color: var(--vscode-terminal-ansiGreen); }
+
+.dependency-graph__empty-message {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  text-align: center;
+  color: var(--vscode-descriptionForeground);
+}
+
+.dependency-graph__empty-message p {
+  margin: 4px 0;
+}
+
