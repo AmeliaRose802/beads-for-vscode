@@ -2788,6 +2788,10 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   font-size: 14px;
   line-height: 1;
 }
+.issue-card__action-btn--copilot {
+  font-size: 12px;
+  line-height: 1;
+}
 
 @keyframes pokepoke-pulse {
   0%, 100% { opacity: 1; }

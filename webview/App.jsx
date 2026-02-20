@@ -20,6 +20,7 @@ import { useRelationshipFormState } from './hooks/useRelationshipFormState';
 import { usePanelVisibility } from './hooks/usePanelVisibility';
 import { useBulkUnblockEpics } from './hooks/useBulkUnblockEpics';
 import { useAgentTracking } from './hooks/useAgentTracking';
+import { useCopilotActions } from './hooks/useCopilotActions';
 const { parseListJSON, parseStatsOutput } = require('./parse-utils');
 const { buildCreateCommand, buildUpdateCommand, safeShellArg } = require('./form-handlers');
 const { buildHierarchyModel } = require('./hierarchy-utils');
@@ -109,6 +110,14 @@ const App = () => {
     outputRef,
     beginCommandProgress,
     completeCommandProgress
+  });
+  const { handleConvertToGitHub, handleAssignToCopilot } = useCopilotActions({
+    vscode,
+    gitHubInfo,
+    beginCommandProgress,
+    setOutput,
+    setIsError,
+    setIsSuccess
   });
   useEffect(() => {
     outputRef.current = output;
@@ -223,14 +232,6 @@ const App = () => {
     vscode.postMessage({ type: 'pokepokeLaunch', itemId, title, isTree });
   const handlePokePokeStop = (itemId) =>
     vscode.postMessage({ type: 'pokepokeStop', itemId });
-  const handleConvertToGitHub = (issueId) => {
-    if (!issueId) return;
-    const commandId = `convertToGitHub:${issueId}`;
-    beginCommandProgress(commandId, 'inline');
-    setOutput(`🐙 Converting ${issueId} to a GitHub issue...`);
-    setIsError(false); setIsSuccess(false);
-    vscode.postMessage({ type: 'convertToGitHub', issueId, commandKey: commandId });
-  };
 
   const handleDepAction = (action) => {
     const { sourceBead, targetBead, relationType } = relationshipForm;
@@ -394,6 +395,7 @@ const App = () => {
                 onShowHierarchy={handleShowHierarchy}
                 onPokePoke={handlePokePoke}
                 onConvertToGitHub={handleConvertToGitHub}
+                onAssignToCopilot={handleAssignToCopilot}
                 onDispatchPhase={openParallelPhaseDispatch}
                 pokepokeInstances={pokepokeInstances}
                 vscode={vscode}
@@ -439,6 +441,7 @@ const App = () => {
                 onShowHierarchy={handleShowHierarchy}
                 onPokePoke={handlePokePoke}
                 onConvertToGitHub={handleConvertToGitHub}
+                onAssignToCopilot={handleAssignToCopilot}
                 pokepokeInstances={pokepokeInstances}
                 issueDetails={issueDetails}
                 loadingDetails={loadingDetails}

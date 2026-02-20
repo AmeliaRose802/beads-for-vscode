@@ -32,6 +32,7 @@ const BlockingView = ({
   onShowHierarchy,
   onPokePoke,
   onConvertToGitHub,
+  onAssignToCopilot,
   onDispatchPhase,
   pokepokeInstances,
   vscode
@@ -429,6 +430,7 @@ const BlockingView = ({
               onShowHierarchy={onShowHierarchy}
               onPokePoke={onPokePoke}
               onConvertToGitHub={onConvertToGitHub}
+              onAssignToCopilot={onAssignToCopilot}
               pokepokeRunning={pokepokeInstances?.some(
                 (instance) =>
                   instance.itemId === selectedCardIssue.id &&

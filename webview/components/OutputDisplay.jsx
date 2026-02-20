@@ -128,7 +128,29 @@ function matchesPriority(issue, priorityFilter) {
   return issuePriority === filterPriority;
 }
 
-const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, onReopenIssue, onEditIssue, onLinkParent, onTypeChange, onPriorityChange, onAssigneeChange, onShowHierarchy, onPokePoke, onConvertToGitHub, pokepokeInstances, issueDetails = {}, loadingDetails = {}, agentTracking = {}, onRefreshAgentStatus, vscode }) => {
+const OutputDisplay = ({
+  output,
+  isError,
+  isSuccess,
+  onShowIssue,
+  onCloseIssue,
+  onReopenIssue,
+  onEditIssue,
+  onLinkParent,
+  onTypeChange,
+  onPriorityChange,
+  onAssigneeChange,
+  onShowHierarchy,
+  onPokePoke,
+  onConvertToGitHub,
+  onAssignToCopilot,
+  pokepokeInstances,
+  issueDetails = {},
+  loadingDetails = {},
+  agentTracking = {},
+  onRefreshAgentStatus,
+  vscode
+}) => {
   const [draggedIssue, setDraggedIssue] = useState(null);
   const [pageSize, setPageSize] = useState(getStoredPageSize);
   const [currentPage, setCurrentPage] = useState(1);
@@ -272,6 +294,7 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
                 onShowHierarchy={onShowHierarchy}
                 onPokePoke={onPokePoke}
                 onConvertToGitHub={onConvertToGitHub}
+                onAssignToCopilot={onAssignToCopilot}
                 pokepokeRunning={pokepokeInstances && pokepokeInstances.some(i => i.itemId === issue.id && (i.state === 'running' || i.state === 'starting'))}
                 existingAssignees={existingAssignees}
                 detailedData={issueDetails[issue.id]}
@@ -305,6 +328,7 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
                   onShowHierarchy={onShowHierarchy}
                   onAssigneeChange={onAssigneeChange}
                   onConvertToGitHub={onConvertToGitHub}
+                  onAssignToCopilot={onAssignToCopilot}
                   existingAssignees={existingAssignees}
                   detailedData={issueDetails[issue.id]}
                   isLoadingDetails={loadingDetails[issue.id]}

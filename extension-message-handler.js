@@ -3,19 +3,9 @@ const fs = require('fs');
 const { getAISuggestions } = require('./ai-suggestions');
 const { detectBeadsBackend } = require('./beads-backend');
 const { convertBeadsItemToGitHubIssue, checkGitHubIssueStatus } = require('./github-converter');
+const { assignCopilotToIssue } = require('./github-copilot');
 const { getGitHubSession, detectGitHubRepo } = require('./github-auth');
-
-/**
- * Read and validate the copilotAssignees setting.
- * @param {import('vscode')} vscode - VS Code API
- * @returns {string[]}
- */
-function getCopilotAssignees(vscode) {
-  const raw = vscode.workspace.getConfiguration('beads-ui.github').get('copilotAssignees', ['github-copilot']);
-  return Array.isArray(raw)
-    ? raw.map(String).map(s => s.trim()).filter(Boolean)
-    : ['github-copilot'];
-}
+const { handleAssignToCopilotMessage, getCopilotAssignees } = require('./assign-copilot-handler');
 
 /**
  * Handle messages from the webview.
@@ -439,7 +429,7 @@ async function handleWebviewMessage(data, context, vscode) {
               success: false,
               error: error.message || 'Unknown error occurred',
               commandKey: data.commandKey
-            });
+           });
         }
         break;
       }
@@ -457,6 +447,19 @@ async function handleWebviewMessage(data, context, vscode) {
             success: false, error: error.message || 'Failed to check agent status'
           });
         }
+        break;
+      }
+      case 'assignToCopilot': {
+        await handleAssignToCopilotMessage(data, {
+          provider,
+          webviewView,
+          vscode,
+          getCopilotAssignees,
+          convertBeadsItemToGitHubIssue,
+          detectGitHubRepo,
+          getGitHubSession,
+          assignCopilotToIssue
+        });
         break;
       }
       case 'logError': {

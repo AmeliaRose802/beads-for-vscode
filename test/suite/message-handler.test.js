@@ -604,6 +604,40 @@ suite('message-handler', () => {
     });
   });
 
+  suite('copilotDispatchResult', () => {
+    test('shows success message and completes progress', () => {
+      const ctx = buildCtx();
+      const clock = sinon.useFakeTimers();
+      processMessage({
+        type: 'copilotDispatchResult',
+        success: true,
+        issueId: 'bd-7',
+        url: 'https://github.com/owner/repo/issues/7',
+        assignedTo: 'github-copilot',
+        commandKey: 'assignCopilot:bd-7'
+      }, ctx);
+      assert.ok(ctx.setOutput.called);
+      assert.ok(ctx.setIsError.calledWith(false));
+      assert.ok(ctx.completeCommandProgress.calledWith('assignCopilot:bd-7'));
+      clock.restore();
+    });
+
+    test('shows error message on failure', () => {
+      const ctx = buildCtx();
+      processMessage({
+        type: 'copilotDispatchResult',
+        success: false,
+        error: 'no token',
+        issueId: 'bd-7',
+        commandKey: 'assignCopilot:bd-7',
+        url: 'https://github.com/owner/repo/issues/7'
+      }, ctx);
+      assert.ok(ctx.setOutput.called);
+      assert.ok(ctx.setIsError.calledWith(true));
+      assert.ok(ctx.completeCommandProgress.calledWith('assignCopilot:bd-7'));
+    });
+  });
+
   suite('unknown message type', () => {
     test('does nothing for unknown types', () => {
       const ctx = buildCtx();
