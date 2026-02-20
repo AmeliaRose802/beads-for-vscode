@@ -88,7 +88,7 @@ npm run test:coverage
 
 ### Testing
 
-This extension includes comprehensive test coverage with 100+ tests:
+This extension includes comprehensive test coverage with 680+ tests:
 
 ```bash
 # Run all tests (lint + unit tests)
