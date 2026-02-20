@@ -175,6 +175,9 @@ function checkCoverage() {
       'npx c8',
       '--include "webview/*.js"',
       '--include "beads-backend.js"',
+      '--include "github-converter.js"',
+      '--include "github-auth.js"',
+      '--include "github-copilot.js"',
       '--include "extension-message-handler.js"',
       `--lines ${MIN_COVERAGE} --branches ${MIN_COVERAGE} --functions ${MIN_COVERAGE}`,
       '-- npm run test:unit --silent'
