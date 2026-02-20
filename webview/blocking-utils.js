@@ -216,9 +216,19 @@ function findParallelGroups(nodeIds, edges, issueMap) {
     groups[d].push(id);
   });
 
+  // Sort items within each phase by priority (P0 first, P4 last)
+  const sortByPriority = (ids) => {
+    if (!issueMap) return ids;
+    return ids.slice().sort((a, b) => {
+      const pa = issueMap[a]?.priority ?? 2;
+      const pb = issueMap[b]?.priority ?? 2;
+      return pa - pb;
+    });
+  };
+
   return Object.keys(groups)
     .sort((a, b) => Number(a) - Number(b))
-    .map(key => groups[key]);
+    .map(key => sortByPriority(groups[key]));
 }
 
 /** Apply filters to a list of issue IDs. */
