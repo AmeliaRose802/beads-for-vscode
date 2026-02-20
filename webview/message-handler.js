@@ -214,6 +214,24 @@ function processMessage(message, ctx) {
         ctx.handleParallelPhaseDispatch(message);
       }
       break;
+    case 'epicUnblockResult': {
+      if (!ctx.setOutput) break;
+      if (message.success) {
+        const errNote = message.errors && message.errors.length > 0
+          ? ` (${message.errors.length} failed)`
+          : '';
+        ctx.setOutput(`🔓 Unblocked ${message.epicA} ↔ ${message.epicB}: ${message.removedCount} relationship${message.removedCount !== 1 ? 's' : ''} removed${errNote}`);
+        ctx.setIsError(false);
+        flashSuccess();
+      } else {
+        ctx.setOutput(`❌ Epic unblock failed: ${message.error || 'Unknown error'}`);
+        ctx.setIsError(true);
+      }
+      if (ctx.handleEpicUnblockComplete) {
+        ctx.handleEpicUnblockComplete(message);
+      }
+      break;
+    }
     case 'githubConversionResult': {
       if (message.commandKey && ctx.completeCommandProgress) {
         ctx.completeCommandProgress(message.commandKey);
