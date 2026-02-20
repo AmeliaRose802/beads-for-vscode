@@ -382,6 +382,45 @@ suite('blocking-utils', () => {
       assert.strictEqual(groups.length, 1);
       assert.deepStrictEqual(groups[0], ['a']);
     });
+
+    test('items within a phase are sorted by priority (P0 first)', () => {
+      const issueMap = {
+        a: { id: 'a', status: 'open', priority: 3 },
+        b: { id: 'b', status: 'open', priority: 0 },
+        c: { id: 'c', status: 'open', priority: 1 }
+      };
+      const groups = findParallelGroups(['a', 'b', 'c'], [], issueMap);
+      assert.strictEqual(groups.length, 1);
+      assert.deepStrictEqual(groups[0], ['b', 'c', 'a']);
+    });
+
+    test('items with no priority default to P2 in sort order', () => {
+      const issueMap = {
+        a: { id: 'a', status: 'open' },
+        b: { id: 'b', status: 'open', priority: 0 },
+        c: { id: 'c', status: 'open', priority: 4 }
+      };
+      const groups = findParallelGroups(['a', 'b', 'c'], [], issueMap);
+      assert.strictEqual(groups.length, 1);
+      assert.deepStrictEqual(groups[0], ['b', 'a', 'c']);
+    });
+
+    test('priority sorting applies within each phase independently', () => {
+      const issueMap = {
+        a: { id: 'a', status: 'open', priority: 2 },
+        b: { id: 'b', status: 'open', priority: 0 },
+        c: { id: 'c', status: 'open', priority: 1 },
+        d: { id: 'd', status: 'open', priority: 3 }
+      };
+      const edges = [
+        { from: 'a', to: 'c' },
+        { from: 'b', to: 'd' }
+      ];
+      const groups = findParallelGroups(['a', 'b', 'c', 'd'], edges, issueMap);
+      assert.strictEqual(groups.length, 2);
+      assert.deepStrictEqual(groups[0], ['b', 'a']);
+      assert.deepStrictEqual(groups[1], ['c', 'd']);
+    });
   });
 
   suite('parent-child blocking', () => {
