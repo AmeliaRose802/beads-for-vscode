@@ -265,11 +265,8 @@ function calculateBlockingCounts(nodeIds, edges) {
 
 module.exports = {
   buildBlockingModel,
-  topologicalSort,
-  findCriticalPaths,
   findReadyItems,
   findParallelGroups,
   applyFilters,
-  calculateFanOut,
   calculateBlockingCounts
 };

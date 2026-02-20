@@ -1,14 +1,12 @@
 const assert = require('assert');
 const {
   buildBlockingModel,
-  topologicalSort,
-  findCriticalPaths,
   findReadyItems,
   findParallelGroups,
   applyFilters,
-  calculateFanOut,
   calculateBlockingCounts
 } = require('../../webview/blocking-utils');
+const { topologicalSort, findCriticalPaths, calculateFanOut } = require('../../webview/blocking-utils-algorithms');
 const { buildPlanSchedule } = require('../../webview/plan-utils');
 
 suite('blocking-utils', () => {
