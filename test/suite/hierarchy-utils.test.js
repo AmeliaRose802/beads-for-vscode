@@ -41,6 +41,25 @@ suite('hierarchy-utils', () => {
     assert.strictEqual(parentNode.direction, 'incoming');
   });
 
+  test('propagates cascaded_from metadata onto blocking nodes', () => {
+    const cascadedComponents = [
+      {
+        Issues: [
+          { id: 'a', title: 'A', status: 'open', priority: 2, issue_type: 'task' },
+          { id: 'b', title: 'B', status: 'open', priority: 2, issue_type: 'task' }
+        ],
+        Dependencies: [
+          { issue_id: 'a', depends_on_id: 'b', type: 'blocks', cascaded_from: 'epic-A→epic-B' }
+        ]
+      }
+    ];
+
+    const model = buildHierarchyModel('a', cascadedComponents);
+    const bNode = model.tree.children.find(n => n.id === 'b');
+    assert.ok(bNode, 'B should appear as child of A');
+    assert.strictEqual(bNode.cascadedFrom, 'epic-A→epic-B');
+  });
+
   test('blocking cycles are marked as cycles', () => {
     const cyclicComponents = [
       {

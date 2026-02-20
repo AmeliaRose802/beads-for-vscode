@@ -253,11 +253,17 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
       }
     }
 
-    const key = `${fromId}|${toId}|${depType}`;
+    const cascadedFrom = dep.cascaded_from || dep.cascadedFrom || dep.CascadedFrom;
+    const cascadedKey = blockingTypes.has(depType) ? (cascadedFrom ? 'cascaded' : 'manual') : '';
+
+    const key = blockingTypes.has(depType)
+      ? `${fromId}|${toId}|${depType}|${cascadedKey}`
+      : `${fromId}|${toId}|${depType}`;
+
     if (edgeKeySet.has(key)) return;
     edgeKeySet.add(key);
 
-    visibleDeps.push({ ...dep, __fromId: fromId, __toId: toId, __type: depType });
+    visibleDeps.push({ ...dep, __fromId: fromId, __toId: toId, __type: depType, __cascadedFrom: cascadedFrom });
   });
 
   if (visibleIssues.length === 0) {
@@ -386,19 +392,28 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
               const typeClass = depType ? `dependency-graph__edge--${depType}` : '';
               const dimmedClass = isDimmed ? 'dependency-graph__edge--dimmed' : '';
 
+              const cascadedFrom = dep.__cascadedFrom || dep.cascaded_from || dep.cascadedFrom || dep.CascadedFrom;
+              const cascadedClass = cascadedFrom && (depType === 'blocks' || depType === 'blocked-by')
+                ? 'dependency-graph__edge--cascaded'
+                : '';
+
               // Use bezier curves for smoother, more distinguishable paths
               const pathData = calculateBezierPath(fromX, fromY, toX, toY);
 
               const edgeClickable = typeof onEdgeClick === 'function';
+              const edgeTitle = cascadedFrom
+                ? `${depType || 'related'} (cascaded)\nCascaded from ${cascadedFrom}`
+                : (depType || 'related');
+
               return (
                 <path
                   key={idx}
-                  className={`dependency-graph__edge ${isHighlighted ? 'dependency-graph__edge--highlighted' : ''} ${priorityClass} ${completedClass} ${typeClass} ${dimmedClass} ${edgeClickable ? 'dependency-graph__edge--clickable' : ''}`}
+                  className={`dependency-graph__edge ${isHighlighted ? 'dependency-graph__edge--highlighted' : ''} ${priorityClass} ${completedClass} ${typeClass} ${cascadedClass} ${dimmedClass} ${edgeClickable ? 'dependency-graph__edge--clickable' : ''}`}
                   d={pathData}
                   markerEnd={edgePriority <= 1 ? "url(#arrowhead-high-priority)" : "url(#arrowhead)"}
                   onClick={edgeClickable ? (e) => onEdgeClick(fromId, toId, e) : undefined}
                 >
-                  <title>{depType || 'related'}</title>
+                  <title>{edgeTitle}</title>
                 </path>
               );
             })}

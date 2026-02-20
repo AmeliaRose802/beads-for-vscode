@@ -64,6 +64,15 @@ function HierarchyNode({ node, onSelect, depth = 0 }) {
           className={getNodeClassName()}
           onClick={(e) => { e.stopPropagation(); onSelect(node.id); }}>
           {icon && <span className="hierarchy-node__icon" title={label}>{icon}</span>}
+          {node.cascadedFrom && (node.relationType === 'blocks' || node.relationType === 'blocked-by') && (
+            <span
+              className="hierarchy-node__cascaded"
+              title={`Cascaded from ${node.cascadedFrom}`}
+              aria-label={`Cascaded from ${node.cascadedFrom}`}
+            >
+              C
+            </span>
+          )}
           <CopyableIssueId id={node.id} className="hierarchy-node__id" />
           <span className={`hierarchy-node__status hierarchy-node__status--${node.status || 'unknown'}`}>
             {node.status || 'unknown'}

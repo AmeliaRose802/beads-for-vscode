@@ -955,6 +955,10 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   border-top-style: dashed;
 }
 
+.dependency-graph__legend-line--cascaded {
+  border-top-style: dashed;
+}
+
 .dependency-graph__legend-separator {
   color: var(--vscode-panel-border);
 }
@@ -1054,6 +1058,10 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   stroke: var(--vscode-errorForeground);
   color: var(--vscode-errorForeground);
   opacity: 0.65;
+}
+
+.dependency-graph__edge--cascaded {
+  stroke-dasharray: 6, 4;
 }
 
 .dependency-graph__edge--parent-child {
@@ -2868,6 +2876,21 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 
 .hierarchy-node__icon {
   font-size: 12px;
+}
+
+.hierarchy-node__cascaded {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background-color: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+  border: 1px solid var(--vscode-panel-border);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .hierarchy-node__id {

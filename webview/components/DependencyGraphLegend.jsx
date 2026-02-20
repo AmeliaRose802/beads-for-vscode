@@ -22,6 +22,9 @@ const DependencyGraphLegend = () => (
       <span className="dependency-graph__legend-line dependency-graph__legend-line--blocks" /> blocks
     </span>
     <span className="dependency-graph__legend-item">
+      <span className="dependency-graph__legend-line dependency-graph__legend-line--blocks dependency-graph__legend-line--cascaded" /> cascaded blocks
+    </span>
+    <span className="dependency-graph__legend-item">
       <span className="dependency-graph__legend-line dependency-graph__legend-line--parent-child" /> parent
     </span>
   </div>

@@ -27,7 +27,7 @@ function buildHierarchyModel(issueId, components) {
 /**
  * Normalize dependency edges into a simple list.
  * @param {Array} components - Graph components containing Dependencies.
- * @returns {Array<{issueId: string, dependsOnId: string, type: string}>} Edge list.
+ * @returns {Array<{issueId: string, dependsOnId: string, type: string, cascadedFrom?: string}>} Edge list.
  */
 function buildEdgeList(components) {
   const edges = [];
@@ -41,8 +41,10 @@ function buildEdgeList(components) {
       const type = rawType === 'parent' ? 'parent-child'
         : rawType === 'relates-to' ? 'related' : rawType;
 
+      const cascadedFrom = dep.cascaded_from || dep.cascadedFrom || dep.CascadedFrom;
+
       if (issueId && dependsOnId) {
-        edges.push({ issueId, dependsOnId, type });
+        edges.push({ issueId, dependsOnId, type, ...(cascadedFrom ? { cascadedFrom } : {}) });
       }
     });
   });
@@ -86,10 +88,10 @@ function buildParentChain(issueId, edges, issueMap) {
  * @param {string} issueId - Current issue id.
  * @param {Array} edges - Normalized dependency edges.
  * @param {Record<string, object>} issueMap - Issue lookup table.
- * @param {{visited: Set<string>, ancestors: Set<string>, relationType: string | null, direction: string | null, sourceId: string | null}} context - Traversal context.
+ * @param {{visited: Set<string>, ancestors: Set<string>, relationType: string | null, direction: string | null, sourceId: string | null, cascadedFrom: string | null}} context - Traversal context.
  * @returns {object} Tree node representing this issue and its relations.
  */
-function buildDependencyTree(issueId, edges, issueMap, context = { visited: new Set(), ancestors: new Set(), relationType: null, direction: null, sourceId: null }) {
+function buildDependencyTree(issueId, edges, issueMap, context = { visited: new Set(), ancestors: new Set(), relationType: null, direction: null, sourceId: null, cascadedFrom: null }) {
   const issue = issueMap[issueId] || createFallbackIssue(issueId);
   const alreadyVisited = context.visited.has(issueId);
   const onAncestorPath = context.ancestors.has(issueId);
@@ -119,6 +121,7 @@ function buildDependencyTree(issueId, edges, issueMap, context = { visited: new 
     issue_type: issue.issue_type,
     relationType: context.relationType,
     direction: context.direction,
+    cascadedFrom: context.cascadedFrom,
     isCycle,
     isBackReference,
     children: []
@@ -146,7 +149,8 @@ function buildDependencyTree(issueId, edges, issueMap, context = { visited: new 
         ancestors: nextAncestors,
         relationType: edge.type,
         direction,
-        sourceId: issueId
+        sourceId: issueId,
+        cascadedFrom: edge.cascadedFrom || null
       })
     );
   });
@@ -161,7 +165,8 @@ function buildDependencyTree(issueId, edges, issueMap, context = { visited: new 
         ancestors: nextAncestors,
         relationType: edge.type,
         direction,
-        sourceId: issueId
+        sourceId: issueId,
+        cascadedFrom: edge.cascadedFrom || null
       })
     );
   });
