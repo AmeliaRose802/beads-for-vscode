@@ -250,6 +250,26 @@ function processMessage(message, ctx) {
       }
       break;
     }
+    case 'copilotDispatchResult': {
+      if (message.commandKey && ctx.completeCommandProgress) {
+        ctx.completeCommandProgress(message.commandKey);
+      }
+      if (!ctx.setOutput) {
+        break;
+      }
+      if (message.success) {
+        const link = message.url ? ` ${message.url}` : '';
+        const assigneeNote = message.assignedTo ? ` (${message.assignedTo})` : '';
+        ctx.setOutput(`🤖 Assigned GitHub Copilot${assigneeNote} for ${message.issueId}.${link}`);
+        ctx.setIsError(false);
+        flashSuccess();
+      } else {
+        const link = message.url ? ` GitHub issue: ${message.url}` : '';
+        ctx.setOutput(`❌ Copilot assignment failed: ${message.error || 'Unknown error'}${link ? ` (${link})` : ''}`);
+        ctx.setIsError(true);
+      }
+      break;
+    }
     default:
       break;
   }

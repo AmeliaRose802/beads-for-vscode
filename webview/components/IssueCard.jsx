@@ -5,7 +5,30 @@ import IssueCardDetails from './IssueCardDetails';
 import { parseComments } from './utils';
 import { useAsyncData } from '../hooks/useAsyncData';
 
-const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, onPriorityChange, onAssigneeChange, onShowHierarchy, onPokePoke, onConvertToGitHub, pokepokeRunning, existingAssignees, detailedData, isLoadingDetails, onDragStart, onDrop, isDragging, isDropTarget, vscode, defaultExpanded = false }) => {
+const IssueCard = ({
+  issue,
+  onClick,
+  onClose,
+  onReopen,
+  onEdit,
+  onTypeChange,
+  onPriorityChange,
+  onAssigneeChange,
+  onShowHierarchy,
+  onPokePoke,
+  onConvertToGitHub,
+  onAssignToCopilot,
+  pokepokeRunning,
+  existingAssignees,
+  detailedData,
+  isLoadingDetails,
+  onDragStart,
+  onDrop,
+  isDragging,
+  isDropTarget,
+  vscode,
+  defaultExpanded = false
+}) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [comments, setComments] = useState([]);
   const [showQuickEdit, setShowQuickEdit] = useState(false);
@@ -163,6 +186,13 @@ const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, on
     }
   };
 
+  const handleAssignToCopilotClick = (e) => {
+    e.stopPropagation();
+    if (onAssignToCopilot) {
+      onAssignToCopilot(issue.id);
+    }
+  };
+
   const toggleQuickEdit = (e) => {
     e.stopPropagation();
     setShowQuickEdit(!showQuickEdit);
@@ -222,6 +252,7 @@ const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, on
   const draggingClass = isDragging ? 'issue-card--dragging' : '';
   const dropTargetClass = isDropTarget ? 'issue-card--drop-target' : '';
   const conversionEnabled = Boolean(onConvertToGitHub && !isClosed);
+  const copilotDispatchEnabled = Boolean(onAssignToCopilot && !isClosed);
   
   // Only allow dragging for non-closed issues, and only epics/features can be drop targets
   const canBeDropTarget = issue.type === 'epic' || issue.type === 'feature';
@@ -330,6 +361,15 @@ const IssueCard = ({ issue, onClick, onClose, onReopen, onEdit, onTypeChange, on
               title={pokepokeRunning ? 'PokePoke is running' : 'Assign to PokePoke'}
               disabled={pokepokeRunning}>
               {pokepokeRunning ? '⏳' : '🤖'}
+            </button>
+          )}
+          {onAssignToCopilot && (
+            <button
+              onClick={handleAssignToCopilotClick}
+              className="issue-card__action-btn issue-card__action-btn--copilot"
+              title="Assign to GitHub Copilot coding agent"
+              disabled={!copilotDispatchEnabled}>
+              🧠
             </button>
           )}
           {onConvertToGitHub && (

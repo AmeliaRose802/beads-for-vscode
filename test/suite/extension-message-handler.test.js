@@ -7,11 +7,13 @@ const fs = require('fs');
 const aiSuggestions = require('../../ai-suggestions');
 const beadsBackend = require('../../beads-backend');
 const githubConverter = require('../../github-converter');
+const githubCopilot = require('../../github-copilot');
 const githubAuth = require('../../github-auth');
 
 const aiStub = sinon.stub(aiSuggestions, 'getAISuggestions');
 const backendStub = sinon.stub(beadsBackend, 'detectBeadsBackend');
 const convertStub = sinon.stub(githubConverter, 'convertBeadsItemToGitHubIssue');
+const assignCopilotStub = sinon.stub(githubCopilot, 'assignCopilotToIssue');
 const ghSessionStub = sinon.stub(githubAuth, 'getGitHubSession');
 const ghRepoStub = sinon.stub(githubAuth, 'detectGitHubRepo');
 
@@ -60,6 +62,7 @@ suite('extension-message-handler', () => {
     aiStub.reset();
     backendStub.reset();
     convertStub.reset();
+    assignCopilotStub.reset();
     ghSessionStub.reset();
     ghRepoStub.reset();
     existsStub = sinon.stub(fs, 'existsSync');
@@ -534,6 +537,82 @@ suite('extension-message-handler', () => {
     const msg = postMessage.firstCall.args[0];
     assert.strictEqual(msg.success, false);
     assert.ok(msg.error.includes('gh auth needed'));
+  });
+
+  // ── assignToCopilot ────────────────────────────────────────────
+
+  test('assignToCopilot converts and assigns Copilot', async () => {
+    const { ctx, vscode, postMessage } = buildMocks();
+    ctx.provider._executeBdCommand.resolves({
+      output: JSON.stringify([{ id: 'bd-1', title: 'Bug' }]), success: true
+    });
+    ghRepoStub.resolves({ owner: 'octo', repo: 'repo' });
+    ghSessionStub.resolves({ token: 'tok', account: { id: '1', label: 'user' } });
+    convertStub.resolves({ url: 'https://gh.com/1', number: 1 });
+    assignCopilotStub.resolves({ assigned: true });
+
+    await handleWebviewMessage(
+      { type: 'assignToCopilot', issueId: 'bd-1', commandKey: 'ck' }, ctx, vscode
+    );
+
+    const msg = postMessage.firstCall.args[0];
+    assert.strictEqual(msg.type, 'copilotDispatchResult');
+    assert.strictEqual(msg.success, true);
+    assert.strictEqual(msg.number, 1);
+    assert.ok(assignCopilotStub.calledWithMatch({
+      owner: 'octo',
+      repo: 'repo',
+      issueNumber: 1,
+      agent: 'github-copilot',
+      token: 'tok'
+    }));
+  });
+
+  test('assignToCopilot errors without workspace', async () => {
+    const { ctx, vscode, postMessage } = buildMocks();
+    vscode.workspace.workspaceFolders = null;
+
+    await handleWebviewMessage(
+      { type: 'assignToCopilot', issueId: 'bd-1', commandKey: 'ck' }, ctx, vscode
+    );
+
+    const msg = postMessage.firstCall.args[0];
+    assert.strictEqual(msg.success, false);
+    assert.strictEqual(msg.type, 'copilotDispatchResult');
+  });
+
+  test('assignToCopilot handles repo detection failure', async () => {
+    const { ctx, vscode, postMessage } = buildMocks();
+    ctx.provider._executeBdCommand.resolves({
+      output: JSON.stringify([{ id: 'bd-1', title: 'Bug' }]), success: true
+    });
+    ghRepoStub.resolves(null);
+
+    await handleWebviewMessage(
+      { type: 'assignToCopilot', issueId: 'bd-1', commandKey: 'ck' }, ctx, vscode
+    );
+
+    const msg = postMessage.firstCall.args[0];
+    assert.strictEqual(msg.success, false);
+    assert.ok(msg.error.includes('GitHub repository'));
+  });
+
+  test('assignToCopilot reports assignment error', async () => {
+    const { ctx, vscode, postMessage } = buildMocks();
+    ctx.provider._executeBdCommand.resolves({
+      output: JSON.stringify([{ id: 'bd-1', title: 'Bug' }]), success: true
+    });
+    ghRepoStub.resolves({ owner: 'octo', repo: 'repo' });
+    convertStub.resolves({ url: 'https://gh.com/1', number: 1 });
+    assignCopilotStub.rejects(new Error('assign failed'));
+
+    await handleWebviewMessage(
+      { type: 'assignToCopilot', issueId: 'bd-1', commandKey: 'ck' }, ctx, vscode
+    );
+
+    const msg = postMessage.firstCall.args[0];
+    assert.strictEqual(msg.success, false);
+    assert.ok(msg.error.includes('assign failed'));
   });
 
   // ── dispatchParallelPhase ─────────────────────────────────────
