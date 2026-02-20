@@ -345,54 +345,64 @@ const BlockingView = ({
       </div>
       <div className="blocking-view__content">
         {activeTab === 'list' && (
-          <BlockingOrderTab
-            issues={filteredCompletionOrder}
-            readyIds={readyIds}
-            onIssueClick={handleNodeClick}
-            onCopy={copyOrderToClipboard}
-            renderCopyFeedback={renderCopyFeedback}
-          />
+          <ErrorBoundary name="BlockingView List Tab" showDetails={false}>
+            <BlockingOrderTab
+              issues={filteredCompletionOrder}
+              readyIds={readyIds}
+              onIssueClick={handleNodeClick}
+              onCopy={copyOrderToClipboard}
+              renderCopyFeedback={renderCopyFeedback}
+            />
+          </ErrorBoundary>
         )}
         {activeTab === 'hierarchy' && (
-          <BlockingGraphTab
-            parallelGroups={filteredParallelGroups}
-            readyIds={readyIds}
-            selectedNode={selectedNode}
-            onNodeClick={handleNodeClick}
-            onEdgeClick={handleEdgeClick}
-            onTogglePhase={togglePhaseExpanded}
-            onDispatchPhase={onDispatchPhase}
-            renderEdgeMenu={renderEdgeMenu}
-            getPhasePreview={getPhasePreview}
-            blocksCount={blocksCount}
-            blockedByCount={blockedByCount}
-          />
+          <ErrorBoundary name="BlockingView Hierarchy Tab" showDetails={false}>
+            <BlockingGraphTab
+              parallelGroups={filteredParallelGroups}
+              readyIds={readyIds}
+              selectedNode={selectedNode}
+              onNodeClick={handleNodeClick}
+              onEdgeClick={handleEdgeClick}
+              onTogglePhase={togglePhaseExpanded}
+              onDispatchPhase={onDispatchPhase}
+              renderEdgeMenu={renderEdgeMenu}
+              getPhasePreview={getPhasePreview}
+              blocksCount={blocksCount}
+              blockedByCount={blockedByCount}
+            />
+          </ErrorBoundary>
         )}
         {activeTab === 'epic-graph' && (
-          <DependencyGraph
-            graphData={epicGraphData}
-            onIssueClick={handleNodeClick}
-            showCloseButton={false}
-            onEdgeClick={handleEpicEdgeClick}
-          />
+          <ErrorBoundary name="DependencyGraph Epic View" showDetails={false}>
+            <DependencyGraph
+              graphData={epicGraphData}
+              onIssueClick={handleNodeClick}
+              showCloseButton={false}
+              onEdgeClick={handleEpicEdgeClick}
+            />
+          </ErrorBoundary>
         )}
         {activeTab === 'task-graph' && (
-          <DependencyGraph
-            graphData={taskGraphData}
-            onIssueClick={handleNodeClick}
-            showCloseButton={false}
-          />
+          <ErrorBoundary name="DependencyGraph Task View" showDetails={false}>
+            <DependencyGraph
+              graphData={taskGraphData}
+              onIssueClick={handleNodeClick}
+              showCloseButton={false}
+            />
+          </ErrorBoundary>
         )}
         {activeTab === 'plan' && (
-          <BlockingPlanView
-            issues={filteredIssues}
-            edges={edges}
-            completionOrder={filteredCompletionOrder}
-            readyIds={readyIds}
-            onIssueClick={handleNodeClick}
-            onCopy={copyPlanToClipboard}
-            renderCopyFeedback={renderCopyFeedback}
-          />
+          <ErrorBoundary name="BlockingView Plan Tab" showDetails={false}>
+            <BlockingPlanView
+              issues={filteredIssues}
+              edges={edges}
+              completionOrder={filteredCompletionOrder}
+              readyIds={readyIds}
+              onIssueClick={handleNodeClick}
+              onCopy={copyPlanToClipboard}
+              renderCopyFeedback={renderCopyFeedback}
+            />
+          </ErrorBoundary>
         )}
       </div>
       {selectedCardIssue && (
