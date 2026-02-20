@@ -80,11 +80,24 @@ function getStatusIcon(status) {
   }
 }
 
+/**
+ * Normalize a dependency relationship type into a canonical value.
+ * @param {string|undefined|null} rawType - Raw relationship type from bd output.
+ * @returns {string} Canonicalized relationship type string.
+ */
+function normalizeRelationshipType(rawType) {
+  const value = String(rawType || 'related').toLowerCase();
+  if (value === 'parent') return 'parent-child';
+  if (value === 'relates-to') return 'related';
+  return value;
+}
+
 module.exports = {
   getField,
   getStatusIcon,
   isClosedStatus,
   buildIssueMap,
+  normalizeRelationshipType,
   DEP_ISSUE_KEYS,
   DEP_TARGET_KEYS,
   DEP_FROM_KEYS,
