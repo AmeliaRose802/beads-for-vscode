@@ -146,9 +146,66 @@ function buildPlanClipboardText(plan) {
   return lines.join('\n');
 }
 
+/**
+ * Escapes a string for safe inclusion in a Mermaid node label.
+ * @param {string} text
+ * @returns {string}
+ */
+function escapeMermaidLabel(text) {
+  return String(text).replace(/"/g, '#quot;');
+}
+
+/**
+ * Converts graph data into a Mermaid flowchart string.
+ * @param {Array<{Issues?: Array<{id: string, title?: string, status?: string, issue_type?: string}>, Dependencies?: Array}>} graphData
+ * @returns {string}
+ */
+function buildMermaidChartText(graphData) {
+  if (!Array.isArray(graphData) || graphData.length === 0) {
+    return '';
+  }
+
+  const lines = ['graph LR'];
+  const seenNodes = new Set();
+  const seenEdges = new Set();
+
+  graphData.forEach(component => {
+    const issues = component.Issues || [];
+    const deps = component.Dependencies || [];
+
+    issues.forEach(issue => {
+      if (!issue || !issue.id || seenNodes.has(issue.id)) return;
+      seenNodes.add(issue.id);
+      const title = sanitizeTitle(issue.title);
+      const safeId = issue.id.replace(/[^a-zA-Z0-9_-]/g, '_');
+      const label = escapeMermaidLabel(`${issue.id}: ${title}`);
+      lines.push(`  ${safeId}["${label}"]`);
+    });
+
+    deps.forEach(dep => {
+      const fromId = dep.depends_on_id || dep.from_id || dep.FromID;
+      const toId = dep.issue_id || dep.to_id || dep.ToID;
+      if (!fromId || !toId) return;
+
+      const depType = dep.type || dep.dependency_type || dep.relationship || dep.relation_type || 'related';
+      const edgeKey = `${fromId}|${toId}|${depType}`;
+      if (seenEdges.has(edgeKey)) return;
+      seenEdges.add(edgeKey);
+
+      const safeFrom = fromId.replace(/[^a-zA-Z0-9_-]/g, '_');
+      const safeTo = toId.replace(/[^a-zA-Z0-9_-]/g, '_');
+      const label = escapeMermaidLabel(String(depType).toLowerCase());
+      lines.push(`  ${safeFrom} -->|"${label}"| ${safeTo}`);
+    });
+  });
+
+  return lines.join('\n');
+}
+
 module.exports = {
   copyTextToClipboard,
   formatIssuesForClipboard,
   buildPhasedClipboardText,
-  buildPlanClipboardText
+  buildPlanClipboardText,
+  buildMermaidChartText
 };
