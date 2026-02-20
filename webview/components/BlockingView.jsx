@@ -10,6 +10,7 @@ import LabelDropdown from './LabelDropdown';
 import IssueCard from './IssueCard';
 const { copyTextToClipboard, formatIssuesForClipboard, buildPhasedClipboardText, buildPlanClipboardText } = require('../clipboard-utils');
 const { isClosedStatus } = require('../field-utils');
+const { formatPriority } = require('../parse-utils');
 const COPY_FEEDBACK_DURATION_MS = 2200;
 const PHASE_ITEM_PREVIEW_LIMIT = 5;
 /** BlockingView - Visualizes blocking relationships and suggests completion order. */
@@ -118,12 +119,6 @@ const BlockingView = ({
     ? normalizedParallelGroups.map(g => g.filter(i => filteredIds.has(i.id))).filter(g => g.length > 0)
     : normalizedParallelGroups
   );
-  const formatPriority = (priority) => {
-    if (priority === undefined || priority === null) return 'p2';
-    const raw = String(priority).trim();
-    if (!raw) return 'p2';
-    return raw.toLowerCase().startsWith('p') ? raw.toLowerCase() : `p${raw}`;
-  };
   const normalizeIssueForCard = (issue) => {
     if (!issue) return null;
     return {

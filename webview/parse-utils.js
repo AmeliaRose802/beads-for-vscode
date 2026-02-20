@@ -299,4 +299,4 @@ function parseStatsOutput(text) {
   return { type: 'stats', header, stats };
 }
 
-module.exports = { parseListJSON, parseStatsOutput };
+module.exports = { formatPriority, parseListJSON, parseStatsOutput };
