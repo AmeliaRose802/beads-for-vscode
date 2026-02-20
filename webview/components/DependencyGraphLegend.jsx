@@ -11,9 +11,6 @@ const DependencyGraphLegend = () => (
     <span className="dependency-graph__legend-item">
       <span className="dependency-graph__legend-icon dependency-graph__legend-icon--blocked">●</span> Blocked
     </span>
-    <span className="dependency-graph__legend-item">
-      <span className="dependency-graph__legend-icon dependency-graph__legend-icon--closed">✓</span> Closed
-    </span>
     <span className="dependency-graph__legend-separator">|</span>
     <span className="dependency-graph__legend-item">
       <span className="dependency-graph__legend-line dependency-graph__legend-line--blocked-by" /> blocked-by
