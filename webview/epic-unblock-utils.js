@@ -91,7 +91,10 @@ function findCascadedBlocks(graphData, epicA, epicB) {
       const isBtoA = childrenB.has(fromId) && childrenA.has(toId);
       if (!isAtoB && !isBtoA) return;
 
-      const entry = { from: fromId, to: toId };
+      // fromId = issue_id (blocked), toId = depends_on_id (blocker)
+      // CLI expects: dep remove <blocker> --blocks <blocked>
+      // So swap: from should be blocker (toId), to should be blocked (fromId)
+      const entry = { from: toId, to: fromId };
       if (dep.cascaded_from) {
         cascadedDeps.push(entry);
       } else {
