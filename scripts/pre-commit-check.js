@@ -57,7 +57,7 @@ function checkFileLength() {
   for (const pattern of patterns) {
     const files = globSync(pattern, {
       cwd: ROOT,
-      ignore: ['node_modules/**', 'webview/bundle.js', 'webview/bundle.js.map', 'webview/styles-old.css']
+      ignore: ['node_modules/**', 'webview/bundle.js', 'webview/bundle.js.map']
     });
 
     for (const file of files) {
