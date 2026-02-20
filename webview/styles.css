@@ -343,19 +343,6 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 .issue-card__header { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 6px; }
 .issue-card__badges { display: flex; align-items: center; gap: 6px; }
 .issue-card__id { font-family: var(--vscode-editor-font-family); font-weight: 600; font-size: 11px; color: var(--vscode-textLink-foreground); }
-.issue-card__copy-btn {
-  background: transparent;
-  border: none;
-  color: var(--vscode-descriptionForeground);
-  cursor: pointer;
-  font-size: 10px;
-  padding: 0 2px;
-  line-height: 1;
-  transition: color 0.2s;
-}
-.issue-card__copy-btn:hover {
-  color: var(--vscode-textLink-foreground);
-}
 .issue-card__badge { padding: 2px 5px; border-radius: 3px; font-size: 10px; color: var(--vscode-badge-foreground); }
 .issue-card__badge--priority { font-weight: 600; }
 .issue-card__badge--priority-p0 { background-color: var(--vscode-errorForeground); }
@@ -372,19 +359,6 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 .issue-card__status--in-progress { color: var(--vscode-terminal-ansiYellow); }
 .issue-card__status--closed { color: var(--vscode-terminal-ansiGreen); }
 .issue-card__status--blocked { color: var(--vscode-errorForeground); }
-
-.issue-card__assignee-badge {
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 10px;
-  background-color: var(--vscode-badge-background);
-  color: var(--vscode-badge-foreground);
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 150px;
-}
 
 /* Inline Assignee Editor */
 .issue-card__assignee-editor {
@@ -691,35 +665,7 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
 /* Issue Tree */
 .issue-tree { display: flex; flex-direction: column; gap: 8px; }
 .issue-tree--flat { padding-left: 0; }
-.issue-tree__node { margin-bottom: 4px; }
-.issue-tree__node-header { display: flex; align-items: flex-start; gap: 6px; }
-.issue-tree__toggle, .issue-tree__toggle-spacer {
-  width: 18px;
-  height: 18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.issue-tree__toggle {
-  background-color: var(--vscode-button-secondaryBackground);
-  color: var(--vscode-button-secondaryForeground);
-  border: 1px solid var(--vscode-button-border);
-  border-radius: 3px;
-  cursor: pointer;
-  font-size: 12px;
-  line-height: 1;
-}
-.issue-tree__toggle:hover { background-color: var(--vscode-button-secondaryHoverBackground); }
-.issue-tree__toggle-spacer { visibility: hidden; }
-.issue-tree__card { flex: 1; }
-.issue-tree__children {
-  margin-left: 12px;
-  padding-left: 10px;
-  border-left: 1px dashed var(--vscode-panel-border);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+
 .issue-tree__empty { padding: 8px; color: var(--vscode-descriptionForeground); font-style: italic; }
 
 /* Pagination Controls */
@@ -913,11 +859,6 @@ textarea.relationship-input { font-family: var(--vscode-font-family); resize: ve
   display: flex;
   align-items: center;
   gap: 4px;
-}
-
-.dependency-graph__legend-item--hint {
-  font-style: italic;
-  opacity: 0.7;
 }
 
 .dependency-graph__legend-icon {
