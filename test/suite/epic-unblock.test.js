@@ -132,7 +132,9 @@ suite('Epic unblock utilities', () => {
       const result = findCascadedBlocks(data, 'epic-A', 'epic-B');
       assert.strictEqual(result.cascadedDeps.length, 1);
       assert.strictEqual(result.manualDeps.length, 1);
-      assert.strictEqual(result.manualDeps[0].from, 'b2');
+      // from should be blocker (a2), to should be blocked (b2)
+      assert.strictEqual(result.manualDeps[0].from, 'a2');
+      assert.strictEqual(result.manualDeps[0].to, 'b2');
     });
 
     test('returns empty results when no blocking deps exist', () => {
