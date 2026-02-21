@@ -127,33 +127,43 @@ suite('GitHub Converter', () => {
   });
 
   suite('convertBeadsItemToGitHubIssue', () => {
-    let execFileStub;
-    const childProcess = require('child_process');
+    let fetchStub;
+    const defaultOpts = { token: 'test-token', owner: 'testowner', repo: 'testrepo' };
 
     setup(() => {
-      execFileStub = sinon.stub(childProcess, 'execFile');
+      fetchStub = sinon.stub(global, 'fetch');
     });
 
     teardown(() => {
-      execFileStub.restore();
+      fetchStub.restore();
     });
 
     test('should throw error if item has no title', async () => {
       await assert.rejects(
-        () => convertBeadsItemToGitHubIssue({}),
+        () => convertBeadsItemToGitHubIssue({}, defaultOpts),
         /title is required/
       );
     });
 
     test('should throw error if item is null', async () => {
       await assert.rejects(
-        () => convertBeadsItemToGitHubIssue(null),
+        () => convertBeadsItemToGitHubIssue(null, defaultOpts),
         /title is required/
       );
     });
 
-    test('should call gh CLI with correct arguments', async () => {
-      execFileStub.callsArgWith(2, null, 'https://github.com/owner/repo/issues/123\n', '');
+    test('should throw error when repo info missing', async () => {
+      await assert.rejects(
+        () => convertBeadsItemToGitHubIssue({ id: 'test-123', title: 'Test' }, {}),
+        /GitHub repository info required/
+      );
+    });
+
+    test('should call GitHub REST API with correct endpoint', async () => {
+      fetchStub.resolves({
+        ok: true,
+        text: async () => JSON.stringify({ number: 123, html_url: 'https://github.com/testowner/testrepo/issues/123' })
+      });
 
       const item = {
         id: 'test-123',
@@ -163,29 +173,34 @@ suite('GitHub Converter', () => {
         issue_type: 'bug'
       };
 
-      await convertBeadsItemToGitHubIssue(item);
+      await convertBeadsItemToGitHubIssue(item, defaultOpts);
 
-      assert.ok(execFileStub.calledOnce);
-      const [command, args] = execFileStub.firstCall.args;
-      assert.strictEqual(command, 'gh');
-      assert.ok(args.includes('issue'));
-      assert.ok(args.includes('create'));
-      assert.ok(args.includes('--title'));
-      assert.ok(args.includes('Test Issue'));
+      assert.ok(fetchStub.calledOnce);
+      const [url, opts] = fetchStub.firstCall.args;
+      assert.ok(url.includes('/repos/testowner/testrepo/issues'));
+      assert.strictEqual(opts.method, 'POST');
+      const body = JSON.parse(opts.body);
+      assert.strictEqual(body.title, 'Test Issue');
     });
 
     test('should return issue number and URL', async () => {
-      execFileStub.callsArgWith(2, null, 'https://github.com/owner/repo/issues/456\n', '');
+      fetchStub.resolves({
+        ok: true,
+        text: async () => JSON.stringify({ number: 456, html_url: 'https://github.com/testowner/testrepo/issues/456' })
+      });
 
       const item = { id: 'test-123', title: 'Test' };
 
-      const result = await convertBeadsItemToGitHubIssue(item);
+      const result = await convertBeadsItemToGitHubIssue(item, defaultOpts);
       assert.strictEqual(result.number, 456);
-      assert.strictEqual(result.url, 'https://github.com/owner/repo/issues/456');
+      assert.strictEqual(result.url, 'https://github.com/testowner/testrepo/issues/456');
     });
 
-    test('should include labels in gh CLI command', async () => {
-      execFileStub.callsArgWith(2, null, 'https://github.com/owner/repo/issues/789\n', '');
+    test('should include labels in API request', async () => {
+      fetchStub.resolves({
+        ok: true,
+        text: async () => JSON.stringify({ number: 789, html_url: 'https://github.com/testowner/testrepo/issues/789' })
+      });
 
       const item = {
         id: 'test-123',
@@ -195,60 +210,55 @@ suite('GitHub Converter', () => {
         labels: ['backend']
       };
 
-      await convertBeadsItemToGitHubIssue(item);
+      await convertBeadsItemToGitHubIssue(item, defaultOpts);
 
-      const [, args] = execFileStub.firstCall.args;
-      const labelIndex = args.indexOf('--label');
-      assert.ok(labelIndex >= 0);
-      const labelValue = args[labelIndex + 1];
-      assert.ok(labelValue.includes('bug'));
-      assert.ok(labelValue.includes('priority:high'));
-      assert.ok(labelValue.includes('backend'));
+      const body = JSON.parse(fetchStub.firstCall.args[1].body);
+      assert.ok(body.labels.includes('bug'));
+      assert.ok(body.labels.includes('priority:high'));
+      assert.ok(body.labels.includes('backend'));
     });
 
     test('should include assignee when provided', async () => {
-      execFileStub.callsArgWith(2, null, 'https://github.com/owner/repo/issues/101\n', '');
+      fetchStub.resolves({
+        ok: true,
+        text: async () => JSON.stringify({ number: 101, html_url: 'https://github.com/testowner/testrepo/issues/101' })
+      });
 
       const item = { id: 'test-123', title: 'Test' };
 
-      await convertBeadsItemToGitHubIssue(item, undefined, { assignee: 'github-copilot' });
+      await convertBeadsItemToGitHubIssue(item, { ...defaultOpts, assignee: 'github-copilot' });
 
-      const [, args] = execFileStub.firstCall.args;
-      const assigneeIndex = args.indexOf('--assignee');
-      assert.ok(assigneeIndex >= 0);
-      assert.strictEqual(args[assigneeIndex + 1], 'github-copilot');
+      const body = JSON.parse(fetchStub.firstCall.args[1].body);
+      assert.deepStrictEqual(body.assignees, ['github-copilot']);
     });
 
-    test('should provide helpful error for missing gh CLI', async () => {
-      execFileStub.callsArgWith(2, { code: 'ENOENT', message: 'not found' });
+    test('should throw error for authentication failure', async () => {
+      fetchStub.resolves({
+        ok: false,
+        status: 401,
+        text: async () => JSON.stringify({ message: 'Bad credentials' })
+      });
 
       const item = { id: 'test-123', title: 'Test' };
 
       await assert.rejects(
-        () => convertBeadsItemToGitHubIssue(item),
-        /GitHub CLI.*not found/
+        () => convertBeadsItemToGitHubIssue(item, defaultOpts),
+        /authentication failed/
       );
     });
 
-    test('should provide helpful error for authentication issues', async () => {
-      execFileStub.callsArgWith(2, { message: 'not logged in' });
+    test('should throw error for API failure', async () => {
+      fetchStub.resolves({
+        ok: false,
+        status: 422,
+        text: async () => JSON.stringify({ message: 'Validation Failed' })
+      });
 
       const item = { id: 'test-123', title: 'Test' };
 
       await assert.rejects(
-        () => convertBeadsItemToGitHubIssue(item),
-        /gh auth login/
-      );
-    });
-
-    test('should provide helpful error for non-git repository', async () => {
-      execFileStub.callsArgWith(2, { message: 'not a git repository' });
-
-      const item = { id: 'test-123', title: 'Test' };
-
-      await assert.rejects(
-        () => convertBeadsItemToGitHubIssue(item),
-        /not linked to GitHub/
+        () => convertBeadsItemToGitHubIssue(item, defaultOpts),
+        /GitHub API error.*422/
       );
     });
   });

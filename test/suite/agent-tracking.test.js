@@ -1,6 +1,5 @@
 const assert = require('assert');
 const sinon = require('sinon');
-const childProcess = require('child_process');
 
 const {
   checkGitHubIssueStatus
@@ -8,68 +7,82 @@ const {
 
 suite('Agent Tracking', () => {
   suite('checkGitHubIssueStatus', () => {
-    let execFileStub;
+    let fetchStub;
+    const defaultOpts = { token: 'test-token', owner: 'testowner', repo: 'testrepo' };
 
     setup(() => {
-      execFileStub = sinon.stub(childProcess, 'execFile');
+      fetchStub = sinon.stub(global, 'fetch');
     });
 
     teardown(() => {
-      execFileStub.restore();
+      fetchStub.restore();
     });
 
     test('should throw error for missing issue number', async () => {
       await assert.rejects(
-        () => checkGitHubIssueStatus(null),
+        () => checkGitHubIssueStatus(null, defaultOpts),
         /Valid issue number is required/
       );
     });
 
     test('should throw error for non-number issue number', async () => {
       await assert.rejects(
-        () => checkGitHubIssueStatus('abc'),
+        () => checkGitHubIssueStatus('abc', defaultOpts),
         /Valid issue number is required/
       );
     });
 
+    test('should throw error when repo info missing', async () => {
+      await assert.rejects(
+        () => checkGitHubIssueStatus(123, {}),
+        /GitHub repository info required/
+      );
+    });
+
     test('should return issue state OPEN', async () => {
-      execFileStub.onFirstCall().callsFake((cmd, args, opts, cb) => {
-        if (args.includes('issue')) {
-          cb(null, JSON.stringify({ state: 'open' }));
-        }
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        text: async () => JSON.stringify({ state: 'open' })
       });
-      execFileStub.onSecondCall().callsFake((cmd, args, opts, cb) => {
-        cb(null, '[]');
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        text: async () => JSON.stringify({ items: [] })
       });
 
-      const result = await checkGitHubIssueStatus(123);
+      const result = await checkGitHubIssueStatus(123, defaultOpts);
       assert.strictEqual(result.issueState, 'OPEN');
       assert.strictEqual(result.pr, null);
     });
 
     test('should return issue state CLOSED', async () => {
-      execFileStub.onFirstCall().callsFake((cmd, args, opts, cb) => {
-        cb(null, JSON.stringify({ state: 'closed' }));
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        text: async () => JSON.stringify({ state: 'closed' })
       });
-      execFileStub.onSecondCall().callsFake((cmd, args, opts, cb) => {
-        cb(null, '[]');
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        text: async () => JSON.stringify({ items: [] })
       });
 
-      const result = await checkGitHubIssueStatus(456);
+      const result = await checkGitHubIssueStatus(456, defaultOpts);
       assert.strictEqual(result.issueState, 'CLOSED');
     });
 
     test('should return linked PR info', async () => {
-      execFileStub.onFirstCall().callsFake((cmd, args, opts, cb) => {
-        cb(null, JSON.stringify({ state: 'open' }));
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        text: async () => JSON.stringify({ state: 'open' })
       });
-      execFileStub.onSecondCall().callsFake((cmd, args, opts, cb) => {
-        cb(null, JSON.stringify([
-          { number: 789, url: 'https://github.com/o/r/pull/789', state: 'open', title: 'Fix it' }
-        ]));
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        text: async () => JSON.stringify({
+          items: [
+            { number: 789, html_url: 'https://github.com/o/r/pull/789', state: 'open', title: 'Fix it' }
+          ]
+        })
       });
 
-      const result = await checkGitHubIssueStatus(123);
+      const result = await checkGitHubIssueStatus(123, defaultOpts);
       assert.strictEqual(result.issueState, 'OPEN');
       assert.ok(result.pr);
       assert.strictEqual(result.pr.number, 789);
@@ -78,53 +91,48 @@ suite('Agent Tracking', () => {
       assert.strictEqual(result.pr.title, 'Fix it');
     });
 
-    test('should handle PR list error gracefully', async () => {
-      execFileStub.onFirstCall().callsFake((cmd, args, opts, cb) => {
-        cb(null, JSON.stringify({ state: 'open' }));
+    test('should handle PR search error gracefully', async () => {
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        text: async () => JSON.stringify({ state: 'open' })
       });
-      execFileStub.onSecondCall().callsFake((cmd, args, opts, cb) => {
-        cb(new Error('pr list failed'));
+      fetchStub.onSecondCall().resolves({
+        ok: false,
+        status: 500,
+        text: async () => 'Internal Server Error'
       });
 
-      const result = await checkGitHubIssueStatus(123);
+      const result = await checkGitHubIssueStatus(123, defaultOpts);
       assert.strictEqual(result.issueState, 'OPEN');
       assert.strictEqual(result.pr, null);
     });
 
-    test('should throw on issue view error', async () => {
-      execFileStub.onFirstCall().callsFake((cmd, args, opts, cb) => {
-        cb(new Error('not found'));
+    test('should throw on issue fetch error', async () => {
+      fetchStub.onFirstCall().resolves({
+        ok: false,
+        status: 404,
+        text: async () => JSON.stringify({ message: 'Not Found' })
       });
 
       await assert.rejects(
-        () => checkGitHubIssueStatus(999),
+        () => checkGitHubIssueStatus(999, defaultOpts),
         /Failed to check issue #999/
       );
     });
 
-    test('should handle invalid JSON from issue view', async () => {
-      execFileStub.onFirstCall().callsFake((cmd, args, opts, cb) => {
-        cb(null, 'not json');
+    test('should pass token in authorization header', async () => {
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        text: async () => JSON.stringify({ state: 'open' })
       });
-      execFileStub.onSecondCall().callsFake((cmd, args, opts, cb) => {
-        cb(null, '[]');
-      });
-
-      const result = await checkGitHubIssueStatus(123);
-      assert.strictEqual(result.issueState, 'UNKNOWN');
-    });
-
-    test('should pass cwd to execFile', async () => {
-      execFileStub.onFirstCall().callsFake((cmd, args, opts, cb) => {
-        cb(null, JSON.stringify({ state: 'open' }));
-      });
-      execFileStub.onSecondCall().callsFake((cmd, args, opts, cb) => {
-        cb(null, '[]');
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        text: async () => JSON.stringify({ items: [] })
       });
 
-      await checkGitHubIssueStatus(123, '/my/workspace');
-      const opts = execFileStub.firstCall.args[2];
-      assert.strictEqual(opts.cwd, '/my/workspace');
+      await checkGitHubIssueStatus(123, defaultOpts);
+      const headers = fetchStub.firstCall.args[1].headers;
+      assert.strictEqual(headers['Authorization'], 'Bearer test-token');
     });
   });
 
@@ -265,6 +273,12 @@ suite('extension-message-handler checkAgentStatus', () => {
       },
       window: {
         createOutputChannel: sinon.stub().returns({ appendLine: sinon.stub() })
+      },
+      authentication: {
+        getSession: sinon.stub().resolves({
+          accessToken: 'mock-token',
+          account: { label: 'test', id: 'test' }
+        })
       }
     };
     return { ctx, vscode, postMessage };

@@ -102,8 +102,12 @@ async function handleAssignToCopilotMessage(
 
     ghResult = await convertBeadsItemToGitHubIssue(
       issue,
-      workspacePath,
-      requestedAgent ? { assignee: requestedAgent } : undefined
+      {
+        token,
+        owner: repo.owner,
+        repo: repo.repo,
+        assignee: requestedAgent || undefined
+      }
     );
 
     if (!ghResult || !ghResult.number) {
