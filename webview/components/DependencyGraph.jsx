@@ -7,14 +7,7 @@ import DependencyGraphDetails from './DependencyGraphDetails';
 import { shouldShowNode, shouldShowEdge, calculateBlockingCounts } from './dependency-graph-utils';
 import { calculateLayout } from './dependency-graph-layout';
 import usePanZoom from '../hooks/usePanZoom';
-const { getField, DEP_TYPE_KEYS, DEP_ISSUE_KEYS, DEP_TARGET_KEYS } = require('../field-utils');
-
-const normalizeRelationshipType = (rawType) => {
-  const value = String(rawType || 'related').toLowerCase();
-  if (value === 'parent') return 'parent-child';
-  if (value === 'relates-to') return 'related';
-  return value;
-};
+const { getField, normalizeRelationshipType, DEP_TYPE_KEYS, DEP_ISSUE_KEYS, DEP_TARGET_KEYS } = require('../field-utils');
 
 /**
  * Calculate a smooth bezier curve path for edges.
