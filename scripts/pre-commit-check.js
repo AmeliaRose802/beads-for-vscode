@@ -173,7 +173,8 @@ function checkCoverage() {
   try {
     const covCmd = [
       'npx c8',
-      '--include "webview/*.js"',
+      '--include "webview/**/*.js"',
+      '--include "webview/**/*.jsx"',
       '--include "beads-backend.js"',
       `--lines ${MIN_COVERAGE} --branches ${MIN_COVERAGE} --functions ${MIN_COVERAGE}`,
       '-- npm run test:unit --silent'
