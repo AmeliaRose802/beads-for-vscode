@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import ErrorBoundary from './components/ErrorBoundary';
 import OutputDisplay from './components/OutputDisplay';
 import CreatePanel from './components/CreatePanel';
 import RelationshipPanel from './components/RelationshipPanel';
@@ -10,7 +9,6 @@ import CommandProgress from './components/CommandProgress';
 import BeadsInitWarning from './components/BeadsInitWarning';
 import PokePokeStatus from './components/PokePokeStatus';
 import ParallelPhaseDispatchDialog from './components/ParallelPhaseDispatchDialog';
-import BulkUnblockConfirmDialog from './components/BulkUnblockConfirmDialog';
 import { useCommandProgress } from './hooks/useCommandProgress';
 import { useParallelPhaseDispatch } from './hooks/useParallelPhaseDispatch';
 import { createAssigneeChangeHandler } from './hooks/createAssigneeChangeHandler';
@@ -18,9 +16,6 @@ import { useEditFormState } from './hooks/useEditFormState';
 import { useCreateFormState } from './hooks/useCreateFormState';
 import { useRelationshipFormState } from './hooks/useRelationshipFormState';
 import { usePanelVisibility } from './hooks/usePanelVisibility';
-import { useBulkUnblockEpics } from './hooks/useBulkUnblockEpics';
-import { useAgentTracking } from './hooks/useAgentTracking';
-import { useCopilotActions } from './hooks/useCopilotActions';
 const { parseListJSON, parseStatsOutput } = require('./parse-utils');
 const { buildCreateCommand, buildUpdateCommand, safeShellArg } = require('./form-handlers');
 const { buildHierarchyModel } = require('./hierarchy-utils');
@@ -55,26 +50,11 @@ const App = () => {
   const { parallelPhaseDispatch, openParallelPhaseDispatch, startParallelPhaseDispatch,
     cancelParallelPhaseDispatch, closeParallelPhaseDispatch, handleParallelPhaseDispatchMessage } =
     useParallelPhaseDispatch({ vscode, gitHubInfo });
-  const { agentTracking, trackDispatch, trackBatchDispatch,
-    updateAgentStatus, refreshAgentStatus } = useAgentTracking({ vscode });
   const {
     pendingOperations,
     beginCommandProgress,
     completeCommandProgress
   } = useCommandProgress();
-  const {
-    bulkUnblockDialog,
-    handleBulkUnblockEpics,
-    confirmBulkUnblock,
-    cancelBulkUnblock
-  } = useBulkUnblockEpics({
-    graphData,
-    vscode,
-    setOutput,
-    setIsError,
-    setIsSuccess,
-    requestBlockingData
-  });
   const {
     displayResult,
     runCommand,
@@ -110,14 +90,6 @@ const App = () => {
     outputRef,
     beginCommandProgress,
     completeCommandProgress
-  });
-  const { handleConvertToGitHub, handleAssignToCopilot } = useCopilotActions({
-    vscode,
-    gitHubInfo,
-    beginCommandProgress,
-    setOutput,
-    setIsError,
-    setIsSuccess
   });
   useEffect(() => {
     outputRef.current = output;
@@ -161,10 +133,6 @@ const App = () => {
         setPokepokeInstances,
         setGitHubInfo,
         handleParallelPhaseDispatch: handleParallelPhaseDispatchMessage,
-        handleEpicUnblockComplete: () => requestBlockingData(),
-        trackDispatch,
-        trackBatchDispatch,
-        updateAgentStatus,
         vscode,
         completeCommandProgress,
         buildHierarchyModel,
@@ -198,14 +166,33 @@ const App = () => {
         description: createForm.createDescription, parentId: createForm.createParentId,
         blocksId: createForm.createBlocksId, relatedId: createForm.createRelatedId, currentFile
       });
-    } catch (error) { setOutput(`❌ Error: ${error.message}`); setIsError(true); return; }
-    if (!command) { setOutput('❌ Error: Title is required'); setIsError(true); return; }
+    } catch (error) {
+      setOutput(`❌ Error: ${error.message}`);
+      setIsError(true);
+      return;
+    }
+    if (!command) {
+      setOutput('❌ Error: Title is required');
+      setIsError(true);
+      return;
+    }
     runInlineAction(command, `Created new ${createForm.createType}`);
   };
   const handleAISuggest = async () => {
-    if (!createForm.createTitle.trim()) { setOutput('Error: Title is required for AI suggestions'); setIsError(true); return; }
-    setIsAILoading(true); setOutput('🤖 Analyzing issue with AI...'); setIsError(false); setIsSuccess(false);
-    vscode.postMessage({ type: 'getAISuggestions', title: createForm.createTitle, currentDescription: createForm.createDescription });
+    if (!createForm.createTitle.trim()) {
+      setOutput('Error: Title is required for AI suggestions');
+      setIsError(true);
+      return;
+    }
+    setIsAILoading(true);
+    setOutput('🤖 Analyzing issue with AI...');
+    setIsError(false);
+    setIsSuccess(false);
+    vscode.postMessage({
+      type: 'getAISuggestions',
+      title: createForm.createTitle,
+      currentDescription: createForm.createDescription
+    });
   };
   const handleShowIssueInline = (issueId) => {
     if (issueDetails[issueId] || loadingDetails[issueId]) return;
@@ -232,6 +219,17 @@ const App = () => {
     vscode.postMessage({ type: 'pokepokeLaunch', itemId, title, isTree });
   const handlePokePokeStop = (itemId) =>
     vscode.postMessage({ type: 'pokepokeStop', itemId });
+  const handleConvertToGitHub = (issueId) => {
+    if (!issueId) {
+      return;
+    }
+    const commandId = `convertToGitHub:${issueId}`;
+    beginCommandProgress(commandId, 'inline');
+    setOutput(`🐙 Converting ${issueId} to a GitHub issue...`);
+    setIsError(false);
+    setIsSuccess(false);
+    vscode.postMessage({ type: 'convertToGitHub', issueId, commandKey: commandId });
+  };
 
   const handleDepAction = (action) => {
     const { sourceBead, targetBead, relationType } = relationshipForm;
@@ -244,7 +242,10 @@ const App = () => {
     relationshipForm.resetRelationshipForm();
   };
 
-  const handleOpenDependencies = (tab = 'list') => { panels.setActiveBlockingTab(tab); requestBlockingData(); };
+  const handleOpenDependencies = (tab = 'list') => {
+    panels.setActiveBlockingTab(tab);
+    requestBlockingData();
+  };
 
   const handleUpdateIssue = () => {
     let command;
@@ -276,9 +277,13 @@ const App = () => {
     editForm.setEditIssueId(id);
     panels.setShowEditPanel(true);
   };
-  const handleCloseIssue = (id) => runInlineAction(`close ${id} -r "Closed from UI"`, `Closed ${id}`);
-  const handleReopenIssue = (id) => runInlineAction(`reopen ${id} -r "Reopened from UI"`, `Reopened ${id}`);
+  const handleCloseIssue = (id) =>
+    runInlineAction(`close ${id} -r "Closed from UI"`, `Closed ${id}`);
+  const handleReopenIssue = (id) =>
+    runInlineAction(`reopen ${id} -r "Reopened from UI"`, `Reopened ${id}`);
   const shouldShowResultsPanel = !panels.showHierarchyView && !panels.showBlockingView;
+  const beadsEnabled = beadsStatus?.initialized === true;
+  const disabledTitle = 'Beads is not initialized in this workspace. Run bd init first.';
   return (
     <div className="container">
       <div className="header">
@@ -291,128 +296,119 @@ const App = () => {
         <div className="section">
           <div className="section-title">Quick Actions</div>
           <div className="button-grid">
-            <button className="action-btn" onClick={() => runCommand('list')} title="Show all issues including open, closed, and blocked">📋 List</button>
-            <button className="action-btn" onClick={() => runCommand('ready')} title="Show unblocked issues ready to work on">✅ Ready</button>
-            <button className="action-btn" onClick={() => runCommand('blocked')} title="Show issues blocked by dependencies">🚫 Blocked</button>
-            <button className="action-btn" onClick={() => runCommand('stats')} title="Show project statistics">📊 Stats</button>
-            <button className="action-btn" onClick={() => runCommand('dep cycles')} title="Detect blocking dependency cycles">🔄 Cycles</button>
-            <button className="action-btn" onClick={() => { clearOutput(); panels.closeAllPanels(); panels.setShowCreatePanel(!panels.showCreatePanel); }} title="Create a new issue">➕ Create</button>
-            <button className="action-btn" onClick={() => { clearOutput(); panels.closeAllPanels(); panels.setShowRelationshipPanel(!panels.showRelationshipPanel); }} title="Manage dependencies between issues">🔗 Add Links</button>
-            <button className="action-btn" onClick={() => handleOpenDependencies('task-graph')} title="Visualize dependency relationships as a graph within Dependencies">🔀 Graph</button>
-            <button className="action-btn" onClick={() => handleOpenDependencies('list')} title="View dependency chains and completion order">🔗 Dependencies</button>
+            <button className="action-btn" disabled={!beadsEnabled} onClick={() => runCommand('list')} title={beadsEnabled ? "Show all issues including open, closed, and blocked" : disabledTitle}>📋 List</button>
+            <button className="action-btn" disabled={!beadsEnabled} onClick={() => runCommand('ready')} title={beadsEnabled ? "Show unblocked issues ready to work on" : disabledTitle}>✅ Ready</button>
+            <button className="action-btn" disabled={!beadsEnabled} onClick={() => runCommand('blocked')} title={beadsEnabled ? "Show issues blocked by dependencies" : disabledTitle}>🚫 Blocked</button>
+            <button className="action-btn" disabled={!beadsEnabled} onClick={() => runCommand('stats')} title={beadsEnabled ? "Show project statistics" : disabledTitle}>📊 Stats</button>
+            <button className="action-btn" disabled={!beadsEnabled} onClick={() => runCommand('dep cycles')} title={beadsEnabled ? "Detect blocking dependency cycles" : disabledTitle}>🔄 Cycles</button>
+            <button className="action-btn" disabled={!beadsEnabled} onClick={() => { clearOutput(); panels.closeAllPanels(); panels.setShowCreatePanel(!panels.showCreatePanel); }} title={beadsEnabled ? "Create a new issue" : disabledTitle}>➕ Create</button>
+            <button className="action-btn" disabled={!beadsEnabled} onClick={() => { clearOutput(); panels.closeAllPanels(); panels.setShowRelationshipPanel(!panels.showRelationshipPanel); }} title={beadsEnabled ? "Manage dependencies between issues" : disabledTitle}>🔗 Add Links</button>
+            <button className="action-btn" disabled={!beadsEnabled} onClick={() => handleOpenDependencies('task-graph')} title={beadsEnabled ? "Visualize dependency relationships as a graph within Dependencies" : disabledTitle}>🔀 Graph</button>
+            <button className="action-btn" disabled={!beadsEnabled} onClick={() => handleOpenDependencies('list')} title={beadsEnabled ? "View dependency chains and completion order" : disabledTitle}>🔗 Dependencies</button>
           </div>
         </div>
         <PokePokeStatus instances={pokepokeInstances} onStop={handlePokePokeStop} vscode={vscode} />
-        <ErrorBoundary name="Form Panels">
-          {panels.showCreatePanel && (
-            <CreatePanel
-              title={createForm.createTitle}
-              type={createForm.createType}
-              priority={createForm.createPriority}
-              description={createForm.createDescription}
-              parentId={createForm.createParentId}
-              blocksId={createForm.createBlocksId}
-              relatedId={createForm.createRelatedId}
-              currentFile={currentFile}
-              onTitleChange={createForm.setCreateTitle}
-              onTypeChange={createForm.setCreateType}
-              onPriorityChange={createForm.setCreatePriority}
-              onDescriptionChange={createForm.setCreateDescription}
-              onParentIdChange={createForm.setCreateParentId}
-              onBlocksIdChange={createForm.setCreateBlocksId}
-              onRelatedIdChange={createForm.setCreateRelatedId}
-              onCreate={handleCreateIssue}
-              onCancel={() => panels.setShowCreatePanel(false)}
-              onAISuggest={handleAISuggest}
-              isAILoading={isAILoading}
+        {panels.showCreatePanel && (
+          <CreatePanel
+            title={createForm.createTitle}
+            type={createForm.createType}
+            priority={createForm.createPriority}
+            description={createForm.createDescription}
+            parentId={createForm.createParentId}
+            blocksId={createForm.createBlocksId}
+            relatedId={createForm.createRelatedId}
+            currentFile={currentFile}
+            onTitleChange={createForm.setCreateTitle}
+            onTypeChange={createForm.setCreateType}
+            onPriorityChange={createForm.setCreatePriority}
+            onDescriptionChange={createForm.setCreateDescription}
+            onParentIdChange={createForm.setCreateParentId}
+            onBlocksIdChange={createForm.setCreateBlocksId}
+            onRelatedIdChange={createForm.setCreateRelatedId}
+            onCreate={handleCreateIssue}
+            onCancel={() => panels.setShowCreatePanel(false)}
+            onAISuggest={handleAISuggest}
+            isAILoading={isAILoading}
+          />
+        )}
+
+        {panels.showRelationshipPanel && (
+          <RelationshipPanel
+            sourceBead={relationshipForm.sourceBead}
+            targetBead={relationshipForm.targetBead}
+            relationType={relationshipForm.relationType}
+            onSourceChange={relationshipForm.setSourceBead}
+            onTargetChange={relationshipForm.setTargetBead}
+            onTypeChange={relationshipForm.setRelationType}
+            onLink={() => handleDepAction('add')}
+            onUnlink={() => handleDepAction('remove')}
+            onCancel={() => panels.setShowRelationshipPanel(false)}
+          />
+        )}
+
+        {panels.showEditPanel && (
+          <EditPanel
+            issueId={editForm.editIssueId}
+            title={editForm.editTitle}
+            type={editForm.editType}
+            priority={editForm.editPriority}
+            description={editForm.editDescription}
+            status={editForm.editStatus}
+            onTitleChange={editForm.setEditTitle}
+            onTypeChange={editForm.setEditType}
+            onPriorityChange={editForm.setEditPriority}
+            onDescriptionChange={editForm.setEditDescription}
+            onStatusChange={editForm.setEditStatus}
+            onUpdate={handleUpdateIssue}
+            onCancel={() => panels.setShowEditPanel(false)}
+          />
+        )}
+
+        {panels.showHierarchyView && (
+          <div className="section">
+            <HierarchyView
+              hierarchy={hierarchyModel}
+              onSelectIssue={(id) => {
+                handleShowIssueInline(id);
+                handleShowHierarchy(id);
+              }}
+              onClose={() => panels.setShowHierarchyView(false)}
             />
-          )}
+          </div>
+        )}
 
-          {panels.showRelationshipPanel && (
-            <RelationshipPanel
-              sourceBead={relationshipForm.sourceBead}
-              targetBead={relationshipForm.targetBead}
-              relationType={relationshipForm.relationType}
-              onSourceChange={relationshipForm.setSourceBead}
-              onTargetChange={relationshipForm.setTargetBead}
-              onTypeChange={relationshipForm.setRelationType}
-              onLink={() => handleDepAction('add')}
-              onUnlink={() => handleDepAction('remove')}
-              onCancel={() => panels.setShowRelationshipPanel(false)}
+        {panels.showBlockingView && (
+          <div className="section">
+            <BlockingView
+              blockingModel={blockingModel}
+              graphData={graphData}
+              activeTab={panels.activeBlockingTab}
+              onTabChange={panels.setActiveBlockingTab}
+              onIssueClick={(issue) => handleShowIssueInline(issue.id)}
+              onClose={() => panels.setShowBlockingView(false)}
+              issueDetails={issueDetails}
+              loadingDetails={loadingDetails}
+              onCloseIssue={handleCloseIssue}
+              onReopenIssue={handleReopenIssue}
+              onEditIssue={handleEditIssue}
+              onTypeChange={handleQuickTypeChange}
+              onPriorityChange={handleQuickPriorityChange}
+              onAssigneeChange={handleAssigneeChange}
+              onShowHierarchy={handleShowHierarchy}
+              onPokePoke={handlePokePoke}
+              onConvertToGitHub={handleConvertToGitHub}
+              onDispatchPhase={openParallelPhaseDispatch}
+              pokepokeInstances={pokepokeInstances}
+              vscode={vscode}
+              onDepAction={(action, fromId, toId) => {
+                runInlineAction(
+                  `dep ${action} ${fromId} --blocks ${toId}`,
+                  `${action === 'add' ? 'Linked' : 'Unlinked'} ${fromId} → ${toId}`
+                );
+              }}
             />
-          )}
-
-          {panels.showEditPanel && (
-            <EditPanel
-              issueId={editForm.editIssueId}
-              title={editForm.editTitle}
-              type={editForm.editType}
-              priority={editForm.editPriority}
-              description={editForm.editDescription}
-              status={editForm.editStatus}
-              onTitleChange={editForm.setEditTitle}
-              onTypeChange={editForm.setEditType}
-              onPriorityChange={editForm.setEditPriority}
-              onDescriptionChange={editForm.setEditDescription}
-              onStatusChange={editForm.setEditStatus}
-              onUpdate={handleUpdateIssue}
-              onCancel={() => panels.setShowEditPanel(false)}
-            />
-          )}
-        </ErrorBoundary>
-
-        <ErrorBoundary name="Views">
-          {panels.showHierarchyView && (
-            <div className="section">
-              <HierarchyView
-                hierarchy={hierarchyModel}
-                onSelectIssue={(id) => {
-                  handleShowIssueInline(id);
-                  handleShowHierarchy(id);
-                }}
-                onClose={() => panels.setShowHierarchyView(false)}
-              />
-            </div>
-          )}
-
-          {panels.showBlockingView && (
-            <div className="section">
-              <BlockingView
-                blockingModel={blockingModel}
-                graphData={graphData}
-                activeTab={panels.activeBlockingTab}
-                onTabChange={panels.setActiveBlockingTab}
-                onIssueClick={(issue) => handleShowIssueInline(issue.id)}
-                onClose={() => panels.setShowBlockingView(false)}
-                issueDetails={issueDetails}
-                loadingDetails={loadingDetails}
-                onCloseIssue={handleCloseIssue}
-                onReopenIssue={handleReopenIssue}
-                onEditIssue={handleEditIssue}
-                onTypeChange={handleQuickTypeChange}
-                onPriorityChange={handleQuickPriorityChange}
-                onAssigneeChange={handleAssigneeChange}
-                onShowHierarchy={handleShowHierarchy}
-                onPokePoke={handlePokePoke}
-                onConvertToGitHub={handleConvertToGitHub}
-                onAssignToCopilot={handleAssignToCopilot}
-                onDispatchPhase={openParallelPhaseDispatch}
-                pokepokeInstances={pokepokeInstances}
-                vscode={vscode}
-                onDepAction={(action, fromId, toId) => {
-                  if (action === 'bulkUnblock') {
-                    handleBulkUnblockEpics(fromId, toId);
-                  } else {
-                    runInlineAction(
-                      `dep ${action} ${fromId} --blocks ${toId}`,
-                      `${action === 'add' ? 'Linked' : 'Unlinked'} ${fromId} → ${toId}`
-                    );
-                  }
-                }}
-              />
-            </div>
-          )}
-        </ErrorBoundary>
+          </div>
+        )}
 
         {shouldShowResultsPanel && (
           <div className="section output-section">
@@ -425,31 +421,26 @@ const App = () => {
                 <button className="clear-btn" onClick={clearOutput}>Clear</button>
               </div>
             </div>
-            <ErrorBoundary name="Output Display">
-              <OutputDisplay 
-                output={output} 
-                isError={isError} 
-                isSuccess={isSuccess}
-                onShowIssue={handleShowIssueInline}
-                onCloseIssue={handleCloseIssue}
-                onReopenIssue={handleReopenIssue}
-                onEditIssue={handleEditIssue}
-                onLinkParent={(childId, parentId) => runInlineAction(`dep add ${childId} --parent ${parentId}`, `Linked ${childId} → ${parentId}`)}
-                onTypeChange={handleQuickTypeChange}
-                onPriorityChange={handleQuickPriorityChange}
-                onAssigneeChange={handleAssigneeChange}
-                onShowHierarchy={handleShowHierarchy}
-                onPokePoke={handlePokePoke}
-                onConvertToGitHub={handleConvertToGitHub}
-                onAssignToCopilot={handleAssignToCopilot}
-                pokepokeInstances={pokepokeInstances}
-                issueDetails={issueDetails}
-                loadingDetails={loadingDetails}
-                agentTracking={agentTracking}
-                onRefreshAgentStatus={refreshAgentStatus}
-                vscode={vscode}
-              />
-            </ErrorBoundary>
+            <OutputDisplay 
+              output={output} 
+              isError={isError} 
+              isSuccess={isSuccess}
+              onShowIssue={handleShowIssueInline}
+              onCloseIssue={handleCloseIssue}
+              onReopenIssue={handleReopenIssue}
+              onEditIssue={handleEditIssue}
+              onLinkParent={(childId, parentId) => runInlineAction(`dep add ${childId} --parent ${parentId}`, `Linked ${childId} → ${parentId}`)}
+              onTypeChange={handleQuickTypeChange}
+              onPriorityChange={handleQuickPriorityChange}
+              onAssigneeChange={handleAssigneeChange}
+              onShowHierarchy={handleShowHierarchy}
+              onPokePoke={handlePokePoke}
+              onConvertToGitHub={handleConvertToGitHub}
+              pokepokeInstances={pokepokeInstances}
+              issueDetails={issueDetails}
+              loadingDetails={loadingDetails}
+              vscode={vscode}
+            />
           </div>
         )}
 
@@ -468,17 +459,6 @@ const App = () => {
           onStart={startParallelPhaseDispatch}
           onClose={closeParallelPhaseDispatch}
         />
-
-        {bulkUnblockDialog && (
-          <BulkUnblockConfirmDialog
-            fromId={bulkUnblockDialog.fromId}
-            toId={bulkUnblockDialog.toId}
-            cascadedCount={bulkUnblockDialog.cascadedCount}
-            childrenPreview={bulkUnblockDialog.childrenPreview}
-            onConfirm={confirmBulkUnblock}
-            onCancel={cancelBulkUnblock}
-          />
-        )}
       </div>
     </div>
   );
