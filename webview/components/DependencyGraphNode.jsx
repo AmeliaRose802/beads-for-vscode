@@ -36,9 +36,19 @@ const DependencyGraphNode = ({
     }
   };
 
+  const nodeClass = [
+    'dependency-graph__node',
+    getPriorityClass(issue.priority),
+    getTypeClass(issue.issue_type),
+    isEpicChild && 'dependency-graph__node--epic-child',
+    isSelected && 'dependency-graph__node--selected',
+    isHovered && 'dependency-graph__node--hovered',
+    isCompleted && 'dependency-graph__node--completed'
+  ].filter(Boolean).join(' ');
+
   return (
     <div
-      className={`dependency-graph__node ${getPriorityClass(issue.priority)} ${getTypeClass(issue.issue_type)} ${isEpicChild ? 'dependency-graph__node--epic-child' : ''} ${isSelected ? 'dependency-graph__node--selected' : ''} ${isHovered ? 'dependency-graph__node--hovered' : ''} ${isCompleted ? 'dependency-graph__node--completed' : ''}`}
+      className={nodeClass}
       style={{ left: position.x, top: position.y }}
       onClick={() => onClick(issue)}
       onMouseEnter={() => onMouseEnter(issue.id)}
