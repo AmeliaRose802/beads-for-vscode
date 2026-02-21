@@ -1,113 +1,88 @@
 const assert = require('assert');
 const sinon = require('sinon');
-const https = require('https');
-const { PassThrough } = require('stream');
 
 const {
   checkGitHubIssueStatus
 } = require('../../github-converter');
 
-/**
- * Create a fake HTTPS response with the given status and body.
- * @param {number} statusCode - HTTP status code
- * @param {string} body - Response body string
- * @returns {PassThrough} Fake response stream
- */
-function fakeResponse(statusCode, body) {
-  const res = new PassThrough();
-  res.statusCode = statusCode;
-  process.nextTick(() => { res.emit('data', body); res.emit('end'); });
-  return res;
-}
-
-const apiOpts = { token: 'test-token', owner: 'octo', repo: 'myrepo' };
-
 suite('Agent Tracking', () => {
   suite('checkGitHubIssueStatus', () => {
-    let requestStub;
+    let fetchStub;
+    const defaultOpts = { token: 'test-token', owner: 'testowner', repo: 'testrepo' };
 
     setup(() => {
-      requestStub = sinon.stub(https, 'request');
+      fetchStub = sinon.stub(global, 'fetch');
     });
 
     teardown(() => {
-      requestStub.restore();
+      fetchStub.restore();
     });
 
     test('should throw error for missing issue number', async () => {
       await assert.rejects(
-        () => checkGitHubIssueStatus(null, apiOpts),
+        () => checkGitHubIssueStatus(null, defaultOpts),
         /Valid issue number is required/
       );
     });
 
     test('should throw error for non-number issue number', async () => {
       await assert.rejects(
-        () => checkGitHubIssueStatus('abc', apiOpts),
+        () => checkGitHubIssueStatus('abc', defaultOpts),
         /Valid issue number is required/
       );
     });
 
+    test('should throw error when repo info missing', async () => {
+      await assert.rejects(
+        () => checkGitHubIssueStatus(123, {}),
+        /GitHub repository info required/
+      );
+    });
+
     test('should return issue state OPEN', async () => {
-      const fakeReq = new PassThrough();
-      fakeReq.end = sinon.stub();
-      let callCount = 0;
-      requestStub.callsFake((opts, cb) => {
-        callCount++;
-        if (callCount === 1) {
-          cb(fakeResponse(200, JSON.stringify({ state: 'open' })));
-        } else {
-          cb(fakeResponse(200, JSON.stringify({ items: [] })));
-        }
-        return fakeReq;
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        text: async () => JSON.stringify({ state: 'open' })
+      });
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        text: async () => JSON.stringify({ items: [] })
       });
 
-      const result = await checkGitHubIssueStatus(123, apiOpts);
+      const result = await checkGitHubIssueStatus(123, defaultOpts);
       assert.strictEqual(result.issueState, 'OPEN');
       assert.strictEqual(result.pr, null);
     });
 
     test('should return issue state CLOSED', async () => {
-      const fakeReq = new PassThrough();
-      fakeReq.end = sinon.stub();
-      let callCount = 0;
-      requestStub.callsFake((opts, cb) => {
-        callCount++;
-        if (callCount === 1) {
-          cb(fakeResponse(200, JSON.stringify({ state: 'closed' })));
-        } else {
-          cb(fakeResponse(200, JSON.stringify({ items: [] })));
-        }
-        return fakeReq;
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        text: async () => JSON.stringify({ state: 'closed' })
+      });
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        text: async () => JSON.stringify({ items: [] })
       });
 
-      const result = await checkGitHubIssueStatus(456, apiOpts);
+      const result = await checkGitHubIssueStatus(456, defaultOpts);
       assert.strictEqual(result.issueState, 'CLOSED');
     });
 
     test('should return linked PR info', async () => {
-      const fakeReq = new PassThrough();
-      fakeReq.end = sinon.stub();
-      let callCount = 0;
-      requestStub.callsFake((opts, cb) => {
-        callCount++;
-        if (callCount === 1) {
-          cb(fakeResponse(200, JSON.stringify({ state: 'open' })));
-        } else {
-          cb(fakeResponse(200, JSON.stringify({
-            items: [{
-              number: 789,
-              html_url: 'https://github.com/o/r/pull/789',
-              state: 'open',
-              title: 'Fix it',
-              pull_request: {}
-            }]
-          })));
-        }
-        return fakeReq;
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        text: async () => JSON.stringify({ state: 'open' })
+      });
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        text: async () => JSON.stringify({
+          items: [
+            { number: 789, html_url: 'https://github.com/o/r/pull/789', state: 'open', title: 'Fix it' }
+          ]
+        })
       });
 
-      const result = await checkGitHubIssueStatus(123, apiOpts);
+      const result = await checkGitHubIssueStatus(123, defaultOpts);
       assert.strictEqual(result.issueState, 'OPEN');
       assert.ok(result.pr);
       assert.strictEqual(result.pr.number, 789);
@@ -117,63 +92,47 @@ suite('Agent Tracking', () => {
     });
 
     test('should handle PR search error gracefully', async () => {
-      const fakeReq = new PassThrough();
-      fakeReq.end = sinon.stub();
-      let callCount = 0;
-      requestStub.callsFake((opts, cb) => {
-        callCount++;
-        if (callCount === 1) {
-          cb(fakeResponse(200, JSON.stringify({ state: 'open' })));
-        } else {
-          cb(fakeResponse(500, '{"message":"Internal Server Error"}'));
-        }
-        return fakeReq;
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        text: async () => JSON.stringify({ state: 'open' })
+      });
+      fetchStub.onSecondCall().resolves({
+        ok: false,
+        status: 500,
+        text: async () => 'Internal Server Error'
       });
 
-      const result = await checkGitHubIssueStatus(123, apiOpts);
+      const result = await checkGitHubIssueStatus(123, defaultOpts);
       assert.strictEqual(result.issueState, 'OPEN');
       assert.strictEqual(result.pr, null);
     });
 
     test('should throw on issue fetch error', async () => {
-      const fakeReq = new PassThrough();
-      fakeReq.end = sinon.stub();
-      requestStub.callsFake((opts, cb) => {
-        cb(fakeResponse(404, '{"message":"Not Found"}'));
-        return fakeReq;
+      fetchStub.onFirstCall().resolves({
+        ok: false,
+        status: 404,
+        text: async () => JSON.stringify({ message: 'Not Found' })
       });
 
       await assert.rejects(
-        () => checkGitHubIssueStatus(999, apiOpts),
+        () => checkGitHubIssueStatus(999, defaultOpts),
         /Failed to check issue #999/
       );
     });
 
-    test('should throw if token or repo info is missing', async () => {
-      await assert.rejects(
-        () => checkGitHubIssueStatus(123, {}),
-        /GitHub token and repository info are required/
-      );
-    });
-
-    test('should call correct API endpoint', async () => {
-      const fakeReq = new PassThrough();
-      fakeReq.end = sinon.stub();
-      let callCount = 0;
-      requestStub.callsFake((opts, cb) => {
-        callCount++;
-        if (callCount === 1) {
-          cb(fakeResponse(200, JSON.stringify({ state: 'open' })));
-        } else {
-          cb(fakeResponse(200, JSON.stringify({ items: [] })));
-        }
-        return fakeReq;
+    test('should pass token in authorization header', async () => {
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        text: async () => JSON.stringify({ state: 'open' })
+      });
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        text: async () => JSON.stringify({ items: [] })
       });
 
-      await checkGitHubIssueStatus(123, apiOpts);
-      const opts = requestStub.firstCall.args[0];
-      assert.strictEqual(opts.hostname, 'api.github.com');
-      assert.ok(opts.path.includes('/repos/octo/myrepo/issues/123'));
+      await checkGitHubIssueStatus(123, defaultOpts);
+      const headers = fetchStub.firstCall.args[1].headers;
+      assert.strictEqual(headers['Authorization'], 'Bearer test-token');
     });
   });
 
@@ -314,6 +273,12 @@ suite('extension-message-handler checkAgentStatus', () => {
       },
       window: {
         createOutputChannel: sinon.stub().returns({ appendLine: sinon.stub() })
+      },
+      authentication: {
+        getSession: sinon.stub().resolves({
+          accessToken: 'mock-token',
+          account: { label: 'test', id: 'test' }
+        })
       }
     };
     return { ctx, vscode, postMessage };

@@ -1,51 +1,3 @@
-const https = require('https');
-
-/**
- * Make an HTTPS request to the GitHub REST API.
- * @param {string} method - HTTP method (GET, POST, etc.)
- * @param {string} apiPath - API path (e.g. /repos/owner/repo/issues)
- * @param {string} token - GitHub access token
- * @param {object} [body] - Request body for POST/PATCH
- * @returns {Promise<object>} Parsed JSON response
- */
-function githubApiRequest(method, apiPath, token, body) {
-  return new Promise((resolve, reject) => {
-    const reqOptions = {
-      hostname: 'api.github.com',
-      path: apiPath,
-      method,
-      headers: {
-        'User-Agent': 'beads-ui-vscode',
-        'Accept': 'application/vnd.github+json',
-        'Authorization': `Bearer ${token}`,
-        'X-GitHub-Api-Version': '2022-11-28'
-      }
-    };
-
-    if (body) {
-      reqOptions.headers['Content-Type'] = 'application/json';
-    }
-
-    const req = https.request(reqOptions, (res) => {
-      let data = '';
-      res.on('data', (chunk) => { data += chunk; });
-      res.on('end', () => {
-        if (res.statusCode >= 200 && res.statusCode < 300) {
-          try { resolve(JSON.parse(data)); } catch { resolve(data); }
-        } else {
-          let msg;
-          try { msg = JSON.parse(data).message || `HTTP ${res.statusCode}`; } catch { msg = `HTTP ${res.statusCode}`; }
-          reject(new Error(msg));
-        }
-      });
-    });
-
-    req.on('error', reject);
-    if (body) { req.write(JSON.stringify(body)); }
-    req.end();
-  });
-}
-
 /**
  * Map beads priority (0-4) to a GitHub label string.
  * @param {number|string} priority - Beads priority value
@@ -127,10 +79,61 @@ function collectLabels(item) {
 }
 
 /**
+ * Make a request to the GitHub REST API.
+ * @param {string} endpoint - API path (e.g. /repos/owner/repo/issues)
+ * @param {object} [opts] - Request options
+ * @param {string} [opts.token] - GitHub access token
+ * @param {string} [opts.method] - HTTP method (default GET)
+ * @param {object} [opts.body] - JSON request body
+ * @returns {Promise<object>} Parsed JSON response
+ */
+async function githubApiRequest(endpoint, opts = {}) {
+  const { token, method = 'GET', body } = opts;
+  const headers = {
+    'Accept': 'application/vnd.github+json',
+    'User-Agent': 'beads-ui-vscode',
+    'X-GitHub-Api-Version': '2022-11-28'
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  if (body) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  const url = `https://api.github.com${endpoint}`;
+  const response = await fetch(url, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    let message;
+    try {
+      message = JSON.parse(errorText).message || errorText;
+    } catch {
+      message = errorText;
+    }
+    if (response.status === 401) {
+      throw new Error('GitHub authentication failed. Sign in again via VS Code.');
+    }
+    if (response.status === 404) {
+      throw new Error(`GitHub resource not found: ${endpoint}`);
+    }
+    throw new Error(`GitHub API error (${response.status}): ${message}`);
+  }
+
+  const text = await response.text();
+  return text ? JSON.parse(text) : {};
+}
+
+/**
  * Convert a beads item to a GitHub issue using the GitHub REST API.
  * @param {object} item - Beads issue object
  * @param {object} [options] - Conversion options
- * @param {string} options.token - GitHub access token
+ * @param {string} [options.token] - GitHub access token
  * @param {string} options.owner - Repository owner
  * @param {string} options.repo - Repository name
  * @param {string} [options.assignee] - GitHub username to assign
@@ -141,37 +144,37 @@ async function convertBeadsItemToGitHubIssue(item, options = {}) {
     throw new Error('Invalid beads item: title is required');
   }
 
-  const { token, owner, repo } = options;
-  if (!token) {
-    throw new Error('GitHub token is required. Sign in via the GitHub authentication provider.');
-  }
+  const { token, owner, repo, assignee } = options;
   if (!owner || !repo) {
-    throw new Error('GitHub repository not detected. Ensure your workspace has a GitHub remote.');
+    throw new Error(
+      'GitHub repository info required. Ensure your workspace has a GitHub remote.'
+    );
   }
 
   const body = buildIssueBody(item);
   const labels = collectLabels(item);
-  const assignee = options && typeof options.assignee === 'string' && options.assignee.trim()
-    ? options.assignee.trim()
-    : null;
-
   const requestBody = { title: item.title, body };
-  if (labels.length > 0) { requestBody.labels = labels; }
-  if (assignee) { requestBody.assignees = [assignee]; }
+
+  if (labels.length > 0) {
+    requestBody.labels = labels;
+  }
+  if (assignee) {
+    requestBody.assignees = [assignee];
+  }
 
   const result = await githubApiRequest(
-    'POST', `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/issues`,
-    token, requestBody
+    `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/issues`,
+    { token, method: 'POST', body: requestBody }
   );
 
   return { number: result.number, url: result.html_url };
 }
 
 /**
- * Check the status of a GitHub issue and find linked PRs via the REST API.
+ * Check the status of a GitHub issue and find linked PRs.
  * @param {number} issueNumber - GitHub issue number
  * @param {object} [options] - Options
- * @param {string} options.token - GitHub access token
+ * @param {string} [options.token] - GitHub access token
  * @param {string} options.owner - Repository owner
  * @param {string} options.repo - Repository name
  * @returns {Promise<{issueState: string, pr: {number: number, url: string, state: string, title: string}|null}>}
@@ -182,40 +185,39 @@ async function checkGitHubIssueStatus(issueNumber, options = {}) {
   }
 
   const { token, owner, repo } = options;
-  if (!token || !owner || !repo) {
-    throw new Error('GitHub token and repository info are required');
+  if (!owner || !repo) {
+    throw new Error('GitHub repository info required.');
   }
 
   let issueState;
   try {
-    const issueData = await githubApiRequest(
-      'GET',
+    const issue = await githubApiRequest(
       `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/issues/${issueNumber}`,
-      token
+      { token }
     );
-    issueState = (issueData.state || 'open').toUpperCase();
+    issueState = (issue.state || 'open').toUpperCase();
   } catch (error) {
     throw new Error(`Failed to check issue #${issueNumber}: ${error.message}`);
   }
 
   let pr = null;
   try {
-    const q = encodeURIComponent(`repo:${owner}/${repo} is:pr ${issueNumber}`);
+    const q = `repo:${owner}/${repo}+is:pr+${issueNumber}`;
     const searchResult = await githubApiRequest(
-      'GET', `/search/issues?q=${q}&per_page=5`, token
+      `/search/issues?q=${encodeURIComponent(q)}`,
+      { token }
     );
     if (searchResult.items && searchResult.items.length > 0) {
       const linked = searchResult.items[0];
-      const merged = linked.pull_request && linked.pull_request.merged_at;
       pr = {
         number: linked.number,
         url: linked.html_url,
-        state: merged ? 'MERGED' : (linked.state || 'open').toUpperCase(),
+        state: (linked.state || 'open').toUpperCase(),
         title: linked.title || ''
       };
     }
   } catch {
-    // PR search is best-effort
+    // PR search is best-effort; continue with null
   }
 
   return { issueState, pr };
@@ -224,9 +226,9 @@ async function checkGitHubIssueStatus(issueNumber, options = {}) {
 module.exports = {
   convertBeadsItemToGitHubIssue,
   checkGitHubIssueStatus,
+  githubApiRequest,
   buildIssueBody,
   collectLabels,
   mapPriorityToLabel,
-  mapTypeToLabel,
-  githubApiRequest
+  mapTypeToLabel
 };

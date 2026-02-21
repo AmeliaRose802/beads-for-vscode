@@ -14,6 +14,21 @@ const { handleAssignToCopilotMessage, getCopilotAssignees } = require('./assign-
  */
 
 /**
+ * Get GitHub auth session and repo info for the workspace.
+ * @param {import('vscode')} vscode - VS Code API
+ * @param {string} workspacePath - Workspace root path
+ * @param {object} [authOpts] - Options for getGitHubSession
+ * @returns {Promise<{token: string|null, repo: {owner: string, repo: string}|null}>}
+ */
+async function resolveGitHubContext(vscode, workspacePath, authOpts = {}) {
+  const [session, repo] = await Promise.all([
+    getGitHubSession(vscode, authOpts),
+    workspacePath ? detectGitHubRepo(workspacePath) : Promise.resolve(null)
+  ]);
+  return { token: session ? session.token : null, repo };
+}
+
+/**
  * Handle a message from the webview
  * @param {object} data - The message data from the webview
  * @param {object} context - Context object containing provider methods
@@ -213,7 +228,6 @@ async function handleWebviewMessage(data, context, vscode) {
           getGitHubSession(vscode, { createIfNone: !silent, silent }),
           workspacePath ? detectGitHubRepo(workspacePath) : Promise.resolve(null)
         ]);
-
         const copilotAssignees = getCopilotAssignees(vscode);
 
         webviewView.webview.postMessage({
@@ -232,8 +246,12 @@ async function handleWebviewMessage(data, context, vscode) {
           break;
         }
         const workspacePath = wsFolders[0].uri.fsPath;
-        const ghRepo = await detectGitHubRepo(workspacePath);
-        const ghToken = (await getGitHubSession(vscode, { createIfNone: true }))?.token || null;
+
+        const { token: ghToken, repo: ghRepo } = await resolveGitHubContext(vscode, workspacePath, { createIfNone: true });
+        if (!ghRepo) {
+          webviewView.webview.postMessage({ type: 'parallelPhaseDispatchError', success: false, error: 'GitHub repository not detected. Ensure your workspace has a GitHub remote.' });
+          break;
+        }
         const phaseIndex = Number.isFinite(data.phaseIndex) ? data.phaseIndex : null;
         const issueIds = Array.isArray(data.issueIds) ? data.issueIds.map(String).map(s => s.trim()).filter(Boolean) : [];
         const uniqueIssueIds = [...new Set(issueIds)];
@@ -280,13 +298,18 @@ async function handleWebviewMessage(data, context, vscode) {
             let assigned = !!assignee;
             let warning = null;
             try {
-              ghResult = await convertBeadsItemToGitHubIssue(item, { token: ghToken, owner: ghRepo?.owner, repo: ghRepo?.repo, assignee });
+              ghResult = await convertBeadsItemToGitHubIssue(item, {
+                token: ghToken, owner: ghRepo.owner, repo: ghRepo.repo,
+                assignee: assignee || undefined
+              });
             } catch (error) {
               const message = error && error.message ? error.message : String(error);
-              if (assignee && /assignee|Could not resolve|Invalid assignee/i.test(message)) {
+              if (assignee && /assignee|Could not resolve|Invalid assignee|Validation Failed/i.test(message)) {
                 warning = `Created issue without assigning ${assignee}: ${message}`;
                 assigned = false;
-                ghResult = await convertBeadsItemToGitHubIssue(item, { token: ghToken, owner: ghRepo?.owner, repo: ghRepo?.repo });
+                ghResult = await convertBeadsItemToGitHubIssue(item, {
+                  token: ghToken, owner: ghRepo.owner, repo: ghRepo.repo
+                });
               } else {
                 throw error;
               }
@@ -381,69 +404,42 @@ async function handleWebviewMessage(data, context, vscode) {
       case 'convertToGitHub': {
         const wsFolders = vscode.workspace.workspaceFolders;
         if (!wsFolders || wsFolders.length === 0) {
-           webviewView.webview.postMessage({
-              type: 'githubConversionResult',
-              success: false,
-              error: 'An open workspace is required to convert items to GitHub issues.',
-              commandKey: data.commandKey
-            });
+          webviewView.webview.postMessage({ type: 'githubConversionResult', success: false, error: 'An open workspace is required to convert items to GitHub issues.', commandKey: data.commandKey });
           break;
         }
 
         const workspacePath = wsFolders[0].uri.fsPath;
         try {
-          const ghRepo = await detectGitHubRepo(workspacePath);
-          const ghToken = (await getGitHubSession(vscode, { createIfNone: true }))?.token || null;
+          const { token, repo } = await resolveGitHubContext(vscode, workspacePath, { createIfNone: true });
+          if (!repo) {
+            webviewView.webview.postMessage({ type: 'githubConversionResult', success: false, error: 'GitHub repository not detected. Ensure your workspace has a GitHub remote.', commandKey: data.commandKey });
+            break;
+          }
 
           const result = await provider._executeBdCommand(`list --id ${data.issueId} --json`);
           if (!result.success) {
-             webviewView.webview.postMessage({
-               type: 'githubConversionResult',
-               success: false,
-               error: `Failed to fetch issue: ${result.output}`,
-               commandKey: data.commandKey
-             });
+            webviewView.webview.postMessage({ type: 'githubConversionResult', success: false, error: `Failed to fetch issue: ${result.output}`, commandKey: data.commandKey });
             break;
           }
 
           const issues = JSON.parse(result.output);
           if (!issues || issues.length === 0) {
-             webviewView.webview.postMessage({
-               type: 'githubConversionResult',
-               success: false,
-               error: `Issue ${data.issueId} not found`,
-               commandKey: data.commandKey
-             });
+            webviewView.webview.postMessage({ type: 'githubConversionResult', success: false, error: `Issue ${data.issueId} not found`, commandKey: data.commandKey });
             break;
           }
 
-          const issue = issues[0];
-          const ghResult = await convertBeadsItemToGitHubIssue(issue, { token: ghToken, owner: ghRepo?.owner, repo: ghRepo?.repo });
-
-           webviewView.webview.postMessage({
-              type: 'githubConversionResult',
-              success: true,
-              url: ghResult.url,
-              number: ghResult.number,
-              issueId: data.issueId,
-              commandKey: data.commandKey
-            });
+          const ghResult = await convertBeadsItemToGitHubIssue(issues[0], { token, owner: repo.owner, repo: repo.repo });
+          webviewView.webview.postMessage({ type: 'githubConversionResult', success: true, url: ghResult.url, number: ghResult.number, issueId: data.issueId, commandKey: data.commandKey });
         } catch (error) {
-           webviewView.webview.postMessage({
-              type: 'githubConversionResult',
-              success: false,
-              error: error.message || 'Unknown error occurred',
-              commandKey: data.commandKey
-           });
+          webviewView.webview.postMessage({ type: 'githubConversionResult', success: false, error: error.message || 'Unknown error occurred', commandKey: data.commandKey });
         }
         break;
       }
       case 'checkAgentStatus': {
         const cwdPath = (vscode.workspace.workspaceFolders || [])[0]?.uri.fsPath;
         try {
-          const agentRepo = cwdPath ? await detectGitHubRepo(cwdPath) : null;
-          const agentToken = (await getGitHubSession(vscode, { createIfNone: false, silent: true }))?.token || null;
-          const statusResult = await checkGitHubIssueStatus(data.issueNumber, { token: agentToken, owner: agentRepo?.owner, repo: agentRepo?.repo });
+          const { token, repo } = await resolveGitHubContext(vscode, cwdPath, { silent: true });
+          const statusResult = await checkGitHubIssueStatus(data.issueNumber, { token, owner: repo?.owner, repo: repo?.repo });
           webviewView.webview.postMessage({
             type: 'agentStatusResult', beadsItemId: data.beadsItemId,
             issueState: statusResult.issueState, pr: statusResult.pr, success: true
