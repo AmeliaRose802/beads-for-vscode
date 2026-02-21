@@ -14,6 +14,9 @@
  * @param {Function} deps.assignCopilotToIssue - Copilot assignment helper
  * @returns {Promise<void>}
  */
+
+const { validateIssueId } = require('./validate-issue-id');
+
 async function handleAssignToCopilotMessage(
   data,
   {
@@ -47,6 +50,7 @@ async function handleAssignToCopilotMessage(
 
   let ghResult = null;
   try {
+    validateIssueId(data.issueId, 'issueId');
     const result = await provider._executeBdCommand(`list --id ${data.issueId} --json`);
     if (!result.success) {
       webviewView.webview.postMessage({

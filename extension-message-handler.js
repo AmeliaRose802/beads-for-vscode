@@ -6,6 +6,7 @@ const { convertBeadsItemToGitHubIssue, checkGitHubIssueStatus } = require('./git
 const { assignCopilotToIssue } = require('./github-copilot');
 const { getGitHubSession, detectGitHubRepo } = require('./github-auth');
 const { handleAssignToCopilotMessage, getCopilotAssignees } = require('./assign-copilot-handler');
+const { validateIssueId, validateIssueIds } = require('./validate-issue-id');
 
 /**
  * Handle messages from the webview.
@@ -171,6 +172,7 @@ async function handleWebviewMessage(data, context, vscode) {
         break;
       }
       case 'getComments': {
+        validateIssueId(data.issueId, 'issueId');
         const cmtResult = await provider._executeBdCommand(`comments ${data.issueId}`);
         webviewView.webview.postMessage({ type: 'commentsResult', issueId: data.issueId, output: cmtResult.output, success: cmtResult.success });
         break;
@@ -186,6 +188,7 @@ async function handleWebviewMessage(data, context, vscode) {
         break;
       }
       case 'getDependencies': {
+        validateIssueId(data.issueId, 'issueId');
         const [depsRes, depsUpRes] = await Promise.all([
           provider._executeBdCommand(`dep list ${data.issueId} --json`),
           provider._executeBdCommand(`dep list ${data.issueId} --direction up --json`)
@@ -246,7 +249,6 @@ async function handleWebviewMessage(data, context, vscode) {
           break;
         }
         const workspacePath = wsFolders[0].uri.fsPath;
-
         const { token: ghToken, repo: ghRepo } = await resolveGitHubContext(vscode, workspacePath, { createIfNone: true });
         if (!ghRepo) {
           webviewView.webview.postMessage({ type: 'parallelPhaseDispatchError', success: false, error: 'GitHub repository not detected. Ensure your workspace has a GitHub remote.' });
@@ -254,20 +256,19 @@ async function handleWebviewMessage(data, context, vscode) {
         }
         const phaseIndex = Number.isFinite(data.phaseIndex) ? data.phaseIndex : null;
         const issueIds = Array.isArray(data.issueIds) ? data.issueIds.map(String).map(s => s.trim()).filter(Boolean) : [];
+        validateIssueIds(issueIds, 'issueId');
         const uniqueIssueIds = [...new Set(issueIds)];
         const copilotAssignees = getCopilotAssignees(vscode);
         const plannedAssignments = uniqueIssueIds.map((id, idx) => {
           const assignee = copilotAssignees.length > 0 ? copilotAssignees[idx % copilotAssignees.length] : null;
           return { issueId: id, assignee };
         });
-
         webviewView.webview.postMessage({
           type: 'parallelPhaseDispatchStarted',
           phaseIndex,
           total: plannedAssignments.length,
           assignments: plannedAssignments
         });
-
         const results = [];
         for (let idx = 0; idx < plannedAssignments.length; idx++) {
           const { issueId, assignee } = plannedAssignments[idx];
@@ -356,7 +357,6 @@ async function handleWebviewMessage(data, context, vscode) {
 
         const successCount = results.filter(r => r.success).length;
         const failureCount = results.length - successCount;
-
         webviewView.webview.postMessage({
           type: 'parallelPhaseDispatchComplete',
           phaseIndex,
@@ -370,8 +370,14 @@ async function handleWebviewMessage(data, context, vscode) {
         const epicA = data.epicA;
         const epicB = data.epicB;
         const cascadedDeps = Array.isArray(data.cascadedDeps) ? data.cascadedDeps : [];
-
         try {
+          // Validate all issue IDs before executing any commands
+          validateIssueId(epicA, 'epicA');
+          validateIssueId(epicB, 'epicB');
+          for (const dep of cascadedDeps) {
+            validateIssueId(dep.from, 'cascadedDep.from');
+            validateIssueId(dep.to, 'cascadedDep.to');
+          }
           // Remove the direct epic-to-epic blocking relationship
           const directResult = await provider._executeBdCommand(
             `dep remove ${epicA} --blocks ${epicB}`
@@ -381,7 +387,6 @@ async function handleWebviewMessage(data, context, vscode) {
               `dep remove ${epicB} --blocks ${epicA}`
             );
           }
-
           // Remove all cascaded child blocking relationships
           const errors = [];
           for (const dep of cascadedDeps) {
@@ -392,7 +397,6 @@ async function handleWebviewMessage(data, context, vscode) {
               errors.push(`${dep.from} → ${dep.to}`);
             }
           }
-
           provider._invalidateCache();
           const removedCount = cascadedDeps.length - errors.length + 1;
           webviewView.webview.postMessage({ type: 'epicUnblockResult', success: true, epicA, epicB, removedCount, errors });
@@ -407,9 +411,9 @@ async function handleWebviewMessage(data, context, vscode) {
           webviewView.webview.postMessage({ type: 'githubConversionResult', success: false, error: 'An open workspace is required to convert items to GitHub issues.', commandKey: data.commandKey });
           break;
         }
-
         const workspacePath = wsFolders[0].uri.fsPath;
         try {
+          validateIssueId(data.issueId, 'issueId');
           const { token, repo } = await resolveGitHubContext(vscode, workspacePath, { createIfNone: true });
           if (!repo) {
             webviewView.webview.postMessage({ type: 'githubConversionResult', success: false, error: 'GitHub repository not detected. Ensure your workspace has a GitHub remote.', commandKey: data.commandKey });
