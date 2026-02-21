@@ -81,10 +81,6 @@
   background-color: var(--vscode-button-secondaryHoverBackground);
 }
 
-.dependency-graph__mermaid-btn {
-  margin-left: 4px;
-}
-
 .dependency-graph__zoom-level {
   font-size: 10px;
   color: var(--vscode-descriptionForeground);
