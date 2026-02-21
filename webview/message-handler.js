@@ -213,43 +213,28 @@ function processMessage(message, ctx) {
       if (ctx.handleParallelPhaseDispatch) {
         ctx.handleParallelPhaseDispatch(message);
       }
-      if (message.type === 'parallelPhaseDispatchComplete' && ctx.trackBatchDispatch) {
-        ctx.trackBatchDispatch(message.results);
-      }
       break;
-    case 'agentStatusResult': {
-      if (message.success && message.beadsItemId && ctx.updateAgentStatus) {
-        ctx.updateAgentStatus(message.beadsItemId, {
-          issueState: message.issueState,
-          pr: message.pr
-        });
+    case 'copilotDispatchResult': {
+      if (message.commandKey && ctx.completeCommandProgress) {
+        ctx.completeCommandProgress(message.commandKey);
       }
-      break;
-    }
-    case 'epicUnblockResult': {
-      if (!ctx.setOutput) break;
+      if (!ctx.setOutput) {
+        break;
+      }
       if (message.success) {
-        const errNote = message.errors && message.errors.length > 0
-          ? ` (${message.errors.length} failed)`
-          : '';
-        ctx.setOutput(`🔓 Unblocked ${message.epicA} ↔ ${message.epicB}: ${message.removedCount} relationship${message.removedCount !== 1 ? 's' : ''} removed${errNote}`);
+        const urlDetail = message.url ? ` ${message.url}` : '';
+        ctx.setOutput(`✅ Assigned to ${message.assignedTo || 'GitHub Copilot'} for ${message.issueId}.${urlDetail}`);
         ctx.setIsError(false);
         flashSuccess();
       } else {
-        ctx.setOutput(`❌ Epic unblock failed: ${message.error || 'Unknown error'}`);
+        ctx.setOutput(`❌ Copilot dispatch failed: ${message.error || 'Unknown error'}`);
         ctx.setIsError(true);
-      }
-      if (ctx.handleEpicUnblockComplete) {
-        ctx.handleEpicUnblockComplete(message);
       }
       break;
     }
     case 'githubConversionResult': {
       if (message.commandKey && ctx.completeCommandProgress) {
         ctx.completeCommandProgress(message.commandKey);
-      }
-      if (message.success && message.issueId && ctx.trackDispatch) {
-        ctx.trackDispatch(message.issueId, message.url, message.number, null);
       }
       if (!ctx.setOutput) {
         break;
@@ -261,26 +246,6 @@ function processMessage(message, ctx) {
         flashSuccess();
       } else {
         ctx.setOutput(`❌ GitHub conversion failed: ${message.error || 'Unknown error'}`);
-        ctx.setIsError(true);
-      }
-      break;
-    }
-    case 'copilotDispatchResult': {
-      if (message.commandKey && ctx.completeCommandProgress) {
-        ctx.completeCommandProgress(message.commandKey);
-      }
-      if (!ctx.setOutput) {
-        break;
-      }
-      if (message.success) {
-        const link = message.url ? ` ${message.url}` : '';
-        const assigneeNote = message.assignedTo ? ` (${message.assignedTo})` : '';
-        ctx.setOutput(`🤖 Assigned GitHub Copilot${assigneeNote} for ${message.issueId}.${link}`);
-        ctx.setIsError(false);
-        flashSuccess();
-      } else {
-        const link = message.url ? ` GitHub issue: ${message.url}` : '';
-        ctx.setOutput(`❌ Copilot assignment failed: ${message.error || 'Unknown error'}${link ? ` (${link})` : ''}`);
         ctx.setIsError(true);
       }
       break;

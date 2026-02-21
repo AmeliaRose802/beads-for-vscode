@@ -2,7 +2,7 @@
  * Blocking view utilities: topological sort, critical path, and completion order.
  */
 
-const { getField, buildIssueMap, isClosedStatus, normalizeRelationshipType, DEP_FROM_KEYS, DEP_TO_KEYS, DEP_TYPE_KEYS } = require('./field-utils');
+const { getField, buildIssueMap, isClosedStatus, DEP_FROM_KEYS, DEP_TO_KEYS, DEP_TYPE_KEYS } = require('./field-utils');
 const { topologicalSort, findCriticalPaths, calculateFanOut } = require('./blocking-utils-algorithms');
 
 /** Build blocking model from graph components. */
@@ -70,33 +70,23 @@ function extractBlockingGraph(components) {
     (component?.Dependencies || []).forEach(dep => {
       const fromId = getField(dep, DEP_FROM_KEYS);
       const toId = getField(dep, DEP_TO_KEYS);
-      const type = normalizeRelationshipType(getField(dep, DEP_TYPE_KEYS));
+      const type = getField(dep, DEP_TYPE_KEYS) || 'related';
 
-      if (!fromId || !toId) {
-        return;
-      }
+      const isParentRelation = type === 'parent' || type === 'parent-child';
+      const isBlockingRelation = type === 'blocks' || type === 'blocked-by';
+      if (fromId && toId && (isBlockingRelation || isParentRelation)) {
+        const hasBeadsIssueKey = Object.prototype.hasOwnProperty.call(dep, 'issue_id')
+          || Object.prototype.hasOwnProperty.call(dep, 'IssueID')
+          || Object.prototype.hasOwnProperty.call(dep, 'issueId');
+        const hasBeadsDependsOnKey = Object.prototype.hasOwnProperty.call(dep, 'depends_on_id')
+          || Object.prototype.hasOwnProperty.call(dep, 'DependsOnID')
+          || Object.prototype.hasOwnProperty.call(dep, 'dependsOnId');
+        const isBeadsOrientation = hasBeadsIssueKey || hasBeadsDependsOnKey;
 
-      const hasBeadsIssueKey = Object.prototype.hasOwnProperty.call(dep, 'issue_id')
-        || Object.prototype.hasOwnProperty.call(dep, 'IssueID')
-        || Object.prototype.hasOwnProperty.call(dep, 'issueId');
-      const hasBeadsDependsOnKey = Object.prototype.hasOwnProperty.call(dep, 'depends_on_id')
-        || Object.prototype.hasOwnProperty.call(dep, 'DependsOnID')
-        || Object.prototype.hasOwnProperty.call(dep, 'dependsOnId');
-      const isBeadsOrientation = hasBeadsIssueKey || hasBeadsDependsOnKey;
-
-      if (type === 'parent-child') {
-        if (isBeadsOrientation) {
-          // Child (issue_id) must complete before parent (depends_on_id).
+        if (isParentRelation) {
+          // Parent-child: child (issue_id/fromId) must complete before parent (depends_on_id/toId) can close.
           edges.push({ from: fromId, to: toId });
-        } else {
-          // Legacy format where from = parent, to = child. Child blocks parent.
-          edges.push({ from: toId, to: fromId });
-        }
-        return;
-      }
-
-      if (type === 'blocks' || type === 'blocked-by') {
-        if (isBeadsOrientation) {
+        } else if (isBeadsOrientation) {
           // Beads graph data uses issue -> depends_on orientation.
           // Normalize to edges from blocker to blocked: depends_on (blocker) -> issue (blocked).
           edges.push({ from: toId, to: fromId });
@@ -143,20 +133,24 @@ function findReadyItems(nodeIds, edges, issueMap) {
 function findParallelGroups(nodeIds, edges, issueMap) {
   if (nodeIds.length === 0) return [];
 
-  // Epics are organizational containers, not actionable work items
-  if (issueMap) {
-    nodeIds = nodeIds.filter(id => issueMap[id]?.issue_type !== 'epic');
-    if (nodeIds.length === 0) return [];
-  }
+  // Exclude epics from parallel group computation
+  const epicIds = new Set(
+    nodeIds.filter(id => issueMap && issueMap[id]?.issue_type === 'epic')
+  );
+  const filteredNodeIds = nodeIds.filter(id => !epicIds.has(id));
+
+  if (filteredNodeIds.length === 0) return [];
 
   const inDegree = {};
   const outEdges = {};
-  nodeIds.forEach(id => {
+  filteredNodeIds.forEach(id => {
     inDegree[id] = 0;
     outEdges[id] = [];
   });
 
   edges.forEach(({ from, to }) => {
+    // Skip edges from epics — treat epics as non-blockers in phase computation
+    if (epicIds.has(from)) return;
     // Completed blockers should not push work into later phases.
     if (issueMap && isClosedStatus(issueMap[from]?.status)) return;
 
@@ -168,7 +162,7 @@ function findParallelGroups(nodeIds, edges, issueMap) {
 
   const depth = {};
   const queue = [];
-  nodeIds.forEach(id => {
+  filteredNodeIds.forEach(id => {
     if (inDegree[id] === 0) {
       queue.push(id);
       depth[id] = 0;
@@ -190,7 +184,7 @@ function findParallelGroups(nodeIds, edges, issueMap) {
   }
 
   // Assign remaining cyclic nodes
-  nodeIds.forEach(id => {
+  filteredNodeIds.forEach(id => {
     if (depth[id] === undefined) {
       depth[id] = 0;
     }
@@ -198,25 +192,20 @@ function findParallelGroups(nodeIds, edges, issueMap) {
 
   // Group by depth
   const groups = {};
-  nodeIds.forEach(id => {
+  filteredNodeIds.forEach(id => {
     const d = depth[id];
     if (!groups[d]) groups[d] = [];
     groups[d].push(id);
   });
 
-  // Sort items within each phase by priority (P0 first, P4 last)
-  const sortByPriority = (ids) => {
-    if (!issueMap) return ids;
-    return ids.slice().sort((a, b) => {
-      const pa = issueMap[a]?.priority ?? 2;
-      const pb = issueMap[b]?.priority ?? 2;
-      return pa - pb;
-    });
-  };
-
+  // Sort each phase by priority (P0 first; undefined defaults to P2)
   return Object.keys(groups)
     .sort((a, b) => Number(a) - Number(b))
-    .map(key => sortByPriority(groups[key]));
+    .map(key => groups[key].sort((a, b) => {
+      const pa = issueMap && issueMap[a]?.priority !== undefined ? issueMap[a].priority : 2;
+      const pb = issueMap && issueMap[b]?.priority !== undefined ? issueMap[b].priority : 2;
+      return pa - pb;
+    }));
 }
 
 /** Apply filters to a list of issue IDs. */
@@ -265,8 +254,11 @@ function calculateBlockingCounts(nodeIds, edges) {
 
 module.exports = {
   buildBlockingModel,
+  topologicalSort,
+  findCriticalPaths,
   findReadyItems,
   findParallelGroups,
   applyFilters,
+  calculateFanOut,
   calculateBlockingCounts
 };
