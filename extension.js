@@ -244,7 +244,7 @@ class BeadsViewProvider {
     }
     
     // Fetch fresh data
-    const result = await this._executeBdCommand('list --json');
+    const result = await this._executeBdCommand('list --json --limit 0');
     
     if (!result.success) {
       console.error('Failed to execute bd list:', result.output);

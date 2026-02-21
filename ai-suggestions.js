@@ -13,7 +13,7 @@
 async function getAISuggestions(executeBdCommand, title, currentDescription) {
   const vscode = require('vscode');
   try {
-    const listResult = await executeBdCommand('list --json');
+    const listResult = await executeBdCommand('list --json --limit 0');
     let existingIssues = [];
 
     try {
