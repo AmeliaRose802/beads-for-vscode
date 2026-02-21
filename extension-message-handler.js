@@ -232,6 +232,8 @@ async function handleWebviewMessage(data, context, vscode) {
           break;
         }
         const workspacePath = wsFolders[0].uri.fsPath;
+        const ghRepo = await detectGitHubRepo(workspacePath);
+        const ghToken = (await getGitHubSession(vscode, { createIfNone: true }))?.token || null;
         const phaseIndex = Number.isFinite(data.phaseIndex) ? data.phaseIndex : null;
         const issueIds = Array.isArray(data.issueIds) ? data.issueIds.map(String).map(s => s.trim()).filter(Boolean) : [];
         const uniqueIssueIds = [...new Set(issueIds)];
@@ -278,13 +280,13 @@ async function handleWebviewMessage(data, context, vscode) {
             let assigned = !!assignee;
             let warning = null;
             try {
-              ghResult = await convertBeadsItemToGitHubIssue(item, workspacePath, assignee ? { assignee } : undefined);
+              ghResult = await convertBeadsItemToGitHubIssue(item, { token: ghToken, owner: ghRepo?.owner, repo: ghRepo?.repo, assignee });
             } catch (error) {
               const message = error && error.message ? error.message : String(error);
               if (assignee && /assignee|Could not resolve|Invalid assignee/i.test(message)) {
                 warning = `Created issue without assigning ${assignee}: ${message}`;
                 assigned = false;
-                ghResult = await convertBeadsItemToGitHubIssue(item, workspacePath);
+                ghResult = await convertBeadsItemToGitHubIssue(item, { token: ghToken, owner: ghRepo?.owner, repo: ghRepo?.repo });
               } else {
                 throw error;
               }
@@ -390,6 +392,9 @@ async function handleWebviewMessage(data, context, vscode) {
 
         const workspacePath = wsFolders[0].uri.fsPath;
         try {
+          const ghRepo = await detectGitHubRepo(workspacePath);
+          const ghToken = (await getGitHubSession(vscode, { createIfNone: true }))?.token || null;
+
           const result = await provider._executeBdCommand(`list --id ${data.issueId} --json`);
           if (!result.success) {
              webviewView.webview.postMessage({
@@ -413,7 +418,7 @@ async function handleWebviewMessage(data, context, vscode) {
           }
 
           const issue = issues[0];
-          const ghResult = await convertBeadsItemToGitHubIssue(issue, workspacePath);
+          const ghResult = await convertBeadsItemToGitHubIssue(issue, { token: ghToken, owner: ghRepo?.owner, repo: ghRepo?.repo });
 
            webviewView.webview.postMessage({
               type: 'githubConversionResult',
@@ -436,7 +441,9 @@ async function handleWebviewMessage(data, context, vscode) {
       case 'checkAgentStatus': {
         const cwdPath = (vscode.workspace.workspaceFolders || [])[0]?.uri.fsPath;
         try {
-          const statusResult = await checkGitHubIssueStatus(data.issueNumber, cwdPath);
+          const agentRepo = cwdPath ? await detectGitHubRepo(cwdPath) : null;
+          const agentToken = (await getGitHubSession(vscode, { createIfNone: false, silent: true }))?.token || null;
+          const statusResult = await checkGitHubIssueStatus(data.issueNumber, { token: agentToken, owner: agentRepo?.owner, repo: agentRepo?.repo });
           webviewView.webview.postMessage({
             type: 'agentStatusResult', beadsItemId: data.beadsItemId,
             issueState: statusResult.issueState, pr: statusResult.pr, success: true
