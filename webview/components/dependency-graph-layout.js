@@ -102,8 +102,11 @@ export const calculateLayout = (data) => {
 
     const repEdgeSet = new Set();
     deps.forEach(dep => {
-      const rawFrom = getField(dep, DEP_FROM_KEYS);
-      const rawTo = getField(dep, DEP_TO_KEYS);
+      // Use DEP_TO_KEYS (depends_on_id / blocker) as the layout source so
+      // blockers appear on the left and the items they block on the right,
+      // producing a natural left-to-right dependency flow.
+      const rawFrom = getField(dep, DEP_TO_KEYS);
+      const rawTo = getField(dep, DEP_FROM_KEYS);
       if (!rawFrom || !rawTo) return;
       if (!issueById[rawFrom] || !issueById[rawTo]) return;
 
