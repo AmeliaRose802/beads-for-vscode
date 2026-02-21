@@ -31,7 +31,7 @@ function buildPlanSchedule(issues, edges, completionOrder, maxParallel) {
 
   const issueMap = {};
   issues.forEach(issue => {
-    if (issue && issue.id !== undefined && issue.id !== null) {
+    if (issue && issue.id != null) {
       issueMap[issue.id] = issue;
     }
   });
@@ -43,7 +43,7 @@ function buildPlanSchedule(issues, edges, completionOrder, maxParallel) {
   const orderIndex = new Map();
   if (Array.isArray(completionOrder)) {
     completionOrder.forEach((issue, idx) => {
-      if (issue && issue.id !== undefined && issue.id !== null) {
+      if (issue && issue.id != null) {
         orderIndex.set(issue.id, idx);
       }
     });
@@ -66,7 +66,7 @@ function buildPlanSchedule(issues, edges, completionOrder, maxParallel) {
   const cycleIdSet = new Set();
   cycleGroups.forEach(group => {
     group.forEach(issue => {
-      if (issue && issue.id !== undefined && issue.id !== null) {
+      if (issue && issue.id != null) {
         cycleIdSet.add(issue.id);
       }
     });

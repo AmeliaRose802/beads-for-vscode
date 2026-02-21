@@ -11,7 +11,7 @@ const { getField, buildIssueMap, DEP_ISSUE_KEYS, DEP_TARGET_KEYS, DEP_TYPE_KEYS,
  * @returns {string} Normalized priority string
  */
 function formatPriority(priority) {
-  if (priority === undefined || priority === null) return 'p2';
+  if (priority == null) return 'p2';
   const raw = String(priority).trim();
   if (raw.toLowerCase().startsWith('p')) {
     const value = raw.slice(1) || '2';

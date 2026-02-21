@@ -214,7 +214,7 @@ function applyFilters(ids, issueMap, filters) {
     const issue = issueMap[id];
     if (!issue) return false;
 
-    if (filters.priority !== undefined && filters.priority !== null) {
+    if (filters.priority != null) {
       if (issue.priority !== filters.priority) return false;
     }
     if (filters.assignee) {

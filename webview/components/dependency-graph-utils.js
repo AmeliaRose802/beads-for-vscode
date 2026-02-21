@@ -60,7 +60,7 @@ const normalizeRelType = (rawType) => {
 const resolveDepType = (dep) => {
   const typeKeys = ['type', 'dependency_type', 'relationship', 'relation_type'];
   for (const key of typeKeys) {
-    if (dep[key] !== undefined && dep[key] !== null) return dep[key];
+    if (dep[key] != null) return dep[key];
   }
   return undefined;
 };

@@ -223,7 +223,7 @@ function findCriticalPaths(nodeIds, edges, issueMap, maxPaths = Infinity) {
 
 /** Compute priority weight (higher-priority/lower-number items get higher weight). */
 function getPriorityWeight(issue) {
-  if (!issue || issue.priority === undefined || issue.priority === null) {
+  if (!issue || issue.priority == null) {
     return 1;
   }
 
@@ -244,7 +244,7 @@ function getEstimateMinutes(issue) {
   }
 
   const raw = getField(issue, ESTIMATE_MINUTES_KEYS);
-  if (raw === undefined || raw === null) {
+  if (raw == null) {
     return null;
   }
 

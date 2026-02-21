@@ -4,7 +4,7 @@ const { copyTextToClipboard } = require('../clipboard-utils');
 const COPY_FEEDBACK_DURATION_MS = 1500;
 
 const CopyableIssueId = ({ id, className = '', tooltip = 'Click to copy ID', allowPropagation = false, onClick }) => {
-  const normalizedId = id === undefined || id === null ? '' : String(id);
+  const normalizedId = id == null ? '' : String(id);
   const [copyState, setCopyState] = useState('idle');
   const timeoutRef = useRef(null);
 

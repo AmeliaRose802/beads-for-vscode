@@ -67,7 +67,7 @@ function collectLabels(item) {
     labels.push(mapTypeToLabel(item.issue_type || item.type));
   }
 
-  if (item.priority !== undefined && item.priority !== null) {
+  if (item.priority != null) {
     labels.push(mapPriorityToLabel(item.priority));
   }
 
