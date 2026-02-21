@@ -355,6 +355,7 @@ const BlockingView = ({
             onIssueClick={handleNodeClick}
             onCopy={copyPlanToClipboard}
             renderCopyFeedback={renderCopyFeedback}
+            onDispatchWave={onDispatchPhase}
           />
         )}
       </div>
