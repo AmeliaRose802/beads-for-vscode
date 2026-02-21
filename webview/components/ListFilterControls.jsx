@@ -330,4 +330,5 @@ const ListFilterControls = ({
   );
 };
 
+export { extractLabels, extractAssignees };
 export default ListFilterControls;

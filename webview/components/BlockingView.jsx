@@ -7,6 +7,7 @@ import EdgeMenu from './EdgeMenu';
 import { filterGraphDataEpicLevel, filterGraphDataTaskLevel } from './dependency-graph-utils';
 import LabelDropdown from './LabelDropdown';
 import IssueCard from './IssueCard';
+import { extractLabels, extractAssignees } from './ListFilterControls';
 const { copyTextToClipboard, formatIssuesForClipboard, buildPhasedClipboardText, buildPlanClipboardText } = require('../clipboard-utils');
 const { isClosedStatus } = require('../field-utils');
 const COPY_FEEDBACK_DURATION_MS = 2200;
@@ -75,22 +76,8 @@ const BlockingView = ({
     );
   }
   const { issues, edges, completionOrder, criticalPaths, readyItems, parallelGroups, blocksCount, blockedByCount } = blockingModel;
-  const existingAssignees = useMemo(() => {
-    if (!Array.isArray(issues)) return [];
-    return [...new Set(issues.map(issue => issue.assignee).filter(Boolean))];
-  }, [issues]);
-  const availableLabels = useMemo(() => {
-    if (!Array.isArray(issues)) return [];
-    const labelSet = new Set();
-    issues.forEach(issue => {
-      if (Array.isArray(issue.labels)) {
-        issue.labels.filter(Boolean).forEach(label => labelSet.add(label));
-      }
-    });
-    return Array.from(labelSet).sort((a, b) =>
-      a.localeCompare(b, undefined, { sensitivity: 'base' })
-    );
-  }, [issues]);
+  const existingAssignees = useMemo(() => extractAssignees(issues || []), [issues]);
+  const availableLabels = useMemo(() => extractLabels(issues || []), [issues]);
   const matchesFilters = useMemo(() => {
     const hasPriority = filterPriority !== '';
     const hasAssignee = filterAssignee.trim() !== '';
