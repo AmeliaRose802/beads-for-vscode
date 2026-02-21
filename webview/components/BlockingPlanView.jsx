@@ -12,7 +12,8 @@ const BlockingPlanView = ({
   readyIds, 
   onIssueClick, 
   onCopy, 
-  renderCopyFeedback 
+  renderCopyFeedback,
+  onDispatchWave
 }) => {
   const [maxParallel, setMaxParallel] = useState(DEFAULT_MAX_PARALLEL);
   const [inputValue, setInputValue] = useState(String(DEFAULT_MAX_PARALLEL));
@@ -127,6 +128,16 @@ const BlockingPlanView = ({
               <span className="blocking-view__plan-wave-meta">
                 {wave.length} item{wave.length !== 1 ? 's' : ''} (capacity {wave.length}/{plan.capacity})
               </span>
+              {onDispatchWave && (
+                <button
+                  type="button"
+                  className="blocking-view__layer-action"
+                  onClick={() => onDispatchWave(wave, index)}
+                  aria-label={`Dispatch wave ${index + 1} to Copilot`}
+                >
+                  Dispatch to Copilot
+                </button>
+              )}
             </div>
             <div className="blocking-view__plan-items">
               {wave.map(issue => {
