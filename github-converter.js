@@ -1,4 +1,50 @@
-const childProcess = require('child_process');
+const https = require('https');
+
+/**
+ * Make an HTTPS request to the GitHub REST API.
+ * @param {string} method - HTTP method (GET, POST, etc.)
+ * @param {string} apiPath - API path (e.g. /repos/owner/repo/issues)
+ * @param {string} token - GitHub access token
+ * @param {object} [body] - Request body for POST/PATCH
+ * @returns {Promise<object>} Parsed JSON response
+ */
+function githubApiRequest(method, apiPath, token, body) {
+  return new Promise((resolve, reject) => {
+    const reqOptions = {
+      hostname: 'api.github.com',
+      path: apiPath,
+      method,
+      headers: {
+        'User-Agent': 'beads-ui-vscode',
+        'Accept': 'application/vnd.github+json',
+        'Authorization': `Bearer ${token}`,
+        'X-GitHub-Api-Version': '2022-11-28'
+      }
+    };
+
+    if (body) {
+      reqOptions.headers['Content-Type'] = 'application/json';
+    }
+
+    const req = https.request(reqOptions, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          try { resolve(JSON.parse(data)); } catch { resolve(data); }
+        } else {
+          let msg;
+          try { msg = JSON.parse(data).message || `HTTP ${res.statusCode}`; } catch { msg = `HTTP ${res.statusCode}`; }
+          reject(new Error(msg));
+        }
+      });
+    });
+
+    req.on('error', reject);
+    if (body) { req.write(JSON.stringify(body)); }
+    req.end();
+  });
+}
 
 /**
  * Map beads priority (0-4) to a GitHub label string.
@@ -81,14 +127,26 @@ function collectLabels(item) {
 }
 
 /**
- * Convert a beads item to a GitHub issue using the gh CLI.
+ * Convert a beads item to a GitHub issue using the GitHub REST API.
  * @param {object} item - Beads issue object
- * @param {string} [cwd] - Working directory for repo context
+ * @param {object} [options] - Conversion options
+ * @param {string} options.token - GitHub access token
+ * @param {string} options.owner - Repository owner
+ * @param {string} options.repo - Repository name
+ * @param {string} [options.assignee] - GitHub username to assign
  * @returns {Promise<{number: number, url: string}>} GitHub issue number and URL
  */
-async function convertBeadsItemToGitHubIssue(item, cwd, options = {}) {
+async function convertBeadsItemToGitHubIssue(item, options = {}) {
   if (!item || !item.title) {
     throw new Error('Invalid beads item: title is required');
+  }
+
+  const { token, owner, repo } = options;
+  if (!token) {
+    throw new Error('GitHub token is required. Sign in via the GitHub authentication provider.');
+  }
+  if (!owner || !repo) {
+    throw new Error('GitHub repository not detected. Ensure your workspace has a GitHub remote.');
   }
 
   const body = buildIssueBody(item);
@@ -97,109 +155,68 @@ async function convertBeadsItemToGitHubIssue(item, cwd, options = {}) {
     ? options.assignee.trim()
     : null;
 
-  const args = [
-    'issue', 'create',
-    '--title', item.title,
-    '--body', body
-  ];
+  const requestBody = { title: item.title, body };
+  if (labels.length > 0) { requestBody.labels = labels; }
+  if (assignee) { requestBody.assignees = [assignee]; }
 
-  if (labels.length > 0) {
-    args.push('--label', labels.join(','));
-  }
+  const result = await githubApiRequest(
+    'POST', `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/issues`,
+    token, requestBody
+  );
 
-  if (assignee) {
-    args.push('--assignee', assignee);
-  }
-
-  return new Promise((resolve, reject) => {
-    const callback = (error, stdout) => {
-      if (error) {
-        if (error.code === 'ENOENT' || (error.message && error.message.includes('not found'))) {
-          return reject(new Error('GitHub CLI (gh) not found. Please install it: https://cli.github.com/'));
-        }
-        if (error.message && error.message.includes('not logged in')) {
-          return reject(new Error('Not authenticated with GitHub. Run: gh auth login'));
-        }
-        if (error.message && error.message.includes('not a git repository')) {
-          return reject(new Error('Not in a git repository or repository not linked to GitHub'));
-        }
-        return reject(new Error(`Failed to create GitHub issue: ${error.message}`));
-      }
-
-      const url = (typeof stdout === 'string' ? stdout : '').trim();
-      const match = url.match(/\/issues\/(\d+)$/);
-      const number = match ? parseInt(match[1], 10) : null;
-
-      resolve({ number, url });
-    };
-
-    if (cwd) {
-      childProcess.execFile('gh', args, { cwd }, callback);
-    } else {
-      childProcess.execFile('gh', args, callback);
-    }
-  });
+  return { number: result.number, url: result.html_url };
 }
 
 /**
- * Check the status of a GitHub issue and find linked PRs.
+ * Check the status of a GitHub issue and find linked PRs via the REST API.
  * @param {number} issueNumber - GitHub issue number
- * @param {string} [cwd] - Working directory for repo context
+ * @param {object} [options] - Options
+ * @param {string} options.token - GitHub access token
+ * @param {string} options.owner - Repository owner
+ * @param {string} options.repo - Repository name
  * @returns {Promise<{issueState: string, pr: {number: number, url: string, state: string, title: string}|null}>}
  */
-async function checkGitHubIssueStatus(issueNumber, cwd) {
+async function checkGitHubIssueStatus(issueNumber, options = {}) {
   if (!issueNumber || typeof issueNumber !== 'number') {
     throw new Error('Valid issue number is required');
   }
 
-  const execOpts = cwd ? { cwd, timeout: 15000 } : { timeout: 15000 };
+  const { token, owner, repo } = options;
+  if (!token || !owner || !repo) {
+    throw new Error('GitHub token and repository info are required');
+  }
 
-  const issueState = await new Promise((resolve, reject) => {
-    childProcess.execFile(
-      'gh', ['issue', 'view', String(issueNumber), '--json', 'state'],
-      execOpts,
-      (error, stdout) => {
-        if (error) {
-          return reject(new Error(`Failed to check issue #${issueNumber}: ${error.message}`));
-        }
-        try {
-          const data = JSON.parse(stdout);
-          resolve((data.state || 'OPEN').toUpperCase());
-        } catch {
-          resolve('UNKNOWN');
-        }
-      }
+  let issueState;
+  try {
+    const issueData = await githubApiRequest(
+      'GET',
+      `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/issues/${issueNumber}`,
+      token
     );
-  });
+    issueState = (issueData.state || 'open').toUpperCase();
+  } catch (error) {
+    throw new Error(`Failed to check issue #${issueNumber}: ${error.message}`);
+  }
 
-  const pr = await new Promise((resolve) => {
-    childProcess.execFile(
-      'gh', ['pr', 'list', '--search', String(issueNumber), '--json', 'number,url,state,title', '--limit', '5'],
-      execOpts,
-      (error, stdout) => {
-        if (error || !stdout) {
-          resolve(null);
-          return;
-        }
-        try {
-          const prs = JSON.parse(stdout);
-          if (Array.isArray(prs) && prs.length > 0) {
-            const linked = prs[0];
-            resolve({
-              number: linked.number,
-              url: linked.url,
-              state: (linked.state || 'OPEN').toUpperCase(),
-              title: linked.title || ''
-            });
-          } else {
-            resolve(null);
-          }
-        } catch {
-          resolve(null);
-        }
-      }
+  let pr = null;
+  try {
+    const q = encodeURIComponent(`repo:${owner}/${repo} is:pr ${issueNumber}`);
+    const searchResult = await githubApiRequest(
+      'GET', `/search/issues?q=${q}&per_page=5`, token
     );
-  });
+    if (searchResult.items && searchResult.items.length > 0) {
+      const linked = searchResult.items[0];
+      const merged = linked.pull_request && linked.pull_request.merged_at;
+      pr = {
+        number: linked.number,
+        url: linked.html_url,
+        state: merged ? 'MERGED' : (linked.state || 'open').toUpperCase(),
+        title: linked.title || ''
+      };
+    }
+  } catch {
+    // PR search is best-effort
+  }
 
   return { issueState, pr };
 }
@@ -210,5 +227,6 @@ module.exports = {
   buildIssueBody,
   collectLabels,
   mapPriorityToLabel,
-  mapTypeToLabel
+  mapTypeToLabel,
+  githubApiRequest
 };
