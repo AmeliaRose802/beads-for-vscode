@@ -3,6 +3,7 @@ import IssueCard from './IssueCard';
 import StatsDisplay from './StatsDisplay';
 import PaginationControls from './PaginationControls';
 import ListFilterControls from './ListFilterControls';
+const { buildFlatHierarchy } = require('../list-hierarchy-utils');
 
 const STORAGE_KEY = 'beads-ui-page-size';
 
@@ -128,7 +129,7 @@ function matchesPriority(issue, priorityFilter) {
   return issuePriority === filterPriority;
 }
 
-const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, onReopenIssue, onEditIssue, onLinkParent, onTypeChange, onPriorityChange, onAssigneeChange, onShowHierarchy, onPokePoke, onConvertToGitHub, pokepokeInstances, issueDetails = {}, loadingDetails = {}, vscode }) => {
+const OutputDisplay = ({ output, isError, isSuccess,onShowIssue, onCloseIssue, onReopenIssue, onEditIssue, onLinkParent, onTypeChange, onPriorityChange, onAssigneeChange, onShowHierarchy, onPokePoke, onConvertToGitHub, pokepokeInstances, issueDetails = {}, loadingDetails = {}, vscode }) => {
   const [draggedIssue, setDraggedIssue] = useState(null);
   const [pageSize, setPageSize] = useState(getStoredPageSize);
   const [currentPage, setCurrentPage] = useState(1);
@@ -184,9 +185,14 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
   [searchFilter, assigneeFilter, labelFilter, statusFilter, priorityFilter]);
 
   const filteredOpenIssues = useMemo(() => {
-    if (!hasActiveFilters) return listOpenIssues;
-    return listOpenIssues.filter(filterFn);
+    const filtered = hasActiveFilters ? listOpenIssues.filter(filterFn) : listOpenIssues;
+    return filtered;
   }, [listOpenIssues, hasActiveFilters, filterFn]);
+
+  const hierarchicalOpenIssues = useMemo(
+    () => buildFlatHierarchy(filteredOpenIssues),
+    [filteredOpenIssues]
+  );
 
   const filteredClosedIssues = useMemo(() => {
     if (!hasActiveFilters) return listClosedIssues;
@@ -219,7 +225,7 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
 
     const totalUnfilteredItems = listOpenIssues.length;
     const totalFilteredItems = filteredOpenIssues.length;
-    const paginatedOpenIssues = paginateItems(filteredOpenIssues, currentPage, pageSize);
+    const paginatedHierarchy = paginateItems(hierarchicalOpenIssues, currentPage, pageSize);
 
     return (
       <div className={`output ${className} output-display`}>
@@ -256,36 +262,37 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
           unfilteredCount={hasActiveFilters ? totalUnfilteredItems : null}
         />
 
-        <div className="issue-tree issue-tree--flat">
-          {paginatedOpenIssues.length === 0 ? (
+        <div className="issue-tree">
+          {paginatedHierarchy.length === 0 ? (
             <div className="issue-tree__empty">
               {hasActiveFilters ? 'No open issues match the current filters.' : 'No open issues.'}
             </div>
           ) : (
-            paginatedOpenIssues.map((issue) => (
-              <IssueCard
-                key={issue.id}
-                issue={issue}
-                onClick={() => onShowIssue(issue.id)}
-                onClose={() => onCloseIssue(issue.id)}
-                onReopen={() => onReopenIssue(issue.id)}
-                onEdit={() => onEditIssue(issue.id)}
-                onTypeChange={onTypeChange}
-                onPriorityChange={onPriorityChange}
-                onAssigneeChange={onAssigneeChange}
-                onShowHierarchy={onShowHierarchy}
-                onPokePoke={onPokePoke}
-                onConvertToGitHub={onConvertToGitHub}
-                pokepokeRunning={pokepokeInstances && pokepokeInstances.some(i => i.itemId === issue.id && (i.state === 'running' || i.state === 'starting'))}
-                existingAssignees={existingAssignees}
-                detailedData={issueDetails[issue.id]}
-                isLoadingDetails={loadingDetails[issue.id]}
-                onDragStart={() => handleDragStart(issue)}
-                onDrop={() => handleDrop(issue)}
-                isDragging={draggedIssue?.id === issue.id}
-                isDropTarget={draggedIssue && (issue.type === 'epic' || issue.type === 'feature') && draggedIssue.id !== issue.id}
-                vscode={vscode}
-              />
+            paginatedHierarchy.map(({ issue, depth }) => (
+              <div key={issue.id} className={`issue-tree__node issue-tree__node--depth-${depth}`}>
+                <IssueCard
+                  issue={issue}
+                  onClick={() => onShowIssue(issue.id)}
+                  onClose={() => onCloseIssue(issue.id)}
+                  onReopen={() => onReopenIssue(issue.id)}
+                  onEdit={() => onEditIssue(issue.id)}
+                  onTypeChange={onTypeChange}
+                  onPriorityChange={onPriorityChange}
+                  onAssigneeChange={onAssigneeChange}
+                  onShowHierarchy={onShowHierarchy}
+                  onPokePoke={onPokePoke}
+                  onConvertToGitHub={onConvertToGitHub}
+                  pokepokeRunning={pokepokeInstances && pokepokeInstances.some(i => i.itemId === issue.id && (i.state === 'running' || i.state === 'starting'))}
+                  existingAssignees={existingAssignees}
+                  detailedData={issueDetails[issue.id]}
+                  isLoadingDetails={loadingDetails[issue.id]}
+                  onDragStart={() => handleDragStart(issue)}
+                  onDrop={() => handleDrop(issue)}
+                  isDragging={draggedIssue?.id === issue.id}
+                  isDropTarget={draggedIssue && (issue.type === 'epic' || issue.type === 'feature') && draggedIssue.id !== issue.id}
+                  vscode={vscode}
+                />
+              </div>
             ))
           )}
         </div>

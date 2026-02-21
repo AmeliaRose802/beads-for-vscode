@@ -4,6 +4,13 @@
 .issue-tree { display: flex; flex-direction: column; gap: 8px; }
 .issue-tree--flat { padding-left: 0; }
 
+.issue-tree__node { }
+.issue-tree__node--depth-0 { margin-left: 0; }
+.issue-tree__node--depth-1 { margin-left: 16px; border-left: 2px solid var(--vscode-editorIndentGuide-background, rgba(128, 128, 128, 0.3)); padding-left: 8px; }
+.issue-tree__node--depth-2 { margin-left: 32px; border-left: 2px solid var(--vscode-editorIndentGuide-background, rgba(128, 128, 128, 0.3)); padding-left: 8px; }
+.issue-tree__node--depth-3 { margin-left: 48px; border-left: 2px solid var(--vscode-editorIndentGuide-background, rgba(128, 128, 128, 0.3)); padding-left: 8px; }
+.issue-tree__node--depth-4 { margin-left: 64px; border-left: 2px solid var(--vscode-editorIndentGuide-background, rgba(128, 128, 128, 0.3)); padding-left: 8px; }
+
 .issue-tree__empty { padding: 8px; color: var(--vscode-descriptionForeground); font-style: italic; }
 
 
