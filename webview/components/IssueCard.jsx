@@ -16,10 +16,8 @@ const IssueCard = ({
   onPriorityChange,
   onAssigneeChange,
   onShowHierarchy,
-  onPokePoke,
   onConvertToGitHub,
   onAssignToCopilot,
-  pokepokeRunning,
   existingAssignees,
   detailedData,
   isLoadingDetails,
@@ -358,15 +356,6 @@ const IssueCard = ({
               className="issue-card__action-btn"
               title="Edit issue">
               ✏️
-            </button>
-          )}
-          {!isClosed && onPokePoke && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onPokePoke(issue.id, issue.title, totalRelationships > 0); }}
-              className={`issue-card__action-btn ${pokepokeRunning ? 'issue-card__action-btn--pokepoke-running' : ''}`}
-              title={pokepokeRunning ? 'PokePoke is running' : 'Assign to PokePoke'}
-              disabled={pokepokeRunning}>
-              {pokepokeRunning ? '⏳' : '🤖'}
             </button>
           )}
           {onAssignToCopilot && (
