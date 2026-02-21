@@ -227,6 +227,10 @@ const OutputDisplay = ({ output, isError, isSuccess, onShowIssue, onCloseIssue, 
           $ bd {output.command}
         </div>
 
+        {output.header && (
+          <div className="output-display__header">{output.header}</div>
+        )}
+
         <ListFilterControls
           searchFilter={searchFilter}
           assigneeFilter={assigneeFilter}

@@ -3,6 +3,7 @@
 /* Output Display */
 .output-display { padding: 10px; }
 .output-display__command { color: var(--vscode-descriptionForeground); margin-bottom: 8px; }
+.output-display__header { font-size: 12px; font-weight: 600; color: var(--vscode-foreground); margin-bottom: 8px; }
 
 .output-display__closed-section { margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--vscode-panel-border); }
 .output-display__closed-summary {

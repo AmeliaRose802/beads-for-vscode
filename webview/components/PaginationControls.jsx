@@ -58,9 +58,16 @@ const PaginationControls = ({
 
   // Generate item count display text
   const hasFilters = filteredCount !== null && unfilteredCount !== null;
-  const itemCountText = hasFilters
-    ? `Showing ${filteredCount} of ${unfilteredCount} item${unfilteredCount !== 1 ? 's' : ''}`
-    : `${totalItems} item${totalItems !== 1 ? 's' : ''}`;
+  let itemCountText;
+  if (hasFilters) {
+    itemCountText = `Showing ${filteredCount} of ${unfilteredCount} item${unfilteredCount !== 1 ? 's' : ''}`;
+  } else if (showNavigation) {
+    const start = (currentPage - 1) * effectivePageSize + 1;
+    const end = Math.min(currentPage * effectivePageSize, totalItems);
+    itemCountText = `Showing ${start}–${end} of ${totalItems} item${totalItems !== 1 ? 's' : ''}`;
+  } else {
+    itemCountText = `${totalItems} item${totalItems !== 1 ? 's' : ''}`;
+  }
 
   return (
     <div className="pagination-controls">
