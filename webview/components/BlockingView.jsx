@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import ErrorBoundary from './ErrorBoundary';
 import BlockingOrderTab from './BlockingOrderTab';
 import BlockingGraphTab from './BlockingGraphTab';
 import BlockingPlanView from './BlockingPlanView';
@@ -10,7 +9,6 @@ import LabelDropdown from './LabelDropdown';
 import IssueCard from './IssueCard';
 const { copyTextToClipboard, formatIssuesForClipboard, buildPhasedClipboardText, buildPlanClipboardText } = require('../clipboard-utils');
 const { isClosedStatus } = require('../field-utils');
-const { formatPriority } = require('../parse-utils');
 const COPY_FEEDBACK_DURATION_MS = 2200;
 const PHASE_ITEM_PREVIEW_LIMIT = 5;
 /** BlockingView - Visualizes blocking relationships and suggests completion order. */
@@ -33,7 +31,6 @@ const BlockingView = ({
   onShowHierarchy,
   onPokePoke,
   onConvertToGitHub,
-  onAssignToCopilot,
   onDispatchPhase,
   pokepokeInstances,
   vscode
@@ -119,6 +116,12 @@ const BlockingView = ({
     ? normalizedParallelGroups.map(g => g.filter(i => filteredIds.has(i.id))).filter(g => g.length > 0)
     : normalizedParallelGroups
   );
+  const formatPriority = (priority) => {
+    if (priority === undefined || priority === null) return 'p2';
+    const raw = String(priority).trim();
+    if (!raw) return 'p2';
+    return raw.toLowerCase().startsWith('p') ? raw.toLowerCase() : `p${raw}`;
+  };
   const normalizeIssueForCard = (issue) => {
     if (!issue) return null;
     return {
@@ -240,34 +243,17 @@ const BlockingView = ({
     if (onDepAction && toId.trim()) onDepAction('add', fromId, toId.trim());
     closeEdgeMenu();
   };
-  const handleEpicEdgeClick = (fromId, toId, event) => {
-    event.stopPropagation();
-    if (onDepAction) onDepAction('bulkUnblock', fromId, toId);
-  };
-  const handleBulkUnblockEpics = (fromId, toId) => {
-    if (onDepAction) onDepAction('bulkUnblock', fromId, toId);
-    closeEdgeMenu();
-  };
-  const getIssueType = (issueId) => {
-    const issue = issues.find(i => i.id === issueId);
-    return issue ? (issue.type || issue.issue_type || 'task') : 'task';
-  };
   const renderEdgeMenu = (fromId, toId) => {
     if (!activeEdgeMenu || activeEdgeMenu.fromId !== fromId || activeEdgeMenu.toId !== toId) {
       return null;
     }
-    const fromType = getIssueType(fromId);
-    const toType = getIssueType(toId);
-    const isEpicToEpic = fromType === 'feature' && toType === 'feature';
     return (
       <EdgeMenu
         fromId={fromId}
         toId={toId}
-        isEpicToEpic={isEpicToEpic}
         onRemove={handleRemoveLink}
         onRetarget={handleRetarget}
         onAddLink={handleAddLink}
-        onBulkUnblock={isEpicToEpic ? handleBulkUnblockEpics : null}
         onClose={closeEdgeMenu}
       />
     );
@@ -341,64 +327,53 @@ const BlockingView = ({
       </div>
       <div className="blocking-view__content">
         {activeTab === 'list' && (
-          <ErrorBoundary name="BlockingView List Tab" showDetails={false}>
-            <BlockingOrderTab
-              issues={filteredCompletionOrder}
-              readyIds={readyIds}
-              onIssueClick={handleNodeClick}
-              onCopy={copyOrderToClipboard}
-              renderCopyFeedback={renderCopyFeedback}
-            />
-          </ErrorBoundary>
+          <BlockingOrderTab
+            issues={filteredCompletionOrder}
+            readyIds={readyIds}
+            onIssueClick={handleNodeClick}
+            onCopy={copyOrderToClipboard}
+            renderCopyFeedback={renderCopyFeedback}
+          />
         )}
         {activeTab === 'hierarchy' && (
-          <ErrorBoundary name="BlockingView Hierarchy Tab" showDetails={false}>
-            <BlockingGraphTab
-              parallelGroups={filteredParallelGroups}
-              readyIds={readyIds}
-              selectedNode={selectedNode}
-              onNodeClick={handleNodeClick}
-              onEdgeClick={handleEdgeClick}
-              onTogglePhase={togglePhaseExpanded}
-              onDispatchPhase={onDispatchPhase}
-              renderEdgeMenu={renderEdgeMenu}
-              getPhasePreview={getPhasePreview}
-              blocksCount={blocksCount}
-              blockedByCount={blockedByCount}
-            />
-          </ErrorBoundary>
+          <BlockingGraphTab
+            parallelGroups={filteredParallelGroups}
+            readyIds={readyIds}
+            selectedNode={selectedNode}
+            onNodeClick={handleNodeClick}
+            onEdgeClick={handleEdgeClick}
+            onTogglePhase={togglePhaseExpanded}
+            onDispatchPhase={onDispatchPhase}
+            renderEdgeMenu={renderEdgeMenu}
+            getPhasePreview={getPhasePreview}
+            blocksCount={blocksCount}
+            blockedByCount={blockedByCount}
+          />
         )}
         {activeTab === 'epic-graph' && (
-          <ErrorBoundary name="DependencyGraph Epic View" showDetails={false}>
-            <DependencyGraph
-              graphData={epicGraphData}
-              onIssueClick={handleNodeClick}
-              showCloseButton={false}
-              onEdgeClick={handleEpicEdgeClick}
-            />
-          </ErrorBoundary>
+          <DependencyGraph
+            graphData={epicGraphData}
+            onIssueClick={handleNodeClick}
+            showCloseButton={false}
+          />
         )}
         {activeTab === 'task-graph' && (
-          <ErrorBoundary name="DependencyGraph Task View" showDetails={false}>
-            <DependencyGraph
-              graphData={taskGraphData}
-              onIssueClick={handleNodeClick}
-              showCloseButton={false}
-            />
-          </ErrorBoundary>
+          <DependencyGraph
+            graphData={taskGraphData}
+            onIssueClick={handleNodeClick}
+            showCloseButton={false}
+          />
         )}
         {activeTab === 'plan' && (
-          <ErrorBoundary name="BlockingView Plan Tab" showDetails={false}>
-            <BlockingPlanView
-              issues={filteredIssues}
-              edges={edges}
-              completionOrder={filteredCompletionOrder}
-              readyIds={readyIds}
-              onIssueClick={handleNodeClick}
-              onCopy={copyPlanToClipboard}
-              renderCopyFeedback={renderCopyFeedback}
-            />
-          </ErrorBoundary>
+          <BlockingPlanView
+            issues={filteredIssues}
+            edges={edges}
+            completionOrder={filteredCompletionOrder}
+            readyIds={readyIds}
+            onIssueClick={handleNodeClick}
+            onCopy={copyPlanToClipboard}
+            renderCopyFeedback={renderCopyFeedback}
+          />
         )}
       </div>
       {selectedCardIssue && (
@@ -425,7 +400,6 @@ const BlockingView = ({
               onShowHierarchy={onShowHierarchy}
               onPokePoke={onPokePoke}
               onConvertToGitHub={onConvertToGitHub}
-              onAssignToCopilot={onAssignToCopilot}
               pokepokeRunning={pokepokeInstances?.some(
                 (instance) =>
                   instance.itemId === selectedCardIssue.id &&

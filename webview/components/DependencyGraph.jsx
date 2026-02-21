@@ -7,8 +7,14 @@ import DependencyGraphDetails from './DependencyGraphDetails';
 import { shouldShowNode, shouldShowEdge, calculateBlockingCounts } from './dependency-graph-utils';
 import { calculateLayout } from './dependency-graph-layout';
 import usePanZoom from '../hooks/usePanZoom';
-const { getField, normalizeRelationshipType, DEP_TYPE_KEYS, DEP_ISSUE_KEYS, DEP_TARGET_KEYS } = require('../field-utils');
-const { copyTextToClipboard, buildMermaidChartText } = require('../clipboard-utils');
+const { getField, DEP_TYPE_KEYS, DEP_ISSUE_KEYS, DEP_TARGET_KEYS } = require('../field-utils');
+
+const normalizeRelationshipType = (rawType) => {
+  const value = String(rawType || 'related').toLowerCase();
+  if (value === 'parent') return 'parent-child';
+  if (value === 'relates-to') return 'related';
+  return value;
+};
 
 /**
  * Calculate a smooth bezier curve path for edges.
@@ -53,12 +59,11 @@ const calculateBezierPath = (fromX, fromY, toX, toY) => {
  * Renders a graph showing issues as nodes and dependencies as edges.
  * Supports pan/zoom, node selection, and displays dependency flow.
  */
-const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = true, onEdgeClick }) => {
+const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = true }) => {
   const containerRef = useRef(null);
   const [selectedNode, setSelectedNode] = useState(null);
   const [hoveredNode, setHoveredNode] = useState(null);
   const [nodePositions, setNodePositions] = useState({});
-  const [mermaidCopied, setMermaidCopied] = useState(false);
   const [filters, setFilters] = useState({
     showCompleted: true,
     showBlocked: true,
@@ -111,18 +116,6 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
       onIssueClick(issue);
     }
   };
-
-  const handleCopyMermaid = useCallback(async () => {
-    const mermaidText = buildMermaidChartText(graphData);
-    if (!mermaidText) return;
-    try {
-      await copyTextToClipboard(mermaidText);
-      setMermaidCopied(true);
-      setTimeout(() => setMermaidCopied(false), 2000);
-    } catch {
-      // Clipboard write failed silently
-    }
-  }, [graphData]);
 
   if (!graphData) {
     return (
@@ -260,17 +253,11 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
       }
     }
 
-    const cascadedFrom = dep.cascaded_from || dep.cascadedFrom || dep.CascadedFrom;
-    const cascadedKey = blockingTypes.has(depType) ? (cascadedFrom ? 'cascaded' : 'manual') : '';
-
-    const key = blockingTypes.has(depType)
-      ? `${fromId}|${toId}|${depType}|${cascadedKey}`
-      : `${fromId}|${toId}|${depType}`;
-
+    const key = `${fromId}|${toId}|${depType}`;
     if (edgeKeySet.has(key)) return;
     edgeKeySet.add(key);
 
-    visibleDeps.push({ ...dep, __fromId: fromId, __toId: toId, __type: depType, __cascadedFrom: cascadedFrom });
+    visibleDeps.push({ ...dep, __fromId: fromId, __toId: toId, __type: depType });
   });
 
   if (visibleIssues.length === 0) {
@@ -310,9 +297,6 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
           <button className="dependency-graph__control-btn" onClick={zoomOut} title="Zoom out">−</button>
           <button className="dependency-graph__control-btn" onClick={resetView} title="Reset view">⟲</button>
           <span className="dependency-graph__zoom-level">{Math.round(transform.scale * 100)}%</span>
-          <button className="dependency-graph__control-btn dependency-graph__mermaid-btn" onClick={handleCopyMermaid} title="Copy as Mermaid chart">
-            {mermaidCopied ? '✓' : '⎘'}
-          </button>
         </div>
         {renderCloseButton()}
       </div>
@@ -402,28 +386,17 @@ const DependencyGraph = ({ graphData, onIssueClick, onClose, showCloseButton = t
               const typeClass = depType ? `dependency-graph__edge--${depType}` : '';
               const dimmedClass = isDimmed ? 'dependency-graph__edge--dimmed' : '';
 
-              const cascadedFrom = dep.__cascadedFrom || dep.cascaded_from || dep.cascadedFrom || dep.CascadedFrom;
-              const cascadedClass = cascadedFrom && (depType === 'blocks' || depType === 'blocked-by')
-                ? 'dependency-graph__edge--cascaded'
-                : '';
-
               // Use bezier curves for smoother, more distinguishable paths
               const pathData = calculateBezierPath(fromX, fromY, toX, toY);
-
-              const edgeClickable = typeof onEdgeClick === 'function';
-              const edgeTitle = cascadedFrom
-                ? `${depType || 'related'} (cascaded)\nCascaded from ${cascadedFrom}`
-                : (depType || 'related');
 
               return (
                 <path
                   key={idx}
-                  className={`dependency-graph__edge ${isHighlighted ? 'dependency-graph__edge--highlighted' : ''} ${priorityClass} ${completedClass} ${typeClass} ${cascadedClass} ${dimmedClass} ${edgeClickable ? 'dependency-graph__edge--clickable' : ''}`}
+                  className={`dependency-graph__edge ${isHighlighted ? 'dependency-graph__edge--highlighted' : ''} ${priorityClass} ${completedClass} ${typeClass} ${dimmedClass}`}
                   d={pathData}
                   markerEnd={edgePriority <= 1 ? "url(#arrowhead-high-priority)" : "url(#arrowhead)"}
-                  onClick={edgeClickable ? (e) => onEdgeClick(fromId, toId, e) : undefined}
                 >
-                  <title>{edgeTitle}</title>
+                  <title>{depType || 'related'}</title>
                 </path>
               );
             })}
