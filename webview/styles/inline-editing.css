@@ -1,15 +1,13 @@
 /* ============================================================================ */
 
 /* Inline dependency editing */
-.blocking-view__arrow-down--interactive,
-.blocking-view__critical-arrow--interactive {
+.blocking-view__arrow-down--interactive {
   cursor: pointer;
   position: relative;
   border-radius: 3px;
   transition: background-color 0.15s;
 }
-.blocking-view__arrow-down--interactive:hover,
-.blocking-view__critical-arrow--interactive:hover {
+.blocking-view__arrow-down--interactive:hover {
   background-color: var(--vscode-list-hoverBackground);
   color: var(--vscode-textLink-foreground);
 }
