@@ -47,24 +47,15 @@ async function handleWebviewMessage(data, context, vscode) {
           try {
             const issues = JSON.parse(result.output);
             if (issues && issues.length > 0) {
-              webviewView.webview.postMessage({
-                type: 'issueDetails',
-                issue: issues[0]
-              });
+              webviewView.webview.postMessage({ type: 'issueDetails', issue: issues[0] });
             } else {
               webviewView.webview.postMessage({
-                type: 'commandResult',
-                command: data.command,
-                output: 'Issue not found',
-                success: false
+                type: 'commandResult', command: data.command,
+                output: 'Issue not found', success: false
               });
             }
           } catch (e) {
-            webviewView.webview.postMessage({
-              type: 'commandResult',
-              command: data.command,
-              ...result
-            });
+            webviewView.webview.postMessage({ type: 'commandResult', command: data.command, ...result });
           }
         } else if (data.useJSON && (data.command === 'list' || data.command === 'ready' || data.command === 'blocked')) {
           // Handle list/ready/blocked commands with JSON output directly
@@ -75,23 +66,15 @@ async function handleWebviewMessage(data, context, vscode) {
           ]);
           if (jsonResult.success) {
             webviewView.webview.postMessage({
-              type: 'commandResultJSON',
-              command: data.command,
-              output: jsonResult.output,
+              type: 'commandResultJSON', command: data.command, output: jsonResult.output,
               graphData: graphResult && graphResult.success ? graphResult.output : null,
               graphError: graphResult && !graphResult.success ? graphResult.output : null,
-              success: true,
-              requestId: data.requestId,
-              isBackgroundSync: data.isBackgroundSync
+              success: true, requestId: data.requestId, isBackgroundSync: data.isBackgroundSync
             });
           } else {
             webviewView.webview.postMessage({
-              type: 'commandResult',
-              command: data.command,
-              output: jsonResult.output,
-              success: false,
-              requestId: data.requestId,
-              isBackgroundSync: data.isBackgroundSync
+              type: 'commandResult', command: data.command, output: jsonResult.output,
+              success: false, requestId: data.requestId, isBackgroundSync: data.isBackgroundSync
             });
           }
         } else {
@@ -99,21 +82,14 @@ async function handleWebviewMessage(data, context, vscode) {
           const result = await provider._executeBdCommand(data.command);
           if (data.isInlineAction) {
             webviewView.webview.postMessage({
-              type: 'inlineActionResult',
-              command: data.command,
-              output: result.output,
-              success: result.success,
-              successMessage: data.successMessage,
-              requestId: data.requestId,
-              isBackgroundSync: data.isBackgroundSync
+              type: 'inlineActionResult', command: data.command, output: result.output,
+              success: result.success, successMessage: data.successMessage,
+              requestId: data.requestId, isBackgroundSync: data.isBackgroundSync
             });
           } else {
             webviewView.webview.postMessage({
-              type: 'commandResult',
-              command: data.command,
-              ...result,
-              requestId: data.requestId,
-              isBackgroundSync: data.isBackgroundSync
+              type: 'commandResult', command: data.command, ...result,
+              requestId: data.requestId, isBackgroundSync: data.isBackgroundSync
             });
           }
         }
@@ -142,12 +118,8 @@ async function handleWebviewMessage(data, context, vscode) {
         const initialized = !!(beadsDir && fs.existsSync(beadsDir));
         const backend = workspacePath ? detectBeadsBackend(workspacePath).backend : 'unknown';
         webviewView.webview.postMessage({
-          type: 'beadsStatus',
-          hasWorkspace: !!wsFolders,
-          workspacePath,
-          beadsDir,
-          initialized,
-          backend
+          type: 'beadsStatus', hasWorkspace: !!wsFolders, workspacePath,
+          beadsDir, initialized, backend
         });
         break;
       }
@@ -190,19 +162,13 @@ async function handleWebviewMessage(data, context, vscode) {
           ]);
           const parseSafe = (r) => { try { return r.success ? JSON.parse(r.output) || [] : []; } catch { return []; } };
           webviewView.webview.postMessage({
-            type: 'dependenciesResult',
-            issueId: data.issueId,
-            dependencies: parseSafe(depsRes),
-            dependents: parseSafe(depsUpRes)
+            type: 'dependenciesResult', issueId: data.issueId,
+            dependencies: parseSafe(depsRes), dependents: parseSafe(depsUpRes)
           });
         } catch (e) {
           webviewView.webview.postMessage({
-            type: 'dependenciesResult',
-            issueId: data.issueId,
-            success: false,
-            error: e.message,
-            dependencies: [],
-            dependents: []
+            type: 'dependenciesResult', issueId: data.issueId, success: false,
+            error: e.message, dependencies: [], dependents: []
           });
         }
         break;
@@ -237,18 +203,50 @@ async function handleWebviewMessage(data, context, vscode) {
         ]);
         const copilotAssignees = getCopilotAssignees(vscode);
         webviewView.webview.postMessage({
-          type: 'githubInfo',
-          authenticated: !!session,
+          type: 'githubInfo', authenticated: !!session,
           account: session ? session.account : null,
           repo: repo ? { owner: repo.owner, repo: repo.repo, remote: repo.remote } : null,
           copilotAssignees
         });
         break;
       }
-      case 'getBackendConfig': { const c = vscode.workspace.getConfiguration('beads-ui.backend'); webviewView.webview.postMessage({ type: 'backendConfig', backendType: c.get('type', 'github'), adoOrgUrl: c.get('adoOrgUrl', ''), adoIterationPath: c.get('adoIterationPath', ''), adoAreaPath: c.get('adoAreaPath', '') }); break; }
-      case 'saveBackendConfig': { try { const cfg = vscode.workspace.getConfiguration('beads-ui.backend'); const { backendType: bType, adoOrgUrl: url, adoIterationPath: iter, adoAreaPath: area } = data.config; await Promise.all([cfg.update('type', bType, 2), cfg.update('adoOrgUrl', url, 2), cfg.update('adoIterationPath', iter, 2), cfg.update('adoAreaPath', area, 2)]); webviewView.webview.postMessage({ type: 'backendConfig', backendType: bType, adoOrgUrl: url, adoIterationPath: iter, adoAreaPath: area }); } catch (err) { console.error('Failed to save backend config:', err); } break; }
+      case 'getBackendConfig': {
+        const c = vscode.workspace.getConfiguration('beads-ui.backend');
+        webviewView.webview.postMessage({
+          type: 'backendConfig',
+          backendType: c.get('type', 'github'),
+          adoOrgUrl: c.get('adoOrgUrl', ''),
+          adoIterationPath: c.get('adoIterationPath', ''),
+          adoAreaPath: c.get('adoAreaPath', '')
+        });
+        break;
+      }
+      case 'saveBackendConfig': {
+        try {
+          const cfg = vscode.workspace.getConfiguration('beads-ui.backend');
+          const { backendType: bType, adoOrgUrl: url, adoIterationPath: iter, adoAreaPath: area } = data.config;
+          await Promise.all([
+            cfg.update('type', bType, 2), cfg.update('adoOrgUrl', url, 2),
+            cfg.update('adoIterationPath', iter, 2), cfg.update('adoAreaPath', area, 2)
+          ]);
+          webviewView.webview.postMessage({
+            type: 'backendConfig', backendType: bType,
+            adoOrgUrl: url, adoIterationPath: iter, adoAreaPath: area
+          });
+        } catch (err) {
+          console.error('Failed to save backend config:', err);
+        }
+        break;
+      }
       case 'importFromADO':
-      case 'exportToADO': webviewView.webview.postMessage({ type: `${data.type}Result`, success: false, error: `${data.type === 'importFromADO' ? 'Import from' : 'Export to'} Azure DevOps is not yet implemented. Coming soon!` }); break;
+      case 'exportToADO': {
+        const action = data.type === 'importFromADO' ? 'Import from' : 'Export to';
+        webviewView.webview.postMessage({
+          type: `${data.type}Result`, success: false,
+          error: `${action} Azure DevOps is not yet implemented. Coming soon!`
+        });
+        break;
+      }
       case 'dispatchParallelPhase': {
         try {
           const wsFolders = vscode.workspace.workspaceFolders;
