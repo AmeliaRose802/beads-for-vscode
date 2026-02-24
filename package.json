@@ -99,27 +99,6 @@
           "items": { "type": "string" },
           "default": ["github-copilot"],
           "description": "GitHub usernames to assign issues to when dispatching a phase to Copilot (round-robin)."
-        },
-        "beads-ui.backend.type": {
-          "type": "string",
-          "enum": ["github", "ado"],
-          "default": "github",
-          "description": "Backend type: GitHub or Azure DevOps (ADO)"
-        },
-        "beads-ui.backend.adoOrgUrl": {
-          "type": "string",
-          "default": "",
-          "description": "Azure DevOps organization/project URL (e.g., https://dev.azure.com/org/project)"
-        },
-        "beads-ui.backend.adoIterationPath": {
-          "type": "string",
-          "default": "",
-          "description": "Azure DevOps iteration path (e.g., Project\\Sprint 1)"
-        },
-        "beads-ui.backend.adoAreaPath": {
-          "type": "string",
-          "default": "",
-          "description": "Azure DevOps area path (e.g., Project\\Team)"
         }
       }
     }
