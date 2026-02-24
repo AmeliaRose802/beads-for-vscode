@@ -303,7 +303,6 @@ const App = () => {
             <button className="action-btn" disabled={!beadsEnabled} onClick={() => runCommand('dep cycles')} title={beadsEnabled ? "Detect blocking dependency cycles" : disabledTitle}>🔄 Cycles</button>
             <button className="action-btn" disabled={!beadsEnabled} onClick={() => { clearOutput(); panels.closeAllPanels(); panels.setShowCreatePanel(!panels.showCreatePanel); }} title={beadsEnabled ? "Create a new issue" : disabledTitle}>➕ Create</button>
             <button className="action-btn" disabled={!beadsEnabled} onClick={() => { clearOutput(); panels.closeAllPanels(); panels.setShowRelationshipPanel(!panels.showRelationshipPanel); }} title={beadsEnabled ? "Manage dependencies between issues" : disabledTitle}>🔗 Add Links</button>
-            <button className="action-btn" disabled={!beadsEnabled} onClick={() => handleOpenDependencies('task-graph')} title={beadsEnabled ? "Visualize dependency relationships as a graph within Dependencies" : disabledTitle}>🔀 Graph</button>
             <button className="action-btn" disabled={!beadsEnabled} onClick={() => handleOpenDependencies('list')} title={beadsEnabled ? "View dependency chains and completion order" : disabledTitle}>🔗 Dependencies</button>
           </div>
         </div>
