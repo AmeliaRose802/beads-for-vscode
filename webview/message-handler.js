@@ -268,10 +268,17 @@ function processMessage(message, ctx) {
     }
     case 'parallelPhaseDispatchStarted':
     case 'parallelPhaseDispatchProgress':
-    case 'parallelPhaseDispatchComplete':
     case 'parallelPhaseDispatchError':
       if (ctx.handleParallelPhaseDispatch) {
         ctx.handleParallelPhaseDispatch(message);
+      }
+      break;
+    case 'parallelPhaseDispatchComplete':
+      if (ctx.handleParallelPhaseDispatch) {
+        ctx.handleParallelPhaseDispatch(message);
+      }
+      if (ctx.trackBatchDispatch && Array.isArray(message.results)) {
+        ctx.trackBatchDispatch(message.results);
       }
       break;
     case 'copilotDispatchResult': {
@@ -296,6 +303,9 @@ function processMessage(message, ctx) {
       if (message.commandKey && ctx.completeCommandProgress) {
         ctx.completeCommandProgress(message.commandKey);
       }
+      if (message.success && ctx.trackDispatch) {
+        ctx.trackDispatch(message.issueId, message.url, message.number, null);
+      }
       if (!ctx.setOutput) {
         break;
       }
@@ -310,6 +320,14 @@ function processMessage(message, ctx) {
       }
       break;
     }
+    case 'agentStatusResult':
+      if (message.success && ctx.updateAgentStatus) {
+        ctx.updateAgentStatus(message.beadsItemId, {
+          issueState: message.issueState,
+          pr: message.pr
+        });
+      }
+      break;
     default:
       break;
   }
