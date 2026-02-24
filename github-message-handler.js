@@ -95,7 +95,14 @@ async function handleCheckAgentStatusMessage(vscode, webviewView, data) {
   const cwdPath = (vscode.workspace.workspaceFolders || [])[0]?.uri.fsPath;
   try {
     const { token, repo } = await resolveGitHubContext(vscode, cwdPath, { silent: true });
-    const statusResult = await checkGitHubIssueStatus(data.issueNumber, { token, owner: repo?.owner, repo: repo?.repo });
+    if (!repo) {
+      webviewView.webview.postMessage({
+        type: 'agentStatusResult', beadsItemId: data.beadsItemId,
+        success: false, error: 'No GitHub remote detected. Ensure your workspace has a GitHub remote.'
+      });
+      return;
+    }
+    const statusResult = await checkGitHubIssueStatus(data.issueNumber, { token, owner: repo.owner, repo: repo.repo });
     webviewView.webview.postMessage({
       type: 'agentStatusResult', beadsItemId: data.beadsItemId,
       issueState: statusResult.issueState, pr: statusResult.pr, success: true

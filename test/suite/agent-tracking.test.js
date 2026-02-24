@@ -241,7 +241,9 @@ suite('Agent Tracking', () => {
 
 suite('extension-message-handler checkAgentStatus', () => {
   const githubConverter = require('../../github-converter');
+  const githubAuth = require('../../github-auth');
   const checkStatusStub = sinon.stub(githubConverter, 'checkGitHubIssueStatus');
+  const detectRepoStub = sinon.stub(githubAuth, 'detectGitHubRepo');
   const { handleWebviewMessage } = require('../../extension-message-handler');
 
   /**
@@ -286,6 +288,8 @@ suite('extension-message-handler checkAgentStatus', () => {
 
   setup(() => {
     checkStatusStub.reset();
+    detectRepoStub.reset();
+    detectRepoStub.resolves({ owner: 'testowner', repo: 'testrepo', remote: 'origin' });
   });
 
   test('should post agentStatusResult on success', async () => {
@@ -335,5 +339,21 @@ suite('extension-message-handler checkAgentStatus', () => {
     assert.ok(msg.pr);
     assert.strictEqual(msg.pr.number, 5);
     assert.strictEqual(msg.pr.state, 'OPEN');
+  });
+
+  test('should return actionable error when no GitHub remote detected', async () => {
+    const { ctx, vscode, postMessage } = buildMocks();
+    detectRepoStub.resolves(null);
+
+    await handleWebviewMessage(
+      { type: 'checkAgentStatus', beadsItemId: 'bd-42', issueNumber: 10 },
+      ctx, vscode
+    );
+
+    const msg = postMessage.firstCall.args[0];
+    assert.strictEqual(msg.type, 'agentStatusResult');
+    assert.strictEqual(msg.success, false);
+    assert.ok(msg.error.includes('No GitHub remote detected'));
+    assert.ok(checkStatusStub.notCalled, 'should not call checkGitHubIssueStatus');
   });
 });
