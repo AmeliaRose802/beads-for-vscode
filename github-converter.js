@@ -117,10 +117,12 @@ async function githubApiRequest(endpoint, opts = {}) {
       message = errorText;
     }
     if (response.status === 401) {
-      throw new Error('GitHub authentication failed. Sign in again via VS Code.');
+      const detail = message ? ` (${message})` : '';
+      throw new Error(`GitHub authentication failed${detail}. Sign in again via VS Code.`);
     }
     if (response.status === 404) {
-      throw new Error(`GitHub resource not found: ${endpoint}`);
+      const detail = message ? ` (${message})` : '';
+      throw new Error(`GitHub resource not found: ${endpoint}${detail}`);
     }
     throw new Error(`GitHub API error (${response.status}): ${message}`);
   }
