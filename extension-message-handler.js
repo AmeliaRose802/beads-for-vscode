@@ -7,9 +7,7 @@ const { assignCopilotToIssue } = require('./github-copilot');
 const { getGitHubSession, detectGitHubRepo } = require('./github-auth');
 const { handleAssignToCopilotMessage, getCopilotAssignees } = require('./assign-copilot-handler');
 const { validateIssueId, validateIssueIds } = require('./validate-issue-id');
-
 /** Handle messages from the webview. */
-
 /**
  * Get GitHub auth session and repo info for the workspace.
  * @param {import('vscode')} vscode - VS Code API
@@ -24,7 +22,6 @@ async function resolveGitHubContext(vscode, workspacePath, authOpts = {}) {
   ]);
   return { token: session ? session.token : null, repo };
 }
-
 /**
  * Handle a message from the webview
  * @param {object} data - The message data from the webview
@@ -248,6 +245,10 @@ async function handleWebviewMessage(data, context, vscode) {
         });
         break;
       }
+      case 'getBackendConfig': { const c = vscode.workspace.getConfiguration('beads-ui.backend'); webviewView.webview.postMessage({ type: 'backendConfig', backendType: c.get('type', 'github'), adoOrgUrl: c.get('adoOrgUrl', ''), adoIterationPath: c.get('adoIterationPath', ''), adoAreaPath: c.get('adoAreaPath', '') }); break; }
+      case 'saveBackendConfig': { try { const cfg = vscode.workspace.getConfiguration('beads-ui.backend'); const { backendType: bType, adoOrgUrl: url, adoIterationPath: iter, adoAreaPath: area } = data.config; await Promise.all([cfg.update('type', bType, 2), cfg.update('adoOrgUrl', url, 2), cfg.update('adoIterationPath', iter, 2), cfg.update('adoAreaPath', area, 2)]); webviewView.webview.postMessage({ type: 'backendConfig', backendType: bType, adoOrgUrl: url, adoIterationPath: iter, adoAreaPath: area }); } catch (err) { console.error('Failed to save backend config:', err); } break; }
+      case 'importFromADO':
+      case 'exportToADO': webviewView.webview.postMessage({ type: `${data.type}Result`, success: false, error: `${data.type === 'importFromADO' ? 'Import from' : 'Export to'} Azure DevOps is not yet implemented. Coming soon!` }); break;
       case 'dispatchParallelPhase': {
         try {
           const wsFolders = vscode.workspace.workspaceFolders;
@@ -432,7 +433,6 @@ async function handleWebviewMessage(data, context, vscode) {
             webviewView.webview.postMessage({ type: 'githubConversionResult', success: false, error: `Issue ${data.issueId} not found`, commandKey: data.commandKey });
             break;
           }
-
           const ghResult = await convertBeadsItemToGitHubIssue(issues[0], { token, owner: repo.owner, repo: repo.repo });
           webviewView.webview.postMessage({ type: 'githubConversionResult', success: true, url: ghResult.url, number: ghResult.number, issueId: data.issueId, commandKey: data.commandKey });
         } catch (error) {

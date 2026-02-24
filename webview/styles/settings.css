@@ -1,0 +1,128 @@
+/* ============================================================================
+   Settings Panel Styles
+   ============================================================================ */
+
+.settings-section {
+  margin-top: 12px;
+}
+
+.settings-content {
+  padding: 12px 8px;
+}
+
+.settings-group {
+  margin-bottom: 16px;
+}
+
+.settings-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 6px;
+  opacity: 0.9;
+}
+
+/* Radio Button Group */
+.settings-radio-group {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.settings-radio-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.settings-radio {
+  margin-right: 6px;
+  cursor: pointer;
+}
+
+.settings-radio-text {
+  user-select: none;
+}
+
+/* Input Fields */
+.settings-input {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 12px;
+  background-color: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border);
+  border-radius: 2px;
+  box-sizing: border-box;
+}
+
+.settings-input:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.settings-input::placeholder {
+  color: var(--vscode-input-placeholderForeground);
+  opacity: 0.7;
+}
+
+.settings-help-text {
+  display: block;
+  font-size: 10px;
+  margin-top: 4px;
+  opacity: 0.7;
+  font-style: italic;
+}
+
+/* Info Box for GitHub Mode */
+.settings-info-box {
+  padding: 10px;
+  background-color: var(--vscode-editorWidget-background);
+  border: 1px solid var(--vscode-editorWidget-border);
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+
+.settings-info-text {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--vscode-descriptionForeground);
+}
+
+/* ADO Action Buttons */
+.settings-ado-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 16px;
+  margin-bottom: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--vscode-panel-border);
+}
+
+.settings-ado-btn {
+  font-size: 11px;
+}
+
+/* Save/Cancel Actions */
+.settings-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--vscode-panel-border);
+}
+
+.secondary-btn {
+  background-color: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+}
+
+.secondary-btn:hover:not(:disabled) {
+  background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+/* ============================================================================ */

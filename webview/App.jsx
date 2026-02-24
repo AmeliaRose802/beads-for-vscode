@@ -9,6 +9,7 @@ import CommandProgress from './components/CommandProgress';
 import BeadsInitWarning from './components/BeadsInitWarning';
 import PokePokeStatus from './components/PokePokeStatus';
 import ParallelPhaseDispatchDialog from './components/ParallelPhaseDispatchDialog';
+import SettingsPanel from './components/SettingsPanel';
 import { useCommandProgress } from './hooks/useCommandProgress';
 import { useParallelPhaseDispatch } from './hooks/useParallelPhaseDispatch';
 import { createAssigneeChangeHandler } from './hooks/createAssigneeChangeHandler';
@@ -16,6 +17,7 @@ import { useEditFormState } from './hooks/useEditFormState';
 import { useCreateFormState } from './hooks/useCreateFormState';
 import { useRelationshipFormState } from './hooks/useRelationshipFormState';
 import { usePanelVisibility } from './hooks/usePanelVisibility';
+import { useSettingsPanel } from './hooks/useSettingsPanel';
 const { parseListJSON, parseStatsOutput } = require('./parse-utils');
 const { buildCreateCommand, buildUpdateCommand, safeShellArg } = require('./form-handlers');
 const { buildHierarchyModel } = require('./hierarchy-utils');
@@ -47,6 +49,7 @@ const App = () => {
   const createForm = useCreateFormState();
   const relationshipForm = useRelationshipFormState();
   const panels = usePanelVisibility();
+  const settings = useSettingsPanel(vscode);
   const { parallelPhaseDispatch, openParallelPhaseDispatch, startParallelPhaseDispatch,
     cancelParallelPhaseDispatch, closeParallelPhaseDispatch, handleParallelPhaseDispatchMessage } =
     useParallelPhaseDispatch({ vscode, gitHubInfo });
@@ -99,6 +102,7 @@ const App = () => {
     vscode.postMessage({ type: 'getCurrentFile' });
     vscode.postMessage({ type: 'getBeadsStatus' });
     vscode.postMessage({ type: 'getGitHubInfo', silent: true });
+    vscode.postMessage({ type: 'getBackendConfig' });
 
     const messageHandler = (event) => {
       processMessage(event.data, {
@@ -132,6 +136,7 @@ const App = () => {
         setShowBlockingView: panels.setShowBlockingView,
         setPokepokeInstances,
         setGitHubInfo,
+        setBackendConfig: settings.setBackendConfig,
         handleParallelPhaseDispatch: handleParallelPhaseDispatchMessage,
         vscode,
         completeCommandProgress,
@@ -281,6 +286,7 @@ const App = () => {
     runInlineAction(`close ${id} -r "Closed from UI"`, `Closed ${id}`);
   const handleReopenIssue = (id) =>
     runInlineAction(`reopen ${id} -r "Reopened from UI"`, `Reopened ${id}`);
+  
   const shouldShowResultsPanel = !panels.showHierarchyView && !panels.showBlockingView;
   const beadsEnabled = beadsStatus?.initialized === true;
   const disabledTitle = 'Beads is not initialized in this workspace. Run bd init first.';
@@ -304,6 +310,7 @@ const App = () => {
             <button className="action-btn" disabled={!beadsEnabled} onClick={() => { clearOutput(); panels.closeAllPanels(); panels.setShowCreatePanel(!panels.showCreatePanel); }} title={beadsEnabled ? "Create a new issue" : disabledTitle}>➕ Create</button>
             <button className="action-btn" disabled={!beadsEnabled} onClick={() => { clearOutput(); panels.closeAllPanels(); panels.setShowRelationshipPanel(!panels.showRelationshipPanel); }} title={beadsEnabled ? "Manage dependencies between issues" : disabledTitle}>🔗 Add Links</button>
             <button className="action-btn" disabled={!beadsEnabled} onClick={() => handleOpenDependencies('list')} title={beadsEnabled ? "View dependency chains and completion order" : disabledTitle}>🔗 Dependencies</button>
+            <button className="action-btn" onClick={() => { clearOutput(); panels.closeAllPanels(); settings.toggleSettingsPanel(); }} title="Configure backend settings (GitHub or Azure DevOps)">⚙️ Settings</button>
           </div>
         </div>
         <PokePokeStatus instances={pokepokeInstances} onStop={handlePokePokeStop} vscode={vscode} />
@@ -360,6 +367,23 @@ const App = () => {
             onStatusChange={editForm.setEditStatus}
             onUpdate={handleUpdateIssue}
             onCancel={() => panels.setShowEditPanel(false)}
+          />
+        )}
+
+        {settings.showSettingsPanel && (
+          <SettingsPanel
+            backendType={settings.backendConfig.backendType}
+            adoOrgUrl={settings.backendConfig.adoOrgUrl}
+            adoIterationPath={settings.backendConfig.adoIterationPath}
+            adoAreaPath={settings.backendConfig.adoAreaPath}
+            onBackendTypeChange={(value) => settings.setBackendConfig({ ...settings.backendConfig, backendType: value })}
+            onAdoOrgUrlChange={(value) => settings.setBackendConfig({ ...settings.backendConfig, adoOrgUrl: value })}
+            onAdoIterationPathChange={(value) => settings.setBackendConfig({ ...settings.backendConfig, adoIterationPath: value })}
+            onAdoAreaPathChange={(value) => settings.setBackendConfig({ ...settings.backendConfig, adoAreaPath: value })}
+            onSave={() => { const result = settings.handleSaveSettings(); setOutput(result.message); setIsSuccess(result.isSuccess); setIsError(result.isError); }}
+            onCancel={settings.handleCancelSettings}
+            onImportFromADO={() => { const result = settings.handleImportFromADO(); setOutput(result.message); setIsError(result.isError); }}
+            onExportToADO={() => { const result = settings.handleExportToADO(); setOutput(result.message); setIsError(result.isError); }}
           />
         )}
 

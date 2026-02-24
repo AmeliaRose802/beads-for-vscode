@@ -206,6 +206,40 @@ function processMessage(message, ctx) {
         });
       }
       break;
+    case 'backendConfig':
+      if (ctx.setBackendConfig) {
+        ctx.setBackendConfig({
+          backendType: message.backendType || 'github',
+          adoOrgUrl: message.adoOrgUrl || '',
+          adoIterationPath: message.adoIterationPath || '',
+          adoAreaPath: message.adoAreaPath || ''
+        });
+      }
+      break;
+    case 'importFromADOResult':
+      if (ctx.setOutput) {
+        if (message.success) {
+          ctx.setOutput(`✅ ${message.message || 'Imported from Azure DevOps successfully'}`);
+          ctx.setIsError(false);
+          flashSuccess();
+        } else {
+          ctx.setOutput(`❌ Import failed: ${message.error || 'Unknown error'}`);
+          ctx.setIsError(true);
+        }
+      }
+      break;
+    case 'exportToADOResult':
+      if (ctx.setOutput) {
+        if (message.success) {
+          ctx.setOutput(`✅ ${message.message || 'Exported to Azure DevOps successfully'}`);
+          ctx.setIsError(false);
+          flashSuccess();
+        } else {
+          ctx.setOutput(`❌ Export failed: ${message.error || 'Unknown error'}`);
+          ctx.setIsError(true);
+        }
+      }
+      break;
     case 'parallelPhaseDispatchStarted':
     case 'parallelPhaseDispatchProgress':
     case 'parallelPhaseDispatchComplete':
