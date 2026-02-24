@@ -46,6 +46,7 @@ suite('message-handler', () => {
       vscode: { postMessage: sinon.stub() },
       setPokepokeInstances: sinon.stub(),
       setGitHubInfo: sinon.stub(),
+      setIntegrationSettings: sinon.stub(),
       handleParallelPhaseDispatch: sinon.stub()
     };
   }
@@ -537,6 +538,80 @@ suite('message-handler', () => {
       assert.strictEqual(arg.authenticated, false);
       assert.strictEqual(arg.account, null);
       assert.strictEqual(arg.repo, null);
+    });
+  });
+
+  suite('integrationSettings', () => {
+    test('stores integration settings', () => {
+      const ctx = buildCtx();
+      processMessage({
+        type: 'integrationSettings',
+        settings: { backend: 'ado', ado: { projectUrl: 'https://dev.azure.com/org/proj', tokenSet: true } }
+      }, ctx);
+      assert.ok(ctx.setIntegrationSettings.calledOnce);
+    });
+  });
+
+  suite('integrationSettingsSaved', () => {
+    test('shows success message and updates settings', () => {
+      const ctx = buildCtx();
+      const clock = sinon.useFakeTimers();
+      processMessage({
+        type: 'integrationSettingsSaved',
+        success: true,
+        settings: { backend: 'ado', ado: { projectUrl: 'https://dev.azure.com/org/proj', tokenSet: true } },
+        commandKey: 'saveIntegrationSettings'
+      }, ctx);
+      assert.ok(ctx.setOutput.called);
+      assert.ok(ctx.setIsError.calledWith(false));
+      assert.ok(ctx.setIntegrationSettings.calledOnce);
+      assert.ok(ctx.completeCommandProgress.calledWith('saveIntegrationSettings'));
+      clock.restore();
+    });
+
+    test('shows error on failure', () => {
+      const ctx = buildCtx();
+      processMessage({
+        type: 'integrationSettingsSaved',
+        success: false,
+        error: 'bad settings',
+        commandKey: 'saveIntegrationSettings'
+      }, ctx);
+      assert.ok(ctx.setOutput.called);
+      assert.ok(ctx.setIsError.calledWith(true));
+      assert.ok(ctx.completeCommandProgress.calledWith('saveIntegrationSettings'));
+    });
+  });
+
+  suite('adoSyncResult', () => {
+    test('shows success summary', () => {
+      const ctx = buildCtx();
+      const clock = sinon.useFakeTimers();
+      processMessage({
+        type: 'adoSyncResult',
+        action: 'import',
+        success: true,
+        summary: { created: 2, updated: 1, failed: 0 },
+        commandKey: 'adoImport'
+      }, ctx);
+      assert.ok(ctx.setOutput.called);
+      assert.ok(ctx.setIsError.calledWith(false));
+      assert.ok(ctx.completeCommandProgress.calledWith('adoImport'));
+      clock.restore();
+    });
+
+    test('shows error on failure', () => {
+      const ctx = buildCtx();
+      processMessage({
+        type: 'adoSyncResult',
+        action: 'export',
+        success: false,
+        error: 'missing pat',
+        commandKey: 'adoExport'
+      }, ctx);
+      assert.ok(ctx.setOutput.called);
+      assert.ok(ctx.setIsError.calledWith(true));
+      assert.ok(ctx.completeCommandProgress.calledWith('adoExport'));
     });
   });
 

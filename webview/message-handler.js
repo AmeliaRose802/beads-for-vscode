@@ -206,40 +206,66 @@ function processMessage(message, ctx) {
         });
       }
       break;
-    case 'backendConfig':
-      if (ctx.setBackendConfig) {
-        ctx.setBackendConfig({
-          backendType: message.backendType || 'github',
-          adoOrgUrl: message.adoOrgUrl || '',
-          adoIterationPath: message.adoIterationPath || '',
-          adoAreaPath: message.adoAreaPath || ''
-        });
+    case 'integrationSettings':
+      if (ctx.setIntegrationSettings && message.settings) {
+        ctx.setIntegrationSettings(message.settings);
       }
       break;
-    case 'importFromADOResult':
-      if (ctx.setOutput) {
-        if (message.success) {
-          ctx.setOutput(`✅ ${message.message || 'Imported from Azure DevOps successfully'}`);
-          ctx.setIsError(false);
-          flashSuccess();
-        } else {
-          ctx.setOutput(`❌ Import failed: ${message.error || 'Unknown error'}`);
-          ctx.setIsError(true);
+    case 'integrationSettingsSaved': {
+      if (message.commandKey && ctx.completeCommandProgress) {
+        ctx.completeCommandProgress(message.commandKey);
+      }
+      if (!ctx.setOutput) {
+        break;
+      }
+      if (message.success) {
+        ctx.setOutput('✅ Integration settings saved.');
+        ctx.setIsError(false);
+        if (ctx.setIntegrationSettings && message.settings) {
+          ctx.setIntegrationSettings(message.settings);
         }
+        flashSuccess();
+      } else {
+        ctx.setOutput(`❌ Integration settings save failed: ${message.error || 'Unknown error'}`);
+        ctx.setIsError(true);
       }
       break;
-    case 'exportToADOResult':
-      if (ctx.setOutput) {
-        if (message.success) {
-          ctx.setOutput(`✅ ${message.message || 'Exported to Azure DevOps successfully'}`);
-          ctx.setIsError(false);
-          flashSuccess();
-        } else {
-          ctx.setOutput(`❌ Export failed: ${message.error || 'Unknown error'}`);
-          ctx.setIsError(true);
+    }
+    case 'adoSyncResult': {
+      if (message.commandKey && ctx.completeCommandProgress) {
+        ctx.completeCommandProgress(message.commandKey);
+      }
+      if (!ctx.setOutput) {
+        break;
+      }
+      if (message.success) {
+        const summary = message.summary || {};
+        const created = summary.created || 0;
+        const updated = summary.updated || 0;
+        const failed = summary.failed || 0;
+        const warnings = Array.isArray(summary.warnings) ? summary.warnings : [];
+        const errors = Array.isArray(summary.errors) ? summary.errors : [];
+        const label = message.action === 'export' ? 'ADO export' : 'ADO import';
+        const detailParts = [`${created} created`, `${updated} updated`, `${failed} failed`];
+        let output = `✅ ${label} complete: ${detailParts.join(', ')}.`;
+        const limitedWarnings = warnings.slice(0, 5);
+        const limitedErrors = errors.slice(0, 5);
+        if (limitedWarnings.length > 0) {
+          output += `\nWarnings:\n- ${limitedWarnings.join('\n- ')}`;
         }
+        if (limitedErrors.length > 0) {
+          output += `\nErrors:\n- ${limitedErrors.join('\n- ')}`;
+        }
+        ctx.setOutput(output);
+        ctx.setIsError(false);
+        flashSuccess();
+      } else {
+        const label = message.action === 'export' ? 'ADO export' : 'ADO import';
+        ctx.setOutput(`❌ ${label} failed: ${message.error || 'Unknown error'}`);
+        ctx.setIsError(true);
       }
       break;
+    }
     case 'parallelPhaseDispatchStarted':
     case 'parallelPhaseDispatchProgress':
     case 'parallelPhaseDispatchComplete':

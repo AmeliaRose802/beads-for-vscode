@@ -1,0 +1,18 @@
+/* ============================================================================ */
+
+/* Integration settings panel */
+.integration-settings__hint,
+.integration-settings__status {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.integration-settings__actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 6px;
+  margin-top: 12px;
+}
+
+/* ============================================================================ */

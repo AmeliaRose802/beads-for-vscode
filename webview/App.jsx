@@ -1,15 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import OutputDisplay from './components/OutputDisplay';
-import CreatePanel from './components/CreatePanel';
-import RelationshipPanel from './components/RelationshipPanel';
-import EditPanel from './components/EditPanel';
+import BeadsPanels from './components/BeadsPanels';
 import HierarchyView from './components/HierarchyView';
 import BlockingView from './components/BlockingView';
 import CommandProgress from './components/CommandProgress';
 import BeadsInitWarning from './components/BeadsInitWarning';
 import PokePokeStatus from './components/PokePokeStatus';
 import ParallelPhaseDispatchDialog from './components/ParallelPhaseDispatchDialog';
-import SettingsPanel from './components/SettingsPanel';
 import { useCommandProgress } from './hooks/useCommandProgress';
 import { useParallelPhaseDispatch } from './hooks/useParallelPhaseDispatch';
 import { createAssigneeChangeHandler } from './hooks/createAssigneeChangeHandler';
@@ -17,7 +14,7 @@ import { useEditFormState } from './hooks/useEditFormState';
 import { useCreateFormState } from './hooks/useCreateFormState';
 import { useRelationshipFormState } from './hooks/useRelationshipFormState';
 import { usePanelVisibility } from './hooks/usePanelVisibility';
-import { useSettingsPanel } from './hooks/useSettingsPanel';
+import { useIntegrationSettings } from './hooks/useIntegrationSettings';
 const { parseListJSON, parseStatsOutput } = require('./parse-utils');
 const { buildCreateCommand, buildUpdateCommand, safeShellArg } = require('./form-handlers');
 const { buildHierarchyModel } = require('./hierarchy-utils');
@@ -49,7 +46,6 @@ const App = () => {
   const createForm = useCreateFormState();
   const relationshipForm = useRelationshipFormState();
   const panels = usePanelVisibility();
-  const settings = useSettingsPanel(vscode);
   const { parallelPhaseDispatch, openParallelPhaseDispatch, startParallelPhaseDispatch,
     cancelParallelPhaseDispatch, closeParallelPhaseDispatch, handleParallelPhaseDispatchMessage } =
     useParallelPhaseDispatch({ vscode, gitHubInfo });
@@ -58,6 +54,23 @@ const App = () => {
     beginCommandProgress,
     completeCommandProgress
   } = useCommandProgress();
+  const {
+    integrationSettings,
+    adoTokenInput,
+    setAdoTokenInput,
+    setIntegrationSettings,
+    applyIntegrationSettings,
+    handleSaveIntegrationSettings,
+    handleAdoImport,
+    handleAdoExport
+  } = useIntegrationSettings({
+    vscode,
+    beginCommandProgress,
+    setOutput,
+    setIsError,
+    setIsSuccess
+  });
+  const canUseGitHubIntegration = integrationSettings.backend !== 'ado';
   const {
     displayResult,
     runCommand,
@@ -102,7 +115,7 @@ const App = () => {
     vscode.postMessage({ type: 'getCurrentFile' });
     vscode.postMessage({ type: 'getBeadsStatus' });
     vscode.postMessage({ type: 'getGitHubInfo', silent: true });
-    vscode.postMessage({ type: 'getBackendConfig' });
+    vscode.postMessage({ type: 'getIntegrationSettings' });
 
     const messageHandler = (event) => {
       processMessage(event.data, {
@@ -136,7 +149,7 @@ const App = () => {
         setShowBlockingView: panels.setShowBlockingView,
         setPokepokeInstances,
         setGitHubInfo,
-        setBackendConfig: settings.setBackendConfig,
+        setIntegrationSettings: applyIntegrationSettings,
         handleParallelPhaseDispatch: handleParallelPhaseDispatchMessage,
         vscode,
         completeCommandProgress,
@@ -236,6 +249,7 @@ const App = () => {
     vscode.postMessage({ type: 'convertToGitHub', issueId, commandKey: commandId });
   };
 
+
   const handleDepAction = (action) => {
     const { sourceBead, targetBead, relationType } = relationshipForm;
     if (!sourceBead.trim() || !targetBead.trim()) { setOutput('Error: Please provide both source and target bead IDs'); setIsError(true); return; }
@@ -290,6 +304,7 @@ const App = () => {
   const shouldShowResultsPanel = !panels.showHierarchyView && !panels.showBlockingView;
   const beadsEnabled = beadsStatus?.initialized === true;
   const disabledTitle = 'Beads is not initialized in this workspace. Run bd init first.';
+  const convertToGitHubHandler = canUseGitHubIntegration ? handleConvertToGitHub : undefined;
   return (
     <div className="container">
       <div className="header">
@@ -310,82 +325,55 @@ const App = () => {
             <button className="action-btn" disabled={!beadsEnabled} onClick={() => { clearOutput(); panels.closeAllPanels(); panels.setShowCreatePanel(!panels.showCreatePanel); }} title={beadsEnabled ? "Create a new issue" : disabledTitle}>➕ Create</button>
             <button className="action-btn" disabled={!beadsEnabled} onClick={() => { clearOutput(); panels.closeAllPanels(); panels.setShowRelationshipPanel(!panels.showRelationshipPanel); }} title={beadsEnabled ? "Manage dependencies between issues" : disabledTitle}>🔗 Add Links</button>
             <button className="action-btn" disabled={!beadsEnabled} onClick={() => handleOpenDependencies('list')} title={beadsEnabled ? "View dependency chains and completion order" : disabledTitle}>🔗 Dependencies</button>
-            <button className="action-btn" onClick={() => { clearOutput(); panels.closeAllPanels(); settings.toggleSettingsPanel(); }} title="Configure backend settings (GitHub or Azure DevOps)">⚙️ Settings</button>
+            <button className="action-btn" onClick={() => { clearOutput(); panels.closeAllPanels(); panels.setShowSettingsPanel(!panels.showSettingsPanel); }} title="Configure GitHub or Azure DevOps integration">⚙️ Settings</button>
           </div>
         </div>
         <PokePokeStatus instances={pokepokeInstances} onStop={handlePokePokeStop} vscode={vscode} />
-        {panels.showCreatePanel && (
-          <CreatePanel
-            title={createForm.createTitle}
-            type={createForm.createType}
-            priority={createForm.createPriority}
-            description={createForm.createDescription}
-            parentId={createForm.createParentId}
-            blocksId={createForm.createBlocksId}
-            relatedId={createForm.createRelatedId}
-            currentFile={currentFile}
-            onTitleChange={createForm.setCreateTitle}
-            onTypeChange={createForm.setCreateType}
-            onPriorityChange={createForm.setCreatePriority}
-            onDescriptionChange={createForm.setCreateDescription}
-            onParentIdChange={createForm.setCreateParentId}
-            onBlocksIdChange={createForm.setCreateBlocksId}
-            onRelatedIdChange={createForm.setCreateRelatedId}
-            onCreate={handleCreateIssue}
-            onCancel={() => panels.setShowCreatePanel(false)}
-            onAISuggest={handleAISuggest}
-            isAILoading={isAILoading}
-          />
-        )}
-
-        {panels.showRelationshipPanel && (
-          <RelationshipPanel
-            sourceBead={relationshipForm.sourceBead}
-            targetBead={relationshipForm.targetBead}
-            relationType={relationshipForm.relationType}
-            onSourceChange={relationshipForm.setSourceBead}
-            onTargetChange={relationshipForm.setTargetBead}
-            onTypeChange={relationshipForm.setRelationType}
-            onLink={() => handleDepAction('add')}
-            onUnlink={() => handleDepAction('remove')}
-            onCancel={() => panels.setShowRelationshipPanel(false)}
-          />
-        )}
-
-        {panels.showEditPanel && (
-          <EditPanel
-            issueId={editForm.editIssueId}
-            title={editForm.editTitle}
-            type={editForm.editType}
-            priority={editForm.editPriority}
-            description={editForm.editDescription}
-            status={editForm.editStatus}
-            onTitleChange={editForm.setEditTitle}
-            onTypeChange={editForm.setEditType}
-            onPriorityChange={editForm.setEditPriority}
-            onDescriptionChange={editForm.setEditDescription}
-            onStatusChange={editForm.setEditStatus}
-            onUpdate={handleUpdateIssue}
-            onCancel={() => panels.setShowEditPanel(false)}
-          />
-        )}
-
-        {settings.showSettingsPanel && (
-          <SettingsPanel
-            backendType={settings.backendConfig.backendType}
-            adoOrgUrl={settings.backendConfig.adoOrgUrl}
-            adoIterationPath={settings.backendConfig.adoIterationPath}
-            adoAreaPath={settings.backendConfig.adoAreaPath}
-            onBackendTypeChange={(value) => settings.setBackendConfig({ ...settings.backendConfig, backendType: value })}
-            onAdoOrgUrlChange={(value) => settings.setBackendConfig({ ...settings.backendConfig, adoOrgUrl: value })}
-            onAdoIterationPathChange={(value) => settings.setBackendConfig({ ...settings.backendConfig, adoIterationPath: value })}
-            onAdoAreaPathChange={(value) => settings.setBackendConfig({ ...settings.backendConfig, adoAreaPath: value })}
-            onSave={() => { const result = settings.handleSaveSettings(); setOutput(result.message); setIsSuccess(result.isSuccess); setIsError(result.isError); }}
-            onCancel={settings.handleCancelSettings}
-            onImportFromADO={() => { const result = settings.handleImportFromADO(); setOutput(result.message); setIsError(result.isError); }}
-            onExportToADO={() => { const result = settings.handleExportToADO(); setOutput(result.message); setIsError(result.isError); }}
-          />
-        )}
+        <BeadsPanels
+          panels={panels}
+          createForm={createForm}
+          relationshipForm={relationshipForm}
+          editForm={editForm}
+          currentFile={currentFile}
+          isAILoading={isAILoading}
+          onCreateIssue={handleCreateIssue}
+          onAISuggest={handleAISuggest}
+          onDepAction={handleDepAction}
+          onUpdateIssue={handleUpdateIssue}
+          integrationSettings={integrationSettings}
+          adoTokenInput={adoTokenInput}
+          onTokenInputChange={setAdoTokenInput}
+          onSaveIntegration={handleSaveIntegrationSettings}
+          onImportAdo={handleAdoImport}
+          onExportAdo={handleAdoExport}
+          onBackendChange={(backend) =>
+            setIntegrationSettings((prev) => ({ ...prev, backend }))
+          }
+          onProjectUrlChange={(value) =>
+            setIntegrationSettings((prev) => ({
+              ...prev,
+              ado: { ...prev.ado, projectUrl: value }
+            }))
+          }
+          onAreaPathChange={(value) =>
+            setIntegrationSettings((prev) => ({
+              ...prev,
+              ado: { ...prev.ado, areaPath: value }
+            }))
+          }
+          onIterationPathChange={(value) =>
+            setIntegrationSettings((prev) => ({
+              ...prev,
+              ado: { ...prev.ado, iterationPath: value }
+            }))
+          }
+          onImportLimitChange={(value) =>
+            setIntegrationSettings((prev) => ({
+              ...prev,
+              ado: { ...prev.ado, importLimit: value }
+            }))
+          }
+        />
 
         {panels.showHierarchyView && (
           <div className="section">
@@ -419,7 +407,7 @@ const App = () => {
               onAssigneeChange={handleAssigneeChange}
               onShowHierarchy={handleShowHierarchy}
               onPokePoke={handlePokePoke}
-              onConvertToGitHub={handleConvertToGitHub}
+              onConvertToGitHub={convertToGitHubHandler}
               onDispatchPhase={openParallelPhaseDispatch}
               pokepokeInstances={pokepokeInstances}
               vscode={vscode}
@@ -458,7 +446,7 @@ const App = () => {
               onAssigneeChange={handleAssigneeChange}
               onShowHierarchy={handleShowHierarchy}
               onPokePoke={handlePokePoke}
-              onConvertToGitHub={handleConvertToGitHub}
+              onConvertToGitHub={convertToGitHubHandler}
               pokepokeInstances={pokepokeInstances}
               issueDetails={issueDetails}
               loadingDetails={loadingDetails}

@@ -63,6 +63,37 @@
           "default": true,
           "description": "Run bd sync before launching PokePoke"
         },
+        "beads-ui.backend": {
+          "type": "string",
+          "enum": ["github", "ado"],
+          "default": "github",
+          "description": "Select the integration backend for syncing beads issues."
+        },
+        "beads-ui.ado.projectUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Azure DevOps organization/project URL (e.g., https://dev.azure.com/org/project)."
+        },
+        "beads-ui.ado.areaPath": {
+          "type": "string",
+          "default": "",
+          "description": "Optional ADO area path filter for imports/exports."
+        },
+        "beads-ui.ado.iterationPath": {
+          "type": "string",
+          "default": "",
+          "description": "Optional ADO iteration path filter for imports/exports."
+        },
+        "beads-ui.ado.importLimit": {
+          "type": "number",
+          "default": 200,
+          "description": "Maximum number of ADO work items to import per sync."
+        },
+        "beads-ui.ado.pat": {
+          "type": "string",
+          "default": "",
+          "description": "Azure DevOps personal access token for API access."
+        },
         "beads-ui.github.copilotAssignees": {
           "type": "array",
           "items": { "type": "string" },
@@ -100,7 +131,7 @@
     "pre-commit": "node scripts/pre-commit-check.js",
     "test:coverage": "c8 --include \"webview/**/*.js\" --include \"webview/**/*.jsx\" --include \"beads-backend.js\" --include \"github-converter.js\" --include \"github-auth.js\" --lines 80 --branches 80 --functions 80 npm run test:unit",
     "test": "npm run test:unit",
-    "test:unit": "mocha --exit test/suite/json-parsing.test.js test/suite/parse-utils.test.js test/suite/form-handlers.test.js test/suite/ai-suggestions.test.js test/suite/pre-commit.test.js test/suite/issue-card-tags.test.js test/suite/assignee-dropdown.test.js test/suite/label-dropdown.test.js test/suite/inline-assignee-editing.test.js test/suite/hierarchy-utils.test.js test/suite/blocking-utils.test.js test/suite/app-actions.test.js test/suite/blocking-view-dep-editing.test.js test/suite/blocking-view-critical-interactions.test.js test/suite/dependency-graph-gestures.test.js test/suite/dependency-graph-filters.test.js test/suite/dependency-graph-layout.test.js test/suite/markdown-rendering.test.js test/suite/pagination.test.js test/suite/pokepoke-manager.test.js test/suite/clipboard-utils.test.js test/suite/dolt-integration.test.js test/suite/e2e-dolt.test.js test/suite/beads-backend.test.js test/suite/message-handler.test.js test/suite/field-utils.test.js test/suite/plan-utils.test.js test/suite/list-filter-controls.test.js test/suite/github-converter.test.js test/suite/github-auth.test.js test/suite/beads-init-guard.test.js test/suite/github-copilot.test.js test/suite/list-hierarchy-utils.test.js test/suite/validate-issue-id.test.js test/suite/settings-panel.test.js",
+    "test:unit": "mocha --exit test/suite/json-parsing.test.js test/suite/parse-utils.test.js test/suite/form-handlers.test.js test/suite/ai-suggestions.test.js test/suite/pre-commit.test.js test/suite/issue-card-tags.test.js test/suite/assignee-dropdown.test.js test/suite/label-dropdown.test.js test/suite/inline-assignee-editing.test.js test/suite/hierarchy-utils.test.js test/suite/blocking-utils.test.js test/suite/app-actions.test.js test/suite/blocking-view-dep-editing.test.js test/suite/blocking-view-critical-interactions.test.js test/suite/dependency-graph-gestures.test.js test/suite/dependency-graph-filters.test.js test/suite/dependency-graph-layout.test.js test/suite/markdown-rendering.test.js test/suite/pagination.test.js test/suite/pokepoke-manager.test.js test/suite/clipboard-utils.test.js test/suite/dolt-integration.test.js test/suite/e2e-dolt.test.js test/suite/beads-backend.test.js test/suite/message-handler.test.js test/suite/field-utils.test.js test/suite/plan-utils.test.js test/suite/list-filter-controls.test.js test/suite/ado-integration.test.js test/suite/github-converter.test.js test/suite/github-auth.test.js test/suite/beads-init-guard.test.js test/suite/github-copilot.test.js test/suite/list-hierarchy-utils.test.js test/suite/validate-issue-id.test.js test/suite/settings-panel.test.js",
     "pretest": "npm run lint",
     "vscode:prepublish": "npm run build",
     "prepare": "husky"

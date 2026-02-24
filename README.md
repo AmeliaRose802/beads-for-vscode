@@ -10,6 +10,7 @@ A VS Code extension providing a user interface for the beads (bd) command-line i
 - 🎨 Integrates with VS Code theme
 - 📂 Automatically uses your workspace directory
 - ⚡ Lightweight sidebar integration
+- 🔁 GitHub and Azure DevOps sync controls (configurable in the Settings panel)
 
 ## Installation
 

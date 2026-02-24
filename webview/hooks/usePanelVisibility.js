@@ -8,6 +8,7 @@ export function usePanelVisibility() {
   const [showRelationshipPanel, setShowRelationshipPanel] = useState(false);
   const [showCreatePanel, setShowCreatePanel] = useState(false);
   const [showEditPanel, setShowEditPanel] = useState(false);
+  const [showSettingsPanel, setShowSettingsPanel] = useState(false);
   const [showHierarchyView, setShowHierarchyView] = useState(false);
   const [showBlockingView, setShowBlockingView] = useState(false);
   const [activeBlockingTab, setActiveBlockingTab] = useState('list');
@@ -27,6 +28,7 @@ export function usePanelVisibility() {
     setShowRelationshipPanel(false);
     setShowCreatePanel(false);
     setShowEditPanel(false);
+    setShowSettingsPanel(false);
     setShowHierarchyView(false);
     setShowBlockingView(false);
   };
@@ -38,6 +40,8 @@ export function usePanelVisibility() {
     setShowCreatePanel,
     showEditPanel,
     setShowEditPanel,
+    showSettingsPanel,
+    setShowSettingsPanel,
     showHierarchyView,
     setShowHierarchyView,
     showBlockingView,
