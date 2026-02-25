@@ -1,4 +1,4 @@
-const { importAdoToBeads, exportBeadsToAdo } = require('./ado-integration');
+const { importAdoToBeads, exportBeadsToAdo } = require("./ado-integration");
 
 /**
  * Utility wrapper to keep webview messaging concise and consistently formatted.
@@ -15,16 +15,16 @@ function postToWebview(webviewView, payload) {
  * @returns {{ backend: string, ado: { projectUrl: string, areaPath: string, iterationPath: string, pat: string, importLimit: number } }}
  */
 function getIntegrationSettings(vscode) {
-  const rootCfg = vscode.workspace.getConfiguration('beads-ui');
-  const adoCfg = vscode.workspace.getConfiguration('beads-ui.ado');
+  const rootCfg = vscode.workspace.getConfiguration("beads-ui");
+  const adoCfg = vscode.workspace.getConfiguration("beads-ui.ado");
   return {
-    backend: rootCfg.get('backend', 'github'),
+    backend: rootCfg.get("backend", "github"),
     ado: {
-      projectUrl: adoCfg.get('projectUrl', ''),
-      areaPath: adoCfg.get('areaPath', ''),
-      iterationPath: adoCfg.get('iterationPath', ''),
-      pat: adoCfg.get('pat', ''),
-      importLimit: adoCfg.get('importLimit', 200),
+      projectUrl: adoCfg.get("projectUrl", ""),
+      areaPath: adoCfg.get("areaPath", ""),
+      iterationPath: adoCfg.get("iterationPath", ""),
+      pat: adoCfg.get("pat", ""),
+      importLimit: adoCfg.get("importLimit", 200),
     },
   };
 }
@@ -36,29 +36,32 @@ function getIntegrationSettings(vscode) {
  * @returns {Promise<void>}
  */
 async function saveIntegrationSettings(vscode, payload) {
-  const rootCfg = vscode.workspace.getConfiguration('beads-ui');
-  const adoCfg = vscode.workspace.getConfiguration('beads-ui.ado');
+  const rootCfg = vscode.workspace.getConfiguration("beads-ui");
+  const adoCfg = vscode.workspace.getConfiguration("beads-ui.ado");
   const target = vscode.ConfigurationTarget.Workspace;
 
-  if (typeof payload?.backend === 'string') {
-    await rootCfg.update('backend', payload.backend, target);
+  if (typeof payload?.backend === "string") {
+    await rootCfg.update("backend", payload.backend, target);
   }
 
   if (payload?.ado) {
-    if (typeof payload.ado.projectUrl === 'string') {
-      await adoCfg.update('projectUrl', payload.ado.projectUrl, target);
+    if (typeof payload.ado.projectUrl === "string") {
+      await adoCfg.update("projectUrl", payload.ado.projectUrl, target);
     }
-    if (typeof payload.ado.areaPath === 'string') {
-      await adoCfg.update('areaPath', payload.ado.areaPath, target);
+    if (typeof payload.ado.areaPath === "string") {
+      await adoCfg.update("areaPath", payload.ado.areaPath, target);
     }
-    if (typeof payload.ado.iterationPath === 'string') {
-      await adoCfg.update('iterationPath', payload.ado.iterationPath, target);
+    if (typeof payload.ado.iterationPath === "string") {
+      await adoCfg.update("iterationPath", payload.ado.iterationPath, target);
     }
-    if (typeof payload.ado.importLimit === 'number' && Number.isFinite(payload.ado.importLimit)) {
-      await adoCfg.update('importLimit', payload.ado.importLimit, target);
+    if (
+      typeof payload.ado.importLimit === "number" &&
+      Number.isFinite(payload.ado.importLimit)
+    ) {
+      await adoCfg.update("importLimit", payload.ado.importLimit, target);
     }
-    if (typeof payload.ado.pat === 'string' && payload.ado.pat.trim()) {
-      await adoCfg.update('pat', payload.ado.pat.trim(), target);
+    if (typeof payload.ado.pat === "string" && payload.ado.pat.trim()) {
+      await adoCfg.update("pat", payload.ado.pat.trim(), target);
     }
   }
 }
@@ -71,7 +74,7 @@ async function saveIntegrationSettings(vscode, payload) {
 function handleGetIntegrationSettingsMessage(vscode, webviewView) {
   const settings = getIntegrationSettings(vscode);
   postToWebview(webviewView, {
-    type: 'integrationSettings',
+    type: "integrationSettings",
     settings: {
       backend: settings.backend,
       ado: {
@@ -92,12 +95,16 @@ function handleGetIntegrationSettingsMessage(vscode, webviewView) {
  * @param {object} data - Incoming message data
  * @returns {Promise<void>}
  */
-async function handleUpdateIntegrationSettingsMessage(vscode, webviewView, data) {
+async function handleUpdateIntegrationSettingsMessage(
+  vscode,
+  webviewView,
+  data,
+) {
   try {
     await saveIntegrationSettings(vscode, data.settings || {});
     const refreshed = getIntegrationSettings(vscode);
     postToWebview(webviewView, {
-      type: 'integrationSettingsSaved',
+      type: "integrationSettingsSaved",
       success: true,
       settings: {
         backend: refreshed.backend,
@@ -113,9 +120,9 @@ async function handleUpdateIntegrationSettingsMessage(vscode, webviewView, data)
     });
   } catch (error) {
     postToWebview(webviewView, {
-      type: 'integrationSettingsSaved',
+      type: "integrationSettingsSaved",
       success: false,
-      error: error.message || 'Failed to save integration settings',
+      error: error.message || "Failed to save integration settings",
       commandKey: data.commandKey,
     });
   }
@@ -130,29 +137,14 @@ async function handleUpdateIntegrationSettingsMessage(vscode, webviewView, data)
  * @returns {Promise<void>}
  */
 async function handleAdoImportMessage(vscode, webviewView, data, provider) {
-  try {
-    const settings = getIntegrationSettings(vscode);
-    const executeBdCommand = (cmd) => provider._executeBdCommand(cmd);
-    const summary = await importAdoToBeads({
-      executeBdCommand,
-      settings,
-    });
-    postToWebview(webviewView, {
-      type: 'adoSyncResult',
-      action: 'import',
-      success: true,
-      summary,
-      commandKey: data.commandKey,
-    });
-  } catch (error) {
-    postToWebview(webviewView, {
-      type: 'adoSyncResult',
-      action: 'import',
-      success: false,
-      error: error.message || 'ADO import failed',
-      commandKey: data.commandKey,
-    });
-  }
+  await runAdoSync({
+    action: "import",
+    commandKey: data.commandKey,
+    operation: importAdoToBeads,
+    vscode,
+    webviewView,
+    provider,
+  });
 }
 
 /**
@@ -164,27 +156,56 @@ async function handleAdoImportMessage(vscode, webviewView, data, provider) {
  * @returns {Promise<void>}
  */
 async function handleAdoExportMessage(vscode, webviewView, data, provider) {
+  await runAdoSync({
+    action: "export",
+    commandKey: data.commandKey,
+    operation: exportBeadsToAdo,
+    vscode,
+    webviewView,
+    provider,
+  });
+}
+
+/**
+ * Shared helper for invoking import/export ADO sync flows so payload formatting
+ * and error handling stay consistent between the two code paths.
+ * @param {object} options
+ * @param {'import'|'export'} options.action
+ * @param {import('vscode')} options.vscode
+ * @param {import('vscode').WebviewView} options.webviewView
+ * @param {string} [options.commandKey]
+ * @param {object} options.provider
+ * @param {(args: { executeBdCommand: Function, settings: { backend: string, ado: object } }) => Promise<object>} options.operation
+ */
+async function runAdoSync({
+  action,
+  vscode,
+  webviewView,
+  commandKey,
+  provider,
+  operation,
+}) {
   try {
     const settings = getIntegrationSettings(vscode);
     const executeBdCommand = (cmd) => provider._executeBdCommand(cmd);
-    const summary = await exportBeadsToAdo({
+    const summary = await operation({
       executeBdCommand,
       settings,
     });
     postToWebview(webviewView, {
-      type: 'adoSyncResult',
-      action: 'export',
+      type: "adoSyncResult",
+      action,
       success: true,
       summary,
-      commandKey: data.commandKey,
+      commandKey,
     });
   } catch (error) {
     postToWebview(webviewView, {
-      type: 'adoSyncResult',
-      action: 'export',
+      type: "adoSyncResult",
+      action,
       success: false,
-      error: error.message || 'ADO export failed',
-      commandKey: data.commandKey,
+      error: error.message || `ADO ${action} failed`,
+      commandKey,
     });
   }
 }

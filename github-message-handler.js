@@ -1,8 +1,14 @@
-const { convertBeadsItemToGitHubIssue, checkGitHubIssueStatus } = require('./github-converter');
-const { assignCopilotToIssue } = require('./github-copilot');
-const { getGitHubSession, detectGitHubRepo } = require('./github-auth');
-const { handleAssignToCopilotMessage, getCopilotAssignees } = require('./assign-copilot-handler');
-const { validateIssueId, validateIssueIds } = require('./validate-issue-id');
+const {
+  convertBeadsItemToGitHubIssue,
+  checkGitHubIssueStatus,
+} = require("./github-converter");
+const { assignCopilotToIssue } = require("./github-copilot");
+const { getGitHubSession, detectGitHubRepo } = require("./github-auth");
+const {
+  handleAssignToCopilotMessage,
+  getCopilotAssignees,
+} = require("./assign-copilot-handler");
+const { validateIssueId, validateIssueIds } = require("./validate-issue-id");
 
 /**
  * Post a structured payload back to the webview.
@@ -11,6 +17,20 @@ const { validateIssueId, validateIssueIds } = require('./validate-issue-id');
  */
 function postToWebview(webviewView, payload) {
   webviewView.webview.postMessage(payload);
+}
+
+/**
+ * Return the active workspace path (if any) so each handler formats messages
+ * consistently before touching disk or GitHub state.
+ * @param {import('vscode')} vscode
+ * @returns {string}
+ */
+function getWorkspacePath(vscode) {
+  const wsFolders = vscode.workspace.workspaceFolders;
+  if (!wsFolders || wsFolders.length === 0) {
+    return "";
+  }
+  return wsFolders[0].uri.fsPath;
 }
 
 /**
@@ -36,8 +56,7 @@ async function resolveGitHubContext(vscode, workspacePath, authOpts = {}) {
  * @returns {Promise<void>}
  */
 async function handleGetGitHubInfoMessage(vscode, webviewView, data) {
-  const wsFolders = vscode.workspace.workspaceFolders;
-  const workspacePath = wsFolders ? wsFolders[0].uri.fsPath : '';
+  const workspacePath = getWorkspacePath(vscode);
   const silent = data.silent !== false;
   const [session, repo] = await Promise.all([
     getGitHubSession(vscode, { createIfNone: !silent, silent }),
@@ -45,10 +64,12 @@ async function handleGetGitHubInfoMessage(vscode, webviewView, data) {
   ]);
   const copilotAssignees = getCopilotAssignees(vscode);
   postToWebview(webviewView, {
-    type: 'githubInfo',
+    type: "githubInfo",
     authenticated: !!session,
     account: session ? session.account : null,
-    repo: repo ? { owner: repo.owner, repo: repo.repo, remote: repo.remote } : null,
+    repo: repo
+      ? { owner: repo.owner, repo: repo.repo, remote: repo.remote }
+      : null,
     copilotAssignees,
   });
 }
@@ -61,36 +82,43 @@ async function handleGetGitHubInfoMessage(vscode, webviewView, data) {
  * @param {object} provider - Beads webview provider with command executor
  * @returns {Promise<void>}
  */
-async function handleConvertToGitHubMessage(vscode, webviewView, data, provider) {
-  const wsFolders = vscode.workspace.workspaceFolders;
-  if (!wsFolders || wsFolders.length === 0) {
+async function handleConvertToGitHubMessage(
+  vscode,
+  webviewView,
+  data,
+  provider,
+) {
+  const workspacePath = getWorkspacePath(vscode);
+  if (!workspacePath) {
     postToWebview(webviewView, {
-      type: 'githubConversionResult',
+      type: "githubConversionResult",
       success: false,
-      error: 'An open workspace is required to convert items to GitHub issues.',
+      error: "An open workspace is required to convert items to GitHub issues.",
       commandKey: data.commandKey,
     });
     return;
   }
-  const workspacePath = wsFolders[0].uri.fsPath;
   try {
-    validateIssueId(data.issueId, 'issueId');
+    validateIssueId(data.issueId, "issueId");
     const { token, repo } = await resolveGitHubContext(vscode, workspacePath, {
       createIfNone: true,
     });
     if (!repo) {
       postToWebview(webviewView, {
-        type: 'githubConversionResult',
+        type: "githubConversionResult",
         success: false,
-        error: 'GitHub repository not detected. Ensure your workspace has a GitHub remote.',
+        error:
+          "GitHub repository not detected. Ensure your workspace has a GitHub remote.",
         commandKey: data.commandKey,
       });
       return;
     }
-    const result = await provider._executeBdCommand(`list --id ${data.issueId} --json`);
+    const result = await provider._executeBdCommand(
+      `list --id ${data.issueId} --json`,
+    );
     if (!result.success) {
       postToWebview(webviewView, {
-        type: 'githubConversionResult',
+        type: "githubConversionResult",
         success: false,
         error: `Failed to fetch issue: ${result.output}`,
         commandKey: data.commandKey,
@@ -100,7 +128,7 @@ async function handleConvertToGitHubMessage(vscode, webviewView, data, provider)
     const issues = JSON.parse(result.output);
     if (!issues || issues.length === 0) {
       postToWebview(webviewView, {
-        type: 'githubConversionResult',
+        type: "githubConversionResult",
         success: false,
         error: `Issue ${data.issueId} not found`,
         commandKey: data.commandKey,
@@ -114,7 +142,7 @@ async function handleConvertToGitHubMessage(vscode, webviewView, data, provider)
       repo: repo.repo,
     });
     postToWebview(webviewView, {
-      type: 'githubConversionResult',
+      type: "githubConversionResult",
       success: true,
       url: ghResult.url,
       number: ghResult.number,
@@ -123,9 +151,9 @@ async function handleConvertToGitHubMessage(vscode, webviewView, data, provider)
     });
   } catch (error) {
     postToWebview(webviewView, {
-      type: 'githubConversionResult',
+      type: "githubConversionResult",
       success: false,
-      error: error.message || 'Unknown error occurred',
+      error: error.message || "Unknown error occurred",
       commandKey: data.commandKey,
     });
   }
@@ -139,15 +167,18 @@ async function handleConvertToGitHubMessage(vscode, webviewView, data, provider)
  * @returns {Promise<void>}
  */
 async function handleCheckAgentStatusMessage(vscode, webviewView, data) {
-  const cwdPath = (vscode.workspace.workspaceFolders || [])[0]?.uri.fsPath;
+  const cwdPath = getWorkspacePath(vscode);
   try {
-    const { token, repo } = await resolveGitHubContext(vscode, cwdPath, { silent: true });
+    const { token, repo } = await resolveGitHubContext(vscode, cwdPath, {
+      silent: true,
+    });
     if (!repo) {
       postToWebview(webviewView, {
-        type: 'agentStatusResult',
+        type: "agentStatusResult",
         beadsItemId: data.beadsItemId,
         success: false,
-        error: 'No GitHub remote detected. Ensure your workspace has a GitHub remote.',
+        error:
+          "No GitHub remote detected. Ensure your workspace has a GitHub remote.",
       });
       return;
     }
@@ -157,7 +188,7 @@ async function handleCheckAgentStatusMessage(vscode, webviewView, data) {
       repo: repo.repo,
     });
     postToWebview(webviewView, {
-      type: 'agentStatusResult',
+      type: "agentStatusResult",
       beadsItemId: data.beadsItemId,
       issueState: statusResult.issueState,
       pr: statusResult.pr,
@@ -165,10 +196,10 @@ async function handleCheckAgentStatusMessage(vscode, webviewView, data) {
     });
   } catch (error) {
     postToWebview(webviewView, {
-      type: 'agentStatusResult',
+      type: "agentStatusResult",
       beadsItemId: data.beadsItemId,
       success: false,
-      error: error.message || 'Failed to check agent status',
+      error: error.message || "Failed to check agent status",
     });
   }
 }
@@ -181,46 +212,60 @@ async function handleCheckAgentStatusMessage(vscode, webviewView, data) {
  * @param {object} provider - Beads webview provider with command executor
  * @returns {Promise<void>}
  */
-async function handleParallelPhaseDispatchMessage(vscode, webviewView, data, provider) {
+async function handleParallelPhaseDispatchMessage(
+  vscode,
+  webviewView,
+  data,
+  provider,
+) {
   try {
-    const wsFolders = vscode.workspace.workspaceFolders;
-    if (!wsFolders || wsFolders.length === 0) {
+    const workspacePath = getWorkspacePath(vscode);
+    if (!workspacePath) {
       postToWebview(webviewView, {
-        type: 'parallelPhaseDispatchError',
+        type: "parallelPhaseDispatchError",
         success: false,
-        error: 'An open workspace is required to dispatch a phase to GitHub Copilot.',
+        error:
+          "An open workspace is required to dispatch a phase to GitHub Copilot.",
       });
       return;
     }
-    const workspacePath = wsFolders[0].uri.fsPath;
-    const { token: ghToken, repo: ghRepo } = await resolveGitHubContext(vscode, workspacePath, {
-      createIfNone: true,
-    });
+    const { token: ghToken, repo: ghRepo } = await resolveGitHubContext(
+      vscode,
+      workspacePath,
+      {
+        createIfNone: true,
+      },
+    );
     if (!ghRepo) {
       postToWebview(webviewView, {
-        type: 'parallelPhaseDispatchError',
+        type: "parallelPhaseDispatchError",
         success: false,
-        error: 'GitHub repository not detected. Ensure your workspace has a GitHub remote.',
+        error:
+          "GitHub repository not detected. Ensure your workspace has a GitHub remote.",
       });
       return;
     }
-    const phaseIndex = Number.isFinite(data.phaseIndex) ? data.phaseIndex : null;
+    const phaseIndex = Number.isFinite(data.phaseIndex)
+      ? data.phaseIndex
+      : null;
     const issueIds = Array.isArray(data.issueIds)
       ? data.issueIds
           .map(String)
           .map((s) => s.trim())
           .filter(Boolean)
       : [];
-    validateIssueIds(issueIds, 'issueId');
+    validateIssueIds(issueIds, "issueId");
     const uniqueIssueIds = [...new Set(issueIds)];
     const copilotAssignees = getCopilotAssignees(vscode);
     const plannedAssignments = uniqueIssueIds.map((id, idx) => {
       const assignee =
-        copilotAssignees.length > 0 ? copilotAssignees[idx % copilotAssignees.length] : null;
+        copilotAssignees.length > 0
+          ? copilotAssignees[idx % copilotAssignees.length]
+          : null;
       return { issueId: id, assignee };
     });
     postToWebview(webviewView, {
-      type: 'parallelPhaseDispatchStarted',
+      type: "parallelPhaseDispatchStarted",
       phaseIndex,
       total: plannedAssignments.length,
       assignments: plannedAssignments,
@@ -229,16 +274,18 @@ async function handleParallelPhaseDispatchMessage(vscode, webviewView, data, pro
     for (let idx = 0; idx < plannedAssignments.length; idx++) {
       const { issueId, assignee } = plannedAssignments[idx];
       postToWebview(webviewView, {
-        type: 'parallelPhaseDispatchProgress',
+        type: "parallelPhaseDispatchProgress",
         phaseIndex,
         issueId,
         assignee,
         index: idx,
         total: plannedAssignments.length,
-        state: 'creating',
+        state: "creating",
       });
       try {
-        const bdResult = await provider._executeBdCommand(`list --id ${issueId} --json`);
+        const bdResult = await provider._executeBdCommand(
+          `list --id ${issueId} --json`,
+        );
         if (!bdResult.success) {
           throw new Error(`Failed to fetch issue: ${bdResult.output}`);
         }
@@ -258,10 +305,13 @@ async function handleParallelPhaseDispatchMessage(vscode, webviewView, data, pro
             assignee: assignee || undefined,
           });
         } catch (error) {
-          const message = error && error.message ? error.message : String(error);
+          const message =
+            error && error.message ? error.message : String(error);
           if (
             assignee &&
-            /assignee|Could not resolve|Invalid assignee|Validation Failed/i.test(message)
+            /assignee|Could not resolve|Invalid assignee|Validation Failed/i.test(
+              message,
+            )
           ) {
             warning = `Created issue without assigning ${assignee}: ${message}`;
             assigned = false;
@@ -284,13 +334,13 @@ async function handleParallelPhaseDispatchMessage(vscode, webviewView, data, pro
           success: true,
         });
         postToWebview(webviewView, {
-          type: 'parallelPhaseDispatchProgress',
+          type: "parallelPhaseDispatchProgress",
           phaseIndex,
           issueId,
           assignee,
           index: idx,
           total: plannedAssignments.length,
-          state: 'created',
+          state: "created",
           url: ghResult.url,
           number: ghResult.number,
           assigned,
@@ -300,13 +350,13 @@ async function handleParallelPhaseDispatchMessage(vscode, webviewView, data, pro
         const message = error && error.message ? error.message : String(error);
         results.push({ issueId, assignee, success: false, error: message });
         postToWebview(webviewView, {
-          type: 'parallelPhaseDispatchProgress',
+          type: "parallelPhaseDispatchProgress",
           phaseIndex,
           issueId,
           assignee,
           index: idx,
           total: plannedAssignments.length,
-          state: 'failed',
+          state: "failed",
           error: message,
         });
       }
@@ -314,7 +364,7 @@ async function handleParallelPhaseDispatchMessage(vscode, webviewView, data, pro
     const successCount = results.filter((r) => r.success).length;
     const failureCount = results.length - successCount;
     postToWebview(webviewView, {
-      type: 'parallelPhaseDispatchComplete',
+      type: "parallelPhaseDispatchComplete",
       phaseIndex,
       successCount,
       failureCount,
@@ -322,7 +372,7 @@ async function handleParallelPhaseDispatchMessage(vscode, webviewView, data, pro
     });
   } catch (e) {
     postToWebview(webviewView, {
-      type: 'parallelPhaseDispatchError',
+      type: "parallelPhaseDispatchError",
       success: false,
       error: e.message,
     });
@@ -337,7 +387,12 @@ async function handleParallelPhaseDispatchMessage(vscode, webviewView, data, pro
  * @param {object} provider - Beads webview provider with command executor
  * @returns {Promise<void>}
  */
-async function handleAssignToCopilotMessageWrapper(vscode, webviewView, data, provider) {
+async function handleAssignToCopilotMessageWrapper(
+  vscode,
+  webviewView,
+  data,
+  provider,
+) {
   await handleAssignToCopilotMessage(data, {
     provider,
     webviewView,
