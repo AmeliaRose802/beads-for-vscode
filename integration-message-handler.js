@@ -1,6 +1,15 @@
 const { importAdoToBeads, exportBeadsToAdo } = require('./ado-integration');
 
 /**
+ * Utility wrapper to keep webview messaging concise and consistently formatted.
+ * @param {import('vscode').WebviewView} webviewView
+ * @param {object} payload
+ */
+function postToWebview(webviewView, payload) {
+  webviewView.webview.postMessage(payload);
+}
+
+/**
  * Read the integration settings from workspace configuration.
  * @param {import('vscode')} vscode - VS Code API
  * @returns {{ backend: string, ado: { projectUrl: string, areaPath: string, iterationPath: string, pat: string, importLimit: number } }}
@@ -15,8 +24,8 @@ function getIntegrationSettings(vscode) {
       areaPath: adoCfg.get('areaPath', ''),
       iterationPath: adoCfg.get('iterationPath', ''),
       pat: adoCfg.get('pat', ''),
-      importLimit: adoCfg.get('importLimit', 200)
-    }
+      importLimit: adoCfg.get('importLimit', 200),
+    },
   };
 }
 
@@ -61,7 +70,7 @@ async function saveIntegrationSettings(vscode, payload) {
  */
 function handleGetIntegrationSettingsMessage(vscode, webviewView) {
   const settings = getIntegrationSettings(vscode);
-  webviewView.webview.postMessage({
+  postToWebview(webviewView, {
     type: 'integrationSettings',
     settings: {
       backend: settings.backend,
@@ -70,9 +79,9 @@ function handleGetIntegrationSettingsMessage(vscode, webviewView) {
         areaPath: settings.ado.areaPath,
         iterationPath: settings.ado.iterationPath,
         importLimit: settings.ado.importLimit,
-        tokenSet: Boolean(settings.ado.pat)
-      }
-    }
+        tokenSet: Boolean(settings.ado.pat),
+      },
+    },
   });
 }
 
@@ -87,7 +96,7 @@ async function handleUpdateIntegrationSettingsMessage(vscode, webviewView, data)
   try {
     await saveIntegrationSettings(vscode, data.settings || {});
     const refreshed = getIntegrationSettings(vscode);
-    webviewView.webview.postMessage({
+    postToWebview(webviewView, {
       type: 'integrationSettingsSaved',
       success: true,
       settings: {
@@ -97,17 +106,17 @@ async function handleUpdateIntegrationSettingsMessage(vscode, webviewView, data)
           areaPath: refreshed.ado.areaPath,
           iterationPath: refreshed.ado.iterationPath,
           importLimit: refreshed.ado.importLimit,
-          tokenSet: Boolean(refreshed.ado.pat)
-        }
+          tokenSet: Boolean(refreshed.ado.pat),
+        },
       },
-      commandKey: data.commandKey
+      commandKey: data.commandKey,
     });
   } catch (error) {
-    webviewView.webview.postMessage({
+    postToWebview(webviewView, {
       type: 'integrationSettingsSaved',
       success: false,
       error: error.message || 'Failed to save integration settings',
-      commandKey: data.commandKey
+      commandKey: data.commandKey,
     });
   }
 }
@@ -123,24 +132,25 @@ async function handleUpdateIntegrationSettingsMessage(vscode, webviewView, data)
 async function handleAdoImportMessage(vscode, webviewView, data, provider) {
   try {
     const settings = getIntegrationSettings(vscode);
+    const executeBdCommand = (cmd) => provider._executeBdCommand(cmd);
     const summary = await importAdoToBeads({
-      executeBdCommand: (cmd) => provider._executeBdCommand(cmd),
-      settings
+      executeBdCommand,
+      settings,
     });
-    webviewView.webview.postMessage({
+    postToWebview(webviewView, {
       type: 'adoSyncResult',
       action: 'import',
       success: true,
       summary,
-      commandKey: data.commandKey
+      commandKey: data.commandKey,
     });
   } catch (error) {
-    webviewView.webview.postMessage({
+    postToWebview(webviewView, {
       type: 'adoSyncResult',
       action: 'import',
       success: false,
       error: error.message || 'ADO import failed',
-      commandKey: data.commandKey
+      commandKey: data.commandKey,
     });
   }
 }
@@ -156,24 +166,25 @@ async function handleAdoImportMessage(vscode, webviewView, data, provider) {
 async function handleAdoExportMessage(vscode, webviewView, data, provider) {
   try {
     const settings = getIntegrationSettings(vscode);
+    const executeBdCommand = (cmd) => provider._executeBdCommand(cmd);
     const summary = await exportBeadsToAdo({
-      executeBdCommand: (cmd) => provider._executeBdCommand(cmd),
-      settings
+      executeBdCommand,
+      settings,
     });
-    webviewView.webview.postMessage({
+    postToWebview(webviewView, {
       type: 'adoSyncResult',
       action: 'export',
       success: true,
       summary,
-      commandKey: data.commandKey
+      commandKey: data.commandKey,
     });
   } catch (error) {
-    webviewView.webview.postMessage({
+    postToWebview(webviewView, {
       type: 'adoSyncResult',
       action: 'export',
       success: false,
       error: error.message || 'ADO export failed',
-      commandKey: data.commandKey
+      commandKey: data.commandKey,
     });
   }
 }
@@ -183,5 +194,5 @@ module.exports = {
   handleGetIntegrationSettingsMessage,
   handleUpdateIntegrationSettingsMessage,
   handleAdoImportMessage,
-  handleAdoExportMessage
+  handleAdoExportMessage,
 };

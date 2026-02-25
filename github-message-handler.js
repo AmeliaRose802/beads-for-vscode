@@ -5,6 +5,15 @@ const { handleAssignToCopilotMessage, getCopilotAssignees } = require('./assign-
 const { validateIssueId, validateIssueIds } = require('./validate-issue-id');
 
 /**
+ * Post a structured payload back to the webview.
+ * @param {import('vscode').WebviewView} webviewView
+ * @param {object} payload
+ */
+function postToWebview(webviewView, payload) {
+  webviewView.webview.postMessage(payload);
+}
+
+/**
  * Get GitHub auth session and repo info for the workspace.
  * @param {import('vscode')} vscode - VS Code API
  * @param {string} workspacePath - Workspace root path
@@ -14,7 +23,7 @@ const { validateIssueId, validateIssueIds } = require('./validate-issue-id');
 async function resolveGitHubContext(vscode, workspacePath, authOpts = {}) {
   const [session, repo] = await Promise.all([
     getGitHubSession(vscode, authOpts),
-    workspacePath ? detectGitHubRepo(workspacePath) : Promise.resolve(null)
+    workspacePath ? detectGitHubRepo(workspacePath) : Promise.resolve(null),
   ]);
   return { token: session ? session.token : null, repo };
 }
@@ -32,15 +41,15 @@ async function handleGetGitHubInfoMessage(vscode, webviewView, data) {
   const silent = data.silent !== false;
   const [session, repo] = await Promise.all([
     getGitHubSession(vscode, { createIfNone: !silent, silent }),
-    workspacePath ? detectGitHubRepo(workspacePath) : Promise.resolve(null)
+    workspacePath ? detectGitHubRepo(workspacePath) : Promise.resolve(null),
   ]);
   const copilotAssignees = getCopilotAssignees(vscode);
-  webviewView.webview.postMessage({
+  postToWebview(webviewView, {
     type: 'githubInfo',
     authenticated: !!session,
     account: session ? session.account : null,
     repo: repo ? { owner: repo.owner, repo: repo.repo, remote: repo.remote } : null,
-    copilotAssignees
+    copilotAssignees,
   });
 }
 
@@ -55,32 +64,70 @@ async function handleGetGitHubInfoMessage(vscode, webviewView, data) {
 async function handleConvertToGitHubMessage(vscode, webviewView, data, provider) {
   const wsFolders = vscode.workspace.workspaceFolders;
   if (!wsFolders || wsFolders.length === 0) {
-    webviewView.webview.postMessage({ type: 'githubConversionResult', success: false, error: 'An open workspace is required to convert items to GitHub issues.', commandKey: data.commandKey });
+    postToWebview(webviewView, {
+      type: 'githubConversionResult',
+      success: false,
+      error: 'An open workspace is required to convert items to GitHub issues.',
+      commandKey: data.commandKey,
+    });
     return;
   }
   const workspacePath = wsFolders[0].uri.fsPath;
   try {
     validateIssueId(data.issueId, 'issueId');
-    const { token, repo } = await resolveGitHubContext(vscode, workspacePath, { createIfNone: true });
+    const { token, repo } = await resolveGitHubContext(vscode, workspacePath, {
+      createIfNone: true,
+    });
     if (!repo) {
-      webviewView.webview.postMessage({ type: 'githubConversionResult', success: false, error: 'GitHub repository not detected. Ensure your workspace has a GitHub remote.', commandKey: data.commandKey });
+      postToWebview(webviewView, {
+        type: 'githubConversionResult',
+        success: false,
+        error: 'GitHub repository not detected. Ensure your workspace has a GitHub remote.',
+        commandKey: data.commandKey,
+      });
       return;
     }
     const result = await provider._executeBdCommand(`list --id ${data.issueId} --json`);
     if (!result.success) {
-      webviewView.webview.postMessage({ type: 'githubConversionResult', success: false, error: `Failed to fetch issue: ${result.output}`, commandKey: data.commandKey });
+      postToWebview(webviewView, {
+        type: 'githubConversionResult',
+        success: false,
+        error: `Failed to fetch issue: ${result.output}`,
+        commandKey: data.commandKey,
+      });
       return;
     }
     const issues = JSON.parse(result.output);
     if (!issues || issues.length === 0) {
-      webviewView.webview.postMessage({ type: 'githubConversionResult', success: false, error: `Issue ${data.issueId} not found`, commandKey: data.commandKey });
+      postToWebview(webviewView, {
+        type: 'githubConversionResult',
+        success: false,
+        error: `Issue ${data.issueId} not found`,
+        commandKey: data.commandKey,
+      });
       return;
     }
 
-    const ghResult = await convertBeadsItemToGitHubIssue(issues[0], { token, owner: repo.owner, repo: repo.repo });
-    webviewView.webview.postMessage({ type: 'githubConversionResult', success: true, url: ghResult.url, number: ghResult.number, issueId: data.issueId, commandKey: data.commandKey });
+    const ghResult = await convertBeadsItemToGitHubIssue(issues[0], {
+      token,
+      owner: repo.owner,
+      repo: repo.repo,
+    });
+    postToWebview(webviewView, {
+      type: 'githubConversionResult',
+      success: true,
+      url: ghResult.url,
+      number: ghResult.number,
+      issueId: data.issueId,
+      commandKey: data.commandKey,
+    });
   } catch (error) {
-    webviewView.webview.postMessage({ type: 'githubConversionResult', success: false, error: error.message || 'Unknown error occurred', commandKey: data.commandKey });
+    postToWebview(webviewView, {
+      type: 'githubConversionResult',
+      success: false,
+      error: error.message || 'Unknown error occurred',
+      commandKey: data.commandKey,
+    });
   }
 }
 
@@ -96,21 +143,32 @@ async function handleCheckAgentStatusMessage(vscode, webviewView, data) {
   try {
     const { token, repo } = await resolveGitHubContext(vscode, cwdPath, { silent: true });
     if (!repo) {
-      webviewView.webview.postMessage({
-        type: 'agentStatusResult', beadsItemId: data.beadsItemId,
-        success: false, error: 'No GitHub remote detected. Ensure your workspace has a GitHub remote.'
+      postToWebview(webviewView, {
+        type: 'agentStatusResult',
+        beadsItemId: data.beadsItemId,
+        success: false,
+        error: 'No GitHub remote detected. Ensure your workspace has a GitHub remote.',
       });
       return;
     }
-    const statusResult = await checkGitHubIssueStatus(data.issueNumber, { token, owner: repo.owner, repo: repo.repo });
-    webviewView.webview.postMessage({
-      type: 'agentStatusResult', beadsItemId: data.beadsItemId,
-      issueState: statusResult.issueState, pr: statusResult.pr, success: true
+    const statusResult = await checkGitHubIssueStatus(data.issueNumber, {
+      token,
+      owner: repo.owner,
+      repo: repo.repo,
+    });
+    postToWebview(webviewView, {
+      type: 'agentStatusResult',
+      beadsItemId: data.beadsItemId,
+      issueState: statusResult.issueState,
+      pr: statusResult.pr,
+      success: true,
     });
   } catch (error) {
-    webviewView.webview.postMessage({
-      type: 'agentStatusResult', beadsItemId: data.beadsItemId,
-      success: false, error: error.message || 'Failed to check agent status'
+    postToWebview(webviewView, {
+      type: 'agentStatusResult',
+      beadsItemId: data.beadsItemId,
+      success: false,
+      error: error.message || 'Failed to check agent status',
     });
   }
 }
@@ -127,41 +185,57 @@ async function handleParallelPhaseDispatchMessage(vscode, webviewView, data, pro
   try {
     const wsFolders = vscode.workspace.workspaceFolders;
     if (!wsFolders || wsFolders.length === 0) {
-      webviewView.webview.postMessage({ type: 'parallelPhaseDispatchError', success: false, error: 'An open workspace is required to dispatch a phase to GitHub Copilot.' });
+      postToWebview(webviewView, {
+        type: 'parallelPhaseDispatchError',
+        success: false,
+        error: 'An open workspace is required to dispatch a phase to GitHub Copilot.',
+      });
       return;
     }
     const workspacePath = wsFolders[0].uri.fsPath;
-    const { token: ghToken, repo: ghRepo } = await resolveGitHubContext(vscode, workspacePath, { createIfNone: true });
+    const { token: ghToken, repo: ghRepo } = await resolveGitHubContext(vscode, workspacePath, {
+      createIfNone: true,
+    });
     if (!ghRepo) {
-      webviewView.webview.postMessage({ type: 'parallelPhaseDispatchError', success: false, error: 'GitHub repository not detected. Ensure your workspace has a GitHub remote.' });
+      postToWebview(webviewView, {
+        type: 'parallelPhaseDispatchError',
+        success: false,
+        error: 'GitHub repository not detected. Ensure your workspace has a GitHub remote.',
+      });
       return;
     }
     const phaseIndex = Number.isFinite(data.phaseIndex) ? data.phaseIndex : null;
-    const issueIds = Array.isArray(data.issueIds) ? data.issueIds.map(String).map(s => s.trim()).filter(Boolean) : [];
+    const issueIds = Array.isArray(data.issueIds)
+      ? data.issueIds
+          .map(String)
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [];
     validateIssueIds(issueIds, 'issueId');
     const uniqueIssueIds = [...new Set(issueIds)];
     const copilotAssignees = getCopilotAssignees(vscode);
     const plannedAssignments = uniqueIssueIds.map((id, idx) => {
-      const assignee = copilotAssignees.length > 0 ? copilotAssignees[idx % copilotAssignees.length] : null;
+      const assignee =
+        copilotAssignees.length > 0 ? copilotAssignees[idx % copilotAssignees.length] : null;
       return { issueId: id, assignee };
     });
-    webviewView.webview.postMessage({
+    postToWebview(webviewView, {
       type: 'parallelPhaseDispatchStarted',
       phaseIndex,
       total: plannedAssignments.length,
-      assignments: plannedAssignments
+      assignments: plannedAssignments,
     });
     const results = [];
     for (let idx = 0; idx < plannedAssignments.length; idx++) {
       const { issueId, assignee } = plannedAssignments[idx];
-      webviewView.webview.postMessage({
+      postToWebview(webviewView, {
         type: 'parallelPhaseDispatchProgress',
         phaseIndex,
         issueId,
         assignee,
         index: idx,
         total: plannedAssignments.length,
-        state: 'creating'
+        state: 'creating',
       });
       try {
         const bdResult = await provider._executeBdCommand(`list --id ${issueId} --json`);
@@ -178,16 +252,23 @@ async function handleParallelPhaseDispatchMessage(vscode, webviewView, data, pro
         let warning = null;
         try {
           ghResult = await convertBeadsItemToGitHubIssue(item, {
-            token: ghToken, owner: ghRepo.owner, repo: ghRepo.repo,
-            assignee: assignee || undefined
+            token: ghToken,
+            owner: ghRepo.owner,
+            repo: ghRepo.repo,
+            assignee: assignee || undefined,
           });
         } catch (error) {
           const message = error && error.message ? error.message : String(error);
-          if (assignee && /assignee|Could not resolve|Invalid assignee|Validation Failed/i.test(message)) {
+          if (
+            assignee &&
+            /assignee|Could not resolve|Invalid assignee|Validation Failed/i.test(message)
+          ) {
             warning = `Created issue without assigning ${assignee}: ${message}`;
             assigned = false;
             ghResult = await convertBeadsItemToGitHubIssue(item, {
-              token: ghToken, owner: ghRepo.owner, repo: ghRepo.repo
+              token: ghToken,
+              owner: ghRepo.owner,
+              repo: ghRepo.repo,
             });
           } else {
             throw error;
@@ -200,9 +281,9 @@ async function handleParallelPhaseDispatchMessage(vscode, webviewView, data, pro
           number: ghResult.number,
           assigned,
           warning,
-          success: true
+          success: true,
         });
-        webviewView.webview.postMessage({
+        postToWebview(webviewView, {
           type: 'parallelPhaseDispatchProgress',
           phaseIndex,
           issueId,
@@ -213,12 +294,12 @@ async function handleParallelPhaseDispatchMessage(vscode, webviewView, data, pro
           url: ghResult.url,
           number: ghResult.number,
           assigned,
-          warning
+          warning,
         });
       } catch (error) {
         const message = error && error.message ? error.message : String(error);
         results.push({ issueId, assignee, success: false, error: message });
-        webviewView.webview.postMessage({
+        postToWebview(webviewView, {
           type: 'parallelPhaseDispatchProgress',
           phaseIndex,
           issueId,
@@ -226,21 +307,25 @@ async function handleParallelPhaseDispatchMessage(vscode, webviewView, data, pro
           index: idx,
           total: plannedAssignments.length,
           state: 'failed',
-          error: message
+          error: message,
         });
       }
     }
-    const successCount = results.filter(r => r.success).length;
+    const successCount = results.filter((r) => r.success).length;
     const failureCount = results.length - successCount;
-    webviewView.webview.postMessage({
+    postToWebview(webviewView, {
       type: 'parallelPhaseDispatchComplete',
       phaseIndex,
       successCount,
       failureCount,
-      results
+      results,
     });
   } catch (e) {
-    webviewView.webview.postMessage({ type: 'parallelPhaseDispatchError', success: false, error: e.message });
+    postToWebview(webviewView, {
+      type: 'parallelPhaseDispatchError',
+      success: false,
+      error: e.message,
+    });
   }
 }
 
@@ -261,7 +346,7 @@ async function handleAssignToCopilotMessageWrapper(vscode, webviewView, data, pr
     convertBeadsItemToGitHubIssue,
     detectGitHubRepo,
     getGitHubSession,
-    assignCopilotToIssue
+    assignCopilotToIssue,
   });
 }
 
@@ -270,5 +355,5 @@ module.exports = {
   handleConvertToGitHubMessage,
   handleCheckAgentStatusMessage,
   handleParallelPhaseDispatchMessage,
-  handleAssignToCopilotMessageWrapper
+  handleAssignToCopilotMessageWrapper,
 };

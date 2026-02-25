@@ -1,5 +1,6 @@
 const path = require('path');
 const fs = require('fs');
+
 const { getAISuggestions } = require('./ai-suggestions');
 const { detectBeadsBackend } = require('./beads-backend');
 const { validateIssueId } = require('./validate-issue-id');
@@ -8,17 +9,19 @@ const {
   handleConvertToGitHubMessage,
   handleCheckAgentStatusMessage,
   handleParallelPhaseDispatchMessage,
-  handleAssignToCopilotMessageWrapper
+  handleAssignToCopilotMessageWrapper,
 } = require('./github-message-handler');
 const {
   handleGetIntegrationSettingsMessage,
   handleUpdateIntegrationSettingsMessage,
   handleAdoImportMessage,
-  handleAdoExportMessage
+  handleAdoExportMessage,
 } = require('./integration-message-handler');
 
-/** Handle messages from the webview. */
-
+/**
+ * Routes messages from the Beads UI webview to VS Code APIs or bd commands.
+ * Keeps UX responsive by centralizing validation, formatting, and side-effects.
+ */
 /**
  * Handle a message from the webview
  * @param {object} data - The message data from the webview
@@ -28,50 +31,57 @@ const {
  */
 async function handleWebviewMessage(data, context, vscode) {
   const { provider, webviewView } = context;
+  const postMessage = (payload) => webviewView.webview.postMessage(payload);
+  const executeCommand = (command) => provider._executeBdCommand(command);
   try {
+    // Dispatch each message type to a focused handler block.
     switch (data.type) {
       case 'executeCommand': {
         // Invalidate cache on modifying commands
         const modifyingCommands = ['create', 'update', 'close', 'reopen', 'link', 'dep'];
-        const isModifying = modifyingCommands.some(cmd => data.command.includes(cmd));
+        const isModifying = modifyingCommands.some((cmd) => data.command.includes(cmd));
         if (isModifying) {
           provider._invalidateCache();
         }
-        // Check conditions BEFORE executing commands to avoid unnecessary work
-        if (data.command.includes('list') && data.command.includes('--json') && data.command.includes('--id')) {
+
+        const isSingleIssueFetch =
+          data.command.includes('list') &&
+          data.command.includes('--json') &&
+          data.command.includes('--id');
+
+        if (isSingleIssueFetch) {
           // Fetch a single issue by ID for editing
-          const result = await provider._executeBdCommand(data.command);
+          const result = await executeCommand(data.command);
           try {
             const issues = JSON.parse(result.output);
             if (issues && issues.length > 0) {
-              webviewView.webview.postMessage({
-                type: 'issueDetails',
-                issue: issues[0]
-              });
+              postMessage({ type: 'issueDetails', issue: issues[0] });
             } else {
-              webviewView.webview.postMessage({
+              postMessage({
                 type: 'commandResult',
                 command: data.command,
                 output: 'Issue not found',
-                success: false
+                success: false,
               });
             }
-          } catch (e) {
-            webviewView.webview.postMessage({
-              type: 'commandResult',
-              command: data.command,
-              ...result
-            });
+          } catch (error) {
+            postMessage({ type: 'commandResult', command: data.command, ...result });
           }
-        } else if (data.useJSON && (data.command === 'list' || data.command === 'ready' || data.command === 'blocked')) {
+          break;
+        }
+
+        const jsonEligibleCommands = ['list', 'ready', 'blocked'];
+        const wantsJsonSummary = data.useJSON && jsonEligibleCommands.includes(data.command);
+
+        if (wantsJsonSummary) {
           // Handle list/ready/blocked commands with JSON output directly
           const jsonCommand = `${data.command} --json`;
           const [jsonResult, graphResult] = await Promise.all([
-            provider._executeBdCommand(jsonCommand),
-            provider._executeBdCommand('graph --all --json --allow-stale')
+            executeCommand(jsonCommand),
+            executeCommand('graph --all --json --allow-stale'),
           ]);
           if (jsonResult.success) {
-            webviewView.webview.postMessage({
+            postMessage({
               type: 'commandResultJSON',
               command: data.command,
               output: jsonResult.output,
@@ -79,46 +89,50 @@ async function handleWebviewMessage(data, context, vscode) {
               graphError: graphResult && !graphResult.success ? graphResult.output : null,
               success: true,
               requestId: data.requestId,
-              isBackgroundSync: data.isBackgroundSync
+              isBackgroundSync: data.isBackgroundSync,
             });
           } else {
-            webviewView.webview.postMessage({
+            postMessage({
               type: 'commandResult',
               command: data.command,
               output: jsonResult.output,
               success: false,
               requestId: data.requestId,
-              isBackgroundSync: data.isBackgroundSync
+              isBackgroundSync: data.isBackgroundSync,
             });
           }
+          break;
+        }
+
+        // All other commands: execute once, then route response
+        const result = await executeCommand(data.command);
+        if (data.isInlineAction) {
+          postMessage({
+            type: 'inlineActionResult',
+            command: data.command,
+            output: result.output,
+            success: result.success,
+            successMessage: data.successMessage,
+            requestId: data.requestId,
+            isBackgroundSync: data.isBackgroundSync,
+          });
         } else {
-          // All other commands: execute once, then route response
-          const result = await provider._executeBdCommand(data.command);
-          if (data.isInlineAction) {
-            webviewView.webview.postMessage({
-              type: 'inlineActionResult',
-              command: data.command,
-              output: result.output,
-              success: result.success,
-              successMessage: data.successMessage,
-              requestId: data.requestId,
-              isBackgroundSync: data.isBackgroundSync
-            });
-          } else {
-            webviewView.webview.postMessage({
-              type: 'commandResult',
-              command: data.command,
-              ...result,
-              requestId: data.requestId,
-              isBackgroundSync: data.isBackgroundSync
-            });
-          }
+          postMessage({
+            type: 'commandResult',
+            command: data.command,
+            ...result,
+            requestId: data.requestId,
+            isBackgroundSync: data.isBackgroundSync,
+          });
         }
         break;
       }
       case 'getCwd': {
         const wsFolders = vscode.workspace.workspaceFolders;
-        webviewView.webview.postMessage({ type: 'cwdResult', cwd: wsFolders ? wsFolders[0].uri.fsPath : process.cwd() });
+        postMessage({
+          type: 'cwdResult',
+          cwd: wsFolders ? wsFolders[0].uri.fsPath : process.cwd(),
+        });
         break;
       }
       case 'getCurrentFile': {
@@ -129,7 +143,7 @@ async function handleWebviewMessage(data, context, vscode) {
             ? vscode.workspace.asRelativePath(editor.document.uri)
             : editor.document.fileName;
         }
-        webviewView.webview.postMessage({ type: 'currentFileResult', file: curFile });
+        postMessage({ type: 'currentFileResult', file: curFile });
         break;
       }
       case 'getBeadsStatus': {
@@ -138,43 +152,64 @@ async function handleWebviewMessage(data, context, vscode) {
         const beadsDir = workspacePath ? path.join(workspacePath, '.beads') : '';
         const initialized = !!(beadsDir && fs.existsSync(beadsDir));
         const backend = workspacePath ? detectBeadsBackend(workspacePath).backend : 'unknown';
-        webviewView.webview.postMessage({
+        postMessage({
           type: 'beadsStatus',
           hasWorkspace: !!wsFolders,
           workspacePath,
           beadsDir,
           initialized,
-          backend
+          backend,
         });
         break;
       }
       case 'getAISuggestions': {
-        const suggestions = await getAISuggestions((cmd) => provider._executeBdCommand(cmd), data.title, data.currentDescription);
-        webviewView.webview.postMessage({ type: 'aiSuggestions', suggestions: suggestions.suggestions, error: suggestions.error });
+        const suggestions = await getAISuggestions(
+          executeCommand,
+          data.title,
+          data.currentDescription,
+        );
+        postMessage({
+          type: 'aiSuggestions',
+          suggestions: suggestions.suggestions,
+          error: suggestions.error,
+        });
         break;
       }
       case 'getIssueDetails': {
         const details = await provider._getIssueDetails(data.issueId);
-        webviewView.webview.postMessage({ type: 'inlineIssueDetails', issueId: data.issueId, details });
+        postMessage({ type: 'inlineIssueDetails', issueId: data.issueId, details });
         break;
       }
       case 'getComments': {
         try {
           validateIssueId(data.issueId, 'issueId');
-          const cmtResult = await provider._executeBdCommand(`comments ${data.issueId}`);
-          webviewView.webview.postMessage({ type: 'commentsResult', issueId: data.issueId, output: cmtResult.output, success: cmtResult.success });
+          const cmtResult = await executeCommand(`comments ${data.issueId}`);
+          postMessage({
+            type: 'commentsResult',
+            issueId: data.issueId,
+            output: cmtResult.output,
+            success: cmtResult.success,
+          });
         } catch (e) {
-          webviewView.webview.postMessage({ type: 'commentsResult', issueId: data.issueId, success: false, output: e.message });
+          postMessage({
+            type: 'commentsResult',
+            issueId: data.issueId,
+            success: false,
+            output: e.message,
+          });
         }
         break;
       }
       case 'getGraphData': {
-        const graphRes = await provider._executeBdCommand('graph --all --json --allow-stale');
+        const graphRes = await executeCommand('graph --all --json --allow-stale');
         if (graphRes.success) {
-          try { webviewView.webview.postMessage({ type: 'graphData', data: JSON.parse(graphRes.output) }); }
-          catch (e) { webviewView.webview.postMessage({ type: 'graphData', error: 'Failed to parse graph data: ' + e.message }); }
+          try {
+            postMessage({ type: 'graphData', data: JSON.parse(graphRes.output) });
+          } catch (e) {
+            postMessage({ type: 'graphData', error: 'Failed to parse graph data: ' + e.message });
+          }
         } else {
-          webviewView.webview.postMessage({ type: 'graphData', error: graphRes.output || 'Failed to get graph data' });
+          postMessage({ type: 'graphData', error: graphRes.output || 'Failed to get graph data' });
         }
         break;
       }
@@ -182,46 +217,56 @@ async function handleWebviewMessage(data, context, vscode) {
         try {
           validateIssueId(data.issueId, 'issueId');
           const [depsRes, depsUpRes] = await Promise.all([
-            provider._executeBdCommand(`dep list ${data.issueId} --json`),
-            provider._executeBdCommand(`dep list ${data.issueId} --direction up --json`)
+            executeCommand(`dep list ${data.issueId} --json`),
+            executeCommand(`dep list ${data.issueId} --direction up --json`),
           ]);
-          const parseSafe = (r) => { try { return r.success ? JSON.parse(r.output) || [] : []; } catch { return []; } };
-          webviewView.webview.postMessage({
+          const parseSafe = (r) => {
+            try {
+              return r.success ? JSON.parse(r.output) || [] : [];
+            } catch {
+              return [];
+            }
+          };
+          postMessage({
             type: 'dependenciesResult',
             issueId: data.issueId,
             dependencies: parseSafe(depsRes),
-            dependents: parseSafe(depsUpRes)
+            dependents: parseSafe(depsUpRes),
           });
         } catch (e) {
-          webviewView.webview.postMessage({
+          postMessage({
             type: 'dependenciesResult',
             issueId: data.issueId,
             success: false,
             error: e.message,
             dependencies: [],
-            dependents: []
+            dependents: [],
           });
         }
         break;
       }
+      // PokePoke orchestration helpers
       case 'pokepokeLaunch': {
         const launchRes = await provider._launchPokePoke(data.itemId, data.title, data.isTree);
-        webviewView.webview.postMessage({ type: 'pokepokeLaunchResult', itemId: data.itemId, ...launchRes });
+        postMessage({ type: 'pokepokeLaunchResult', itemId: data.itemId, ...launchRes });
         break;
       }
       case 'pokepokeStop': {
         const stopRes = provider._getPokePokeManager().stop(data.itemId);
-        webviewView.webview.postMessage({ type: 'pokepokeStopResult', itemId: data.itemId, ...stopRes });
+        postMessage({ type: 'pokepokeStopResult', itemId: data.itemId, ...stopRes });
         break;
       }
       case 'pokepokeGetStatus': {
-        webviewView.webview.postMessage({ type: 'pokepokeStatus', instances: provider._getPokePokeManager().getInstances() });
+        postMessage({
+          type: 'pokepokeStatus',
+          instances: provider._getPokePokeManager().getInstances(),
+        });
         break;
       }
       case 'pokepokeDismiss': {
         const mgr = provider._getPokePokeManager();
         mgr.remove(data.itemId);
-        webviewView.webview.postMessage({ type: 'pokepokeStatus', instances: mgr.getInstances() });
+        postMessage({ type: 'pokepokeStatus', instances: mgr.getInstances() });
         break;
       }
       case 'getGitHubInfo': {
@@ -249,6 +294,7 @@ async function handleWebviewMessage(data, context, vscode) {
         break;
       }
       case 'epicUnblock': {
+        // Remove direct and cascaded blocking edges between two epics.
         const epicA = data.epicA;
         const epicB = data.epicB;
         const cascadedDeps = Array.isArray(data.cascadedDeps) ? data.cascadedDeps : [];
@@ -261,29 +307,36 @@ async function handleWebviewMessage(data, context, vscode) {
             validateIssueId(dep.to, 'cascadedDep.to');
           }
           // Remove the direct epic-to-epic blocking relationship
-          const directResult = await provider._executeBdCommand(
-            `dep remove ${epicA} --blocks ${epicB}`
-          );
+          const directResult = await executeCommand(`dep remove ${epicA} --blocks ${epicB}`);
           if (!directResult.success) {
-            await provider._executeBdCommand(
-              `dep remove ${epicB} --blocks ${epicA}`
-            );
+            await executeCommand(`dep remove ${epicB} --blocks ${epicA}`);
           }
           // Remove all cascaded child blocking relationships
           const errors = [];
           for (const dep of cascadedDeps) {
-            const removeResult = await provider._executeBdCommand(
-              `dep remove ${dep.from} --blocks ${dep.to}`
-            );
+            const removeResult = await executeCommand(`dep remove ${dep.from} --blocks ${dep.to}`);
             if (!removeResult.success) {
               errors.push(`${dep.from} → ${dep.to}`);
             }
           }
           provider._invalidateCache();
           const removedCount = cascadedDeps.length - errors.length + 1;
-          webviewView.webview.postMessage({ type: 'epicUnblockResult', success: true, epicA, epicB, removedCount, errors });
+          postMessage({
+            type: 'epicUnblockResult',
+            success: true,
+            epicA,
+            epicB,
+            removedCount,
+            errors,
+          });
         } catch (error) {
-          webviewView.webview.postMessage({ type: 'epicUnblockResult', success: false, epicA, epicB, error: error.message || 'Unknown error during epic unblock' });
+          postMessage({
+            type: 'epicUnblockResult',
+            success: false,
+            epicA,
+            epicB,
+            error: error.message || 'Unknown error during epic unblock',
+          });
         }
         break;
       }
@@ -301,7 +354,9 @@ async function handleWebviewMessage(data, context, vscode) {
       }
       case 'logError': {
         const ch = vscode.window.createOutputChannel('Beads UI Errors');
-        ch.appendLine(`[${new Date().toISOString()}] ${data.boundaryName}: ${data.error?.message || 'No message'}`);
+        ch.appendLine(
+          `[${new Date().toISOString()}] ${data.boundaryName}: ${data.error?.message || 'No message'}`,
+        );
         if (data.error?.stack) ch.appendLine(`Stack:\n${data.error.stack}`);
         if (data.error?.componentStack) ch.appendLine(`Component:\n${data.error.componentStack}`);
         ch.appendLine('---');
@@ -311,11 +366,11 @@ async function handleWebviewMessage(data, context, vscode) {
   } catch (err) {
     console.error('Unhandled error in message handler:', err);
     try {
-      webviewView.webview.postMessage({
+      postMessage({
         type: 'commandResult',
         command: data.command || 'unknown',
         output: `Internal error: ${err.message}`,
-        success: false
+        success: false,
       });
     } catch {
       // Webview may be disposed; nothing we can do
@@ -324,5 +379,5 @@ async function handleWebviewMessage(data, context, vscode) {
 }
 
 module.exports = {
-  handleWebviewMessage
+  handleWebviewMessage,
 };
