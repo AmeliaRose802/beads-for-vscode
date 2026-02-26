@@ -35,12 +35,17 @@ function processMessage(message, ctx) {
     case 'commandResult':
       ctx.displayResult(message.command, message.output, message.success, {
         requestId: message.requestId,
-        isBackgroundSync: message.isBackgroundSync
+        isBackgroundSync: message.isBackgroundSync,
       });
       break;
     case 'inlineActionResult':
       ctx.handleInlineActionResult(message);
-      if (message.success && typeof message.command === 'string' && message.command.trim().startsWith('init') && ctx.vscode) {
+      if (
+        message.success &&
+        typeof message.command === 'string' &&
+        message.command.trim().startsWith('init') &&
+        ctx.vscode
+      ) {
         ctx.vscode.postMessage({ type: 'getBeadsStatus' });
       }
       break;
@@ -106,11 +111,11 @@ function processMessage(message, ctx) {
       if (message.issueId && message.details) {
         ctx.setIssueDetails((prev) => ({
           ...prev,
-          [message.issueId]: message.details
+          [message.issueId]: message.details,
         }));
         ctx.setLoadingDetails((prev) => ({
           ...prev,
-          [message.issueId]: false
+          [message.issueId]: false,
         }));
       }
       break;
@@ -202,7 +207,9 @@ function processMessage(message, ctx) {
           authenticated: message.authenticated,
           account: message.account || null,
           repo: message.repo || null,
-          copilotAssignees: Array.isArray(message.copilotAssignees) ? message.copilotAssignees : undefined
+          copilotAssignees: Array.isArray(message.copilotAssignees)
+            ? message.copilotAssignees
+            : undefined,
         });
       }
       break;
@@ -290,7 +297,9 @@ function processMessage(message, ctx) {
       }
       if (message.success) {
         const urlDetail = message.url ? ` ${message.url}` : '';
-        ctx.setOutput(`✅ Assigned to ${message.assignedTo || 'GitHub Copilot'} for ${message.issueId}.${urlDetail}`);
+        ctx.setOutput(
+          `✅ Assigned to ${message.assignedTo || 'GitHub Copilot'} for ${message.issueId}.${urlDetail}`,
+        );
         ctx.setIsError(false);
         flashSuccess();
       } else {
@@ -324,7 +333,7 @@ function processMessage(message, ctx) {
       if (message.success && ctx.updateAgentStatus) {
         ctx.updateAgentStatus(message.beadsItemId, {
           issueState: message.issueState,
-          pr: message.pr
+          pr: message.pr,
         });
       }
       break;
